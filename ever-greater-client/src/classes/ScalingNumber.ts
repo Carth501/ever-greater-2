@@ -10,9 +10,13 @@ class ScalingNumber {
     }
     if (value > 0) {
       if (Math.log10(value) >= 9) {
-        this.fromString(value.toString());
+        this.digits = [];
+        while (value > 0) {
+          this.digits.push(value % 1e9);
+          value = Math.floor(value / 1e9);
+        }
       } else {
-      this.digits = [value];
+        this.digits = [value];
       }
     }
   }
@@ -65,17 +69,20 @@ class ScalingNumber {
       const exponent = (this.digits.length - 1) * 9;
       return `${firstDigit}.${roundedTrailing}e${exponent}`;
     } else {
-      return this.digits
+      const result = this.digits
         .slice()
         .reverse()
         .map((digit, index) => digit.toString().padStart(9, "0"))
         .join("");
+      return result.replace(/^0+/, "") || "0";
     }
   }
 
   fromString(str: string): void {
     if (!/^[0-9]+$/.test(str)) {
-      throw new Error("Invalid input: only numbers are allowed");
+      throw new Error(
+        "Invalid input: only numbers are allowed. Received: " + str,
+      );
     }
     this.digits = [];
     for (let i = str.length; i > 0; i -= 9) {
