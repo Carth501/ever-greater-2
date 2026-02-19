@@ -41,12 +41,26 @@ class ScalingNumber {
     }
   }
 
-  toString(): string {
+  toString(scientific: boolean = false): string {
     if (this.digits.length === 0) return "0";
-    return this.digits
-      .reverse()
-      .map((digit, index) => digit + "e" + index * 9)
-      .join(" + ");
+    if (scientific) {
+      const mostSignificant = this.digits[this.digits.length - 1];
+      const magnitude = Math.floor(Math.log10(mostSignificant));
+      const divisor = Math.pow(10, Math.floor(magnitude));
+      const firstDigit = Math.floor(mostSignificant / divisor);
+      const trailingDigits = mostSignificant % divisor;
+      const roundedTrailing = Math.round(
+        trailingDigits / Math.pow(10, magnitude - 3),
+      );
+      const exponent = (this.digits.length - 1) * 9;
+      return `${firstDigit}.${roundedTrailing}e${exponent}`;
+    } else {
+      return this.digits
+        .slice()
+        .reverse()
+        .map((digit, index) => digit.toString().padStart(9, "0"))
+        .join("");
+    }
   }
 
   fromString(str: string): void {
@@ -65,6 +79,10 @@ class ScalingNumber {
       (sum, digit, index) => sum + digit * Math.pow(10, index * 9),
       0,
     );
+  }
+
+  getDigits(): number[] {
+    return [...this.digits];
   }
 }
 

@@ -10,7 +10,12 @@ function ScalingNumberDisplay({ scalingNumber, label }: Props): JSX.Element {
   return (
     <div className="scaling-number-display">
       {label && <label>{label}</label>}
-      <div>{scalingNumber.getValue()}</div>
+      <div>
+        <strong>Value:</strong> {scalingNumber.toString(true)}
+      </div>
+      <div>
+        <strong>Raw Array:</strong> [{scalingNumber.getDigits().join(", ")}]
+      </div>
     </div>
   );
 }
