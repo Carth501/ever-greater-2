@@ -16,9 +16,7 @@ describe("ScalingNumber.fromString()", () => {
   test("parses a string with more than 9 digits", () => {
     const num = new ScalingNumber();
     num.fromString("123456789012345678");
-    // First group: 012345678 (9 digits from right) = 12345678
-    // Second group: 123 (remaining) = 123 * 10^9
-    expect(num.getValue()).toBe(123000000000 + 12345678);
+    expect(num.getValue()).toBe(123456789012345678);
   });
 
   test("parses a single digit string", () => {
