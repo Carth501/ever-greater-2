@@ -6,6 +6,7 @@ function ScalingNumberDemo(): JSX.Element {
   const [scalingNumber, setScalingNumber] = useState(new ScalingNumber(0));
   const [inputValue, setInputValue] = useState("");
   const [error, setError] = useState("");
+  const [scientific, setScientific] = useState(true);
 
   const handleAdd = () => {
     try {
@@ -56,12 +57,18 @@ function ScalingNumberDemo(): JSX.Element {
     }
   };
 
+  const handleScientificToggle = (setting: boolean) => {
+    setScientific(setting);
+  };
+
   return (
     <div className="scaling-number-demo">
       <h2>ScalingNumber Demo (fromString)</h2>
       <ScalingNumberDisplay
         scalingNumber={scalingNumber}
         label="Current Value:"
+        scientific={scientific}
+        handleScientificToggle={() => handleScientificToggle(!scientific)}
       />
 
       <div className="demo-controls">
