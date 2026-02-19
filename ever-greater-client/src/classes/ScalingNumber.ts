@@ -2,8 +2,18 @@ class ScalingNumber {
   private digits: number[] = [];
 
   constructor(value: number = 0) {
+    if (!Number.isFinite(value)) {
+      throw new Error("Value must be a finite number");
+    }
+    if (value < 0 || !Number.isInteger(value)) {
+      throw new Error("Value must be a non-negative integer");
+    }
     if (value > 0) {
+      if (Math.log10(value) >= 9) {
+        this.fromString(value.toString());
+      } else {
       this.digits = [value];
+      }
     }
   }
 
