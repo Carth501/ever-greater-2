@@ -66,4 +66,21 @@ describe("ScalingNumber.fromString()", () => {
     num.fromString("0");
     expect(num.getValue()).toBe(0);
   });
+
+  test("constructs from Number.MAX_VALUE in constructor", () => {
+    const num = new ScalingNumber(Number.MAX_VALUE);
+    expect(num.getValue()).toBe(Number.MAX_VALUE);
+  });
+});
+
+describe("ScalingNumber.add()", () => {
+  test("adds Number.MAX_VALUE to a ScalingNumber", () => {
+    const num1 = new ScalingNumber(Number.MAX_VALUE);
+    const num2 = new ScalingNumber(Number.MAX_VALUE);
+    num1.add(num2);
+    console.log(num1.toString());
+    expect(num1.toString()).toBe(
+      "179769313486231570814527423731704356798070567525844996598917476803157260780028538760589558632766878171540458953514382464234321326889464182768467546703537516986049910576551282076245490090389328944075868508455133942304583236903222948165808559332123348274797826204144723168738177180919299881250404026184124858368",
+    );
+  });
 });
