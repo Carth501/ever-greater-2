@@ -63,10 +63,8 @@ function ScalingNumberDemo(): JSX.Element {
 
   return (
     <div className="scaling-number-demo">
-      <h2>ScalingNumber Demo (fromString)</h2>
       <ScalingNumberDisplay
         scalingNumber={scalingNumber}
-        label="Current Value:"
         scientific={scientific}
         handleScientificToggle={() => handleScientificToggle(!scientific)}
       />
