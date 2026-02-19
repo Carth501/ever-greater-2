@@ -35,6 +35,9 @@ class ScalingNumber {
   }
 
   subtract(other: ScalingNumber): ScalingNumber {
+    if (other.isGreaterThan(this)) {
+      throw new Error("Cannot subtract a larger number from a smaller number");
+    }
     const result = new ScalingNumber();
     const maxLength = Math.max(this.digits.length, other.digits.length);
 
@@ -45,6 +48,30 @@ class ScalingNumber {
     }
 
     return result;
+  }
+
+  isGreaterThan(other: ScalingNumber): boolean {
+    const thisIndex = this.getMostSignificantIndex();
+    const otherIndex = other.getMostSignificantIndex();
+
+    if (thisIndex !== otherIndex) {
+      return thisIndex > otherIndex;
+    }
+    for (let i = thisIndex; i >= 0; i--) {
+      if (this.digits[i] !== other.digits[i]) {
+        return this.digits[i] > other.digits[i];
+      }
+    }
+    return false;
+  }
+
+  private getMostSignificantIndex(): number {
+    for (let i = this.digits.length - 1; i >= 0; i--) {
+      if (this.digits[i] !== 0) {
+        return i;
+      }
+    }
+    return 0;
   }
 
   increment(): void {
