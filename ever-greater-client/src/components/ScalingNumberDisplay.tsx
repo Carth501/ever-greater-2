@@ -29,6 +29,7 @@ function ScalingNumberDisplay({
       </div>
       <div>
         <strong>Raw Array:</strong> [{scalingNumber.getDigits().join(", ")}]
+        {/* For debugging purposes. Note: This does not include leading zeros */}
       </div>
     </div>
   );

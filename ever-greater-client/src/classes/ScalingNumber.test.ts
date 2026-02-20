@@ -66,6 +66,12 @@ describe("ScalingNumber.fromString()", () => {
     num.fromString("0");
     expect(num.getValue()).toBe(0);
   });
+
+  test("gets the power of 10 right in scientific notation", () => {
+    const num = new ScalingNumber();
+    num.fromString("123444444444444444");
+    expect(num.toString(true)).toBe("1.234e17");
+  });
 });
 
 describe("ScalingNumber constructor", () => {
@@ -92,7 +98,6 @@ describe("ScalingNumber.add()", () => {
     const num1 = new ScalingNumber(Number.MAX_VALUE);
     const num2 = new ScalingNumber(Number.MAX_VALUE);
     const result = num1.add(num2);
-    console.log(result.toString());
     expect(result.toString()).toBe(
       "35815386269724632678401827966976542564352138129305688596172876472524818222714882718873600150292481587189760167705088086289100816913367046181806080188569601343024128135070208096492134415958712328200560641850443776707112960145506611266936012817034455041903082496278514688196391628812366069767265382404026787841510115328249716736",
     );
@@ -115,5 +120,12 @@ describe("ScalingNumber.subtract()", () => {
     expect(() => num1.subtract(num2)).toThrow(
       "Cannot subtract a larger number from a smaller number",
     );
+  });
+
+  test("Subtract a large number and check there are no negative digits", () => {
+    const num1 = new ScalingNumber(8159020270712095092489);
+    const num2 = new ScalingNumber(8158020270712095092480);
+    const result = num1.subtract(num2);
+    expect(result.toString()).toBe("1");
   });
 });

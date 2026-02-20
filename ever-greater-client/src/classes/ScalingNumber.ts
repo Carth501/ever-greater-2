@@ -85,7 +85,8 @@ class ScalingNumber {
   toString(scientific: boolean = false): string {
     if (this.digits.length === 0) return "0";
     if (scientific) {
-      const mostSignificant = this.digits[this.digits.length - 1];
+      const mostSignificantIndex = this.getMostSignificantIndex();
+      const mostSignificant = this.digits[mostSignificantIndex];
       const magnitude = Math.floor(Math.log10(mostSignificant));
       const divisor = Math.pow(10, Math.floor(magnitude));
       const firstDigit = Math.floor(mostSignificant / divisor);
@@ -93,7 +94,8 @@ class ScalingNumber {
       const roundedTrailing = Math.round(
         trailingDigits / Math.pow(10, magnitude - 3),
       );
-      return `${firstDigit}.${roundedTrailing}e${magnitude}`;
+      const power = mostSignificantIndex * 9 + magnitude;
+      return `${firstDigit}.${roundedTrailing}e${power}`;
     } else {
       const result = this.digits
         .slice()
