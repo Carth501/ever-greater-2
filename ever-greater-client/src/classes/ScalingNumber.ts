@@ -93,8 +93,7 @@ class ScalingNumber {
       const roundedTrailing = Math.round(
         trailingDigits / Math.pow(10, magnitude - 3),
       );
-      const exponent = (this.digits.length - 1) * 9;
-      return `${firstDigit}.${roundedTrailing}e${exponent}`;
+      return `${firstDigit}.${roundedTrailing}e${magnitude}`;
     } else {
       const result = this.digits
         .slice()

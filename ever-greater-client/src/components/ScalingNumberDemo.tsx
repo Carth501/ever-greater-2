@@ -61,6 +61,11 @@ function ScalingNumberDemo(): JSX.Element {
     setScientific(setting);
   };
 
+  const increment = () => {
+    const result = scalingNumber.add(new ScalingNumber(1));
+    setScalingNumber(result);
+  };
+
   return (
     <div className="scaling-number-demo">
       <ScalingNumberDisplay
@@ -83,6 +88,9 @@ function ScalingNumberDemo(): JSX.Element {
         </button>
         <button onClick={handleSubtract} className="demo-button">
           Subtract
+        </button>
+        <button onClick={() => increment()} className="demo-button">
+          Increment
         </button>
       </div>
 

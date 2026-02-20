@@ -14,9 +14,9 @@ function ScalingNumberDisplay({
 }: Props): JSX.Element {
   return (
     <div className="scaling-number-display">
-      <div>
+      <h1>
         <strong>Ticket Pool:</strong> {scalingNumber.toString(scientific)}
-      </div>
+      </h1>
       <div>
         <input
           type="checkbox"
