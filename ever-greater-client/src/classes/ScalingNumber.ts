@@ -116,6 +116,16 @@ class ScalingNumber {
     }
   }
 
+  toFormattedString(): string {
+    if (this.digits.length === 0) return "0";
+    const indexCount = this.getMostSignificantIndex();
+    if (indexCount === 1) {
+      return this.toString(false);
+    } else {
+      return this.toString(true);
+    }
+  }
+
   fromString(str: string): void {
     if (!/^[0-9]+$/.test(str)) {
       throw new Error(

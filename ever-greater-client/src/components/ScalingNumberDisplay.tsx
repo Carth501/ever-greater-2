@@ -18,7 +18,10 @@ function ScalingNumberDisplay({
   return (
     <div className="box scaling-number-display">
       <h1>
-        <strong>Ticket Pool:</strong> {scalingNumber.toString(scientific)}
+        <strong>Ticket Pool:</strong>{" "}
+        {scientific
+          ? scalingNumber.toString(true)
+          : scalingNumber.toFormattedString()}
       </h1>
       <div>
         <input
@@ -28,7 +31,7 @@ function ScalingNumberDisplay({
           checked={scientific}
           onChange={handleScientificToggle}
         />
-        <label htmlFor="scientific">Scientific Notation</label>
+        <label htmlFor="scientific">Force Scientific Notation</label>
       </div>
       {debugMode && (
         <div>
