@@ -5,12 +5,14 @@ interface Props {
   scalingNumber: ScalingNumber;
   scientific?: boolean;
   handleScientificToggle?: () => void;
+  debugMode?: boolean;
 }
 
 function ScalingNumberDisplay({
   scalingNumber,
   scientific = true,
   handleScientificToggle,
+  debugMode = false,
 }: Props): JSX.Element {
   return (
     <div className="scaling-number-display">
@@ -27,10 +29,12 @@ function ScalingNumberDisplay({
         />
         <label htmlFor="scientific">Scientific Notation</label>
       </div>
-      <div>
-        <strong>Raw Array:</strong> [{scalingNumber.getDigits().join(", ")}]
-        {/* For debugging purposes. Note: This does not include leading zeros */}
-      </div>
+      {debugMode && (
+        <div>
+          <strong>Raw Array:</strong> [{scalingNumber.getDigits().join(", ")}]
+          {/* For debugging purposes. Note: This does not include leading zeros */}
+        </div>
+      )}
     </div>
   );
 }

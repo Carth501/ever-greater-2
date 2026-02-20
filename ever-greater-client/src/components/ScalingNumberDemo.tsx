@@ -7,6 +7,7 @@ function ScalingNumberDemo(): JSX.Element {
   const [inputValue, setInputValue] = useState("");
   const [error, setError] = useState("");
   const [scientific, setScientific] = useState(true);
+  const [debugMode, setDebugMode] = useState(false);
 
   const handleAdd = () => {
     try {
@@ -68,30 +69,47 @@ function ScalingNumberDemo(): JSX.Element {
 
   return (
     <div className="scaling-number-demo">
+      <div className="debug-mode-toggle">
+        <label>
+          <input
+            type="checkbox"
+            checked={debugMode}
+            onChange={(e) => setDebugMode(e.target.checked)}
+          />
+          Debug Mode
+        </label>
+      </div>
+
       <ScalingNumberDisplay
         scalingNumber={scalingNumber}
         scientific={scientific}
         handleScientificToggle={() => handleScientificToggle(!scientific)}
+        debugMode={debugMode}
       />
 
       <div className="demo-controls">
-        <input
-          type="text"
-          value={inputValue}
-          onChange={handleInputChange}
-          onKeyPress={handleKeyPress}
-          placeholder="Enter a number"
-          className="demo-input"
-        />
-        <button onClick={handleAdd} className="demo-button">
-          Add
-        </button>
-        <button onClick={handleSubtract} className="demo-button">
-          Subtract
-        </button>
         <button onClick={() => increment()} className="demo-button">
           Increment
         </button>
+
+        {debugMode && (
+          <>
+            <input
+              type="text"
+              value={inputValue}
+              onChange={handleInputChange}
+              onKeyPress={handleKeyPress}
+              placeholder="Enter a number"
+              className="demo-input"
+            />
+            <button onClick={handleAdd} className="demo-button">
+              Add
+            </button>
+            <button onClick={handleSubtract} className="demo-button">
+              Subtract
+            </button>
+          </>
+        )}
       </div>
 
       {error && <p className="error-message">{error}</p>}
