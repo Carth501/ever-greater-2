@@ -97,15 +97,31 @@ class ScalingNumber {
     if (scientific) {
       const mostSignificantIndex = this.getMostSignificantIndex();
       const mostSignificant = this.digits[mostSignificantIndex];
-      const magnitude = Math.floor(Math.log10(mostSignificant));
-      const divisor = Math.pow(10, Math.floor(magnitude));
-      const firstDigit = Math.floor(mostSignificant / divisor);
-      const trailingDigits = mostSignificant % divisor;
-      const roundedTrailing = Math.round(
-        trailingDigits / Math.pow(10, magnitude - 3),
-      );
-      const power = mostSignificantIndex * 9 + magnitude;
-      return `${firstDigit}.${roundedTrailing}e${power}`;
+      const mostSignificantStr = mostSignificant.toString();
+      const nextChunk = this.digits[mostSignificantIndex - 1] || 0;
+      const nextChunkStr = nextChunk.toString().padStart(9, "0");
+      const combined = mostSignificantStr + nextChunkStr;
+      const totalDigits = mostSignificantIndex * 9 + mostSignificantStr.length;
+      let exponent = totalDigits - 1;
+
+      const fourDigits = combined.padEnd(4, "0").slice(0, 4);
+      const roundDigit = combined.padEnd(5, "0").charAt(4);
+      let mantissaNumber = parseInt(fourDigits, 10);
+
+      if (roundDigit >= "5") {
+        mantissaNumber += 1;
+      }
+
+      if (mantissaNumber >= 10000) {
+        mantissaNumber = 1000;
+        exponent += 1;
+      }
+
+      const firstDigit = Math.floor(mantissaNumber / 1000);
+      const trailing = mantissaNumber % 1000;
+      const trailingStr = trailing.toString().padStart(3, "0");
+
+      return `${firstDigit}.${trailingStr}e${exponent}`;
     } else {
       const result = this.digits
         .slice()

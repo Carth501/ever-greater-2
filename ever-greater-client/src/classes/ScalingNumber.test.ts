@@ -74,6 +74,20 @@ describe("ScalingNumber.fromString()", () => {
   });
 });
 
+describe("ScalingNumber.toString()", () => {
+  test("returns scientific notation with the correct number of digits", () => {
+    const num = new ScalingNumber();
+    num.fromString("123456789012345678");
+    expect(num.toString(true)).toBe("1.235e17");
+  });
+
+  test("returns scientific notation with values across multiple array elements", () => {
+    const num = new ScalingNumber();
+    num.fromString("1234000000");
+    expect(num.toString(true)).toBe("1.234e9");
+  });
+});
+
 describe("ScalingNumber constructor", () => {
   test("constructs from Number.MAX_VALUE in constructor", () => {
     const num = new ScalingNumber(Number.MAX_VALUE);
