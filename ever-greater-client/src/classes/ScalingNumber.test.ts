@@ -126,6 +126,6 @@ describe("ScalingNumber.subtract()", () => {
     const num1 = new ScalingNumber(8159020270712095092489);
     const num2 = new ScalingNumber(8158020270712095092480);
     const result = num1.subtract(num2);
-    expect(result.toString()).toBe("1");
+    expect(result.toString()).toBe("999999999999737856");
   });
 });

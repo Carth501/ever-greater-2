@@ -40,11 +40,21 @@ class ScalingNumber {
     }
     const result = new ScalingNumber();
     const maxLength = Math.max(this.digits.length, other.digits.length);
+    let borrow = 0;
 
     for (let i = 0; i < maxLength; i++) {
       const a = this.digits[i] || 0;
       const b = other.digits[i] || 0;
-      result.digits[i] = a - b;
+      let diff = a - b - borrow;
+
+      if (diff < 0) {
+        diff += 1e9;
+        borrow = 1;
+      } else {
+        borrow = 0;
+      }
+
+      result.digits[i] = diff;
     }
 
     return result;
