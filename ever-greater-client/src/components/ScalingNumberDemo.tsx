@@ -69,6 +69,12 @@ function ScalingNumberDemo(): JSX.Element {
 
   return (
     <div className="scaling-number-demo">
+      <ScalingNumberDisplay
+        scalingNumber={scalingNumber}
+        scientific={scientific}
+        handleScientificToggle={() => handleScientificToggle(!scientific)}
+        debugMode={debugMode}
+      />
       <div className="debug-mode-toggle">
         <label>
           <input
@@ -79,13 +85,6 @@ function ScalingNumberDemo(): JSX.Element {
           Debug Mode
         </label>
       </div>
-
-      <ScalingNumberDisplay
-        scalingNumber={scalingNumber}
-        scientific={scientific}
-        handleScientificToggle={() => handleScientificToggle(!scientific)}
-        debugMode={debugMode}
-      />
 
       <div className="demo-controls">
         <button onClick={() => increment()} className="demo-button">

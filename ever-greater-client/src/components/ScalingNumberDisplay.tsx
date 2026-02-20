@@ -1,5 +1,6 @@
 import { JSX } from "react";
 import ScalingNumber from "../classes/ScalingNumber";
+import "./ScalingNumberDisplay.css";
 
 interface Props {
   scalingNumber: ScalingNumber;
@@ -15,7 +16,7 @@ function ScalingNumberDisplay({
   debugMode = false,
 }: Props): JSX.Element {
   return (
-    <div className="scaling-number-display">
+    <div className="box scaling-number-display">
       <h1>
         <strong>Ticket Pool:</strong> {scalingNumber.toString(scientific)}
       </h1>
