@@ -97,29 +97,33 @@ class ScalingNumber {
     if (scientific) {
       const mostSignificantIndex = this.getMostSignificantIndex();
       const mostSignificant = this.digits[mostSignificantIndex];
-      const mostSignificantStr = mostSignificant.toString();
-      const nextChunk = this.digits[mostSignificantIndex - 1] || 0;
-      const nextChunkStr = nextChunk.toString().padStart(9, "0");
-      const combined = mostSignificantStr + nextChunkStr;
-      const totalDigits = mostSignificantIndex * 9 + mostSignificantStr.length;
-      let exponent = totalDigits - 1;
-
-      const fourDigits = combined.padEnd(4, "0").slice(0, 4);
-      const roundDigit = combined.padEnd(5, "0").charAt(4);
-      let mantissaNumber = parseInt(fourDigits, 10);
-
-      if (roundDigit >= "5") {
-        mantissaNumber += 1;
+      let topDigits = mostSignificant;
+      const digitCount = Math.floor(Math.log10(mostSignificant));
+      // 4, because we want 3 after the decimal, with one to be rounded away, and the first is not counted.
+      if (digitCount < 4) {
+        const missingDigitCount = 4 - digitCount;
+        const nextDigits = this.digits[mostSignificantIndex - 1] || 0;
+        topDigits *= Math.pow(10, missingDigitCount);
+        topDigits += Math.floor(
+          nextDigits / Math.pow(10, 9 - missingDigitCount),
+        );
+      } else if (digitCount > 4) {
+        const excessDigitCount = digitCount - 4;
+        topDigits = Math.floor(topDigits / Math.pow(10, excessDigitCount));
       }
 
-      if (mantissaNumber >= 10000) {
-        mantissaNumber = 1000;
-        exponent += 1;
+      // If the top digits would round over a power of 10, round down
+      // instead of up to avoid displaying something like 1.000e6.
+      // Many thresholds are at powers of 10, so this makes the display more intuitive.
+      if (topDigits < 99999) {
+        topDigits = Math.round(topDigits / 10);
+      } else {
+        topDigits = Math.floor(topDigits / 10);
       }
-
-      const firstDigit = Math.floor(mantissaNumber / 1000);
-      const trailing = mantissaNumber % 1000;
-      const trailingStr = trailing.toString().padStart(3, "0");
+      const firstDigit = Math.floor(topDigits / 1000);
+      const trailingDigits = topDigits % 1000;
+      const trailingStr = trailingDigits.toString().padStart(3, "0");
+      const exponent = mostSignificantIndex * 9 + digitCount;
 
       return `${firstDigit}.${trailingStr}e${exponent}`;
     } else {

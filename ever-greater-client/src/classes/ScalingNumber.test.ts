@@ -86,6 +86,19 @@ describe("ScalingNumber.toString()", () => {
     num.fromString("1234000000");
     expect(num.toString(true)).toBe("1.234e9");
   });
+
+  test("rounding to nearest integer up to the highest digit", () => {
+    const num = new ScalingNumber();
+    num.fromString("199999999");
+    expect(num.toString(true)).toBe("2.000e8");
+  });
+
+  // This might be worth a setting to toggle this behavior
+  test("check the rounding does not cause the exponent to increase incorrectly", () => {
+    const num = new ScalingNumber();
+    num.fromString("999999999");
+    expect(num.toString(true)).toBe("9.999e8");
+  });
 });
 
 describe("ScalingNumber constructor", () => {
