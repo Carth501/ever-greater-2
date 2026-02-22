@@ -63,7 +63,7 @@ function ScalingNumberDemo(): JSX.Element {
 
       <div className="demo-controls">
         <button onClick={() => increment()} className="demo-button">
-          Increment
+          Print a ticket
         </button>
       </div>
 
