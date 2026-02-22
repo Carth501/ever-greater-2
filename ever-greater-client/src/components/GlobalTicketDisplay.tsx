@@ -1,27 +1,26 @@
 import { JSX } from "react";
-import ScalingNumber from "../classes/ScalingNumber";
-import "./ScalingNumberDisplay.css";
+import "./GlobalTicketDisplay.css";
 
 interface Props {
-  scalingNumber: ScalingNumber;
+  scalingNumber: number;
   scientific?: boolean;
   handleScientificToggle?: () => void;
   debugMode?: boolean;
 }
 
-function ScalingNumberDisplay({
+function GlobalTicketDisplay({
   scalingNumber,
   scientific = true,
   handleScientificToggle,
   debugMode = false,
 }: Props): JSX.Element {
   return (
-    <div className="box scaling-number-display">
+    <div className="box global-ticket-display">
       <h1>
         <strong>Ticket Pool:</strong>{" "}
         {scientific
-          ? scalingNumber.toString(true)
-          : scalingNumber.toFormattedString()}
+          ? scalingNumber.toExponential(2)
+          : scalingNumber.toLocaleString()}
       </h1>
       <div>
         <input
@@ -35,7 +34,8 @@ function ScalingNumberDisplay({
       </div>
       {debugMode && (
         <div>
-          <strong>Raw Array:</strong> [{scalingNumber.getDigits().join(", ")}]
+          <strong>Raw Array:</strong> [
+          {scalingNumber.toString().split("").join(", ")}]
           {/* For debugging purposes. Note: This does not include leading zeros */}
         </div>
       )}
@@ -43,4 +43,4 @@ function ScalingNumberDisplay({
   );
 }
 
-export default ScalingNumberDisplay;
+export default GlobalTicketDisplay;

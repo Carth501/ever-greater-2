@@ -1,9 +1,8 @@
 import { JSX, useState } from "react";
-import ScalingNumber from "../classes/ScalingNumber";
-import ScalingNumberDisplay from "./ScalingNumberDisplay";
+import GlobalTicketDisplay from "./GlobalTicketDisplay";
 
 function ScalingNumberDemo(): JSX.Element {
-  const [scalingNumber, setScalingNumber] = useState(new ScalingNumber(0));
+  const [scalingNumber, setScalingNumber] = useState(0);
   const [inputValue, setInputValue] = useState("");
   const [error, setError] = useState("");
   const [scientific, setScientific] = useState(true);
@@ -16,9 +15,8 @@ function ScalingNumberDemo(): JSX.Element {
         setError("Please enter a number");
         return;
       }
-      const numToAdd = new ScalingNumber();
-      numToAdd.fromString(inputValue);
-      const result = scalingNumber.add(numToAdd);
+      const numToAdd = Math.floor(parseFloat(inputValue));
+      const result = scalingNumber + numToAdd;
       setScalingNumber(result);
       setInputValue("");
     } catch (err) {
@@ -33,9 +31,8 @@ function ScalingNumberDemo(): JSX.Element {
         setError("Please enter a number");
         return;
       }
-      const numToSubtract = new ScalingNumber();
-      numToSubtract.fromString(inputValue);
-      const result = scalingNumber.subtract(numToSubtract);
+      const numToSubtract = Math.floor(parseFloat(inputValue));
+      const result = scalingNumber - numToSubtract;
       setScalingNumber(result);
       setInputValue("");
     } catch (err) {
@@ -63,18 +60,19 @@ function ScalingNumberDemo(): JSX.Element {
   };
 
   const increment = () => {
-    const result = scalingNumber.add(new ScalingNumber(1));
+    const result = scalingNumber + 1;
     setScalingNumber(result);
   };
 
   return (
     <div className="scaling-number-demo">
-      <ScalingNumberDisplay
-        scalingNumber={scalingNumber}
-        scientific={scientific}
-        handleScientificToggle={() => handleScientificToggle(!scientific)}
-        debugMode={debugMode}
-      />
+      <div className="scaling-number-display">
+        <GlobalTicketDisplay
+          scalingNumber={scalingNumber}
+          scientific={scientific}
+          handleScientificToggle={() => handleScientificToggle(!scientific)}
+        ></GlobalTicketDisplay>
+      </div>
       <div className="debug-mode-toggle">
         <label>
           <input
