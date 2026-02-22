@@ -1,0 +1,12 @@
+{
+	"name": "ever-greater",
+	"private": true,
+	"scripts": {
+		"client": "npm --prefix ever-greater-client start",
+		"server": "npm --prefix ever-greater-server start",
+		"dev": "concurrently \"npm --prefix ever-greater-server start\" \"npm --prefix ever-greater-client start\""
+	},
+	"devDependencies": {
+		"concurrently": "^8.2.2"
+	}
+}

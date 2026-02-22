@@ -1,4 +1,9 @@
-import { JSX, useState } from "react";
+import { JSX, useEffect, useState } from "react";
+import {
+  connectGlobalCountSocket,
+  fetchGlobalCount,
+  incrementGlobalCount,
+} from "../api/globalTicket";
 import GlobalTicketDisplay from "./GlobalTicketDisplay";
 
 function ScalingNumberDemo(): JSX.Element {
@@ -10,15 +15,7 @@ function ScalingNumberDemo(): JSX.Element {
 
   const handleAdd = () => {
     try {
-      setError("");
-      if (!inputValue.trim()) {
-        setError("Please enter a number");
-        return;
-      }
-      const numToAdd = Math.floor(parseFloat(inputValue));
-      const result = scalingNumber + numToAdd;
-      setScalingNumber(result);
-      setInputValue("");
+      setError("Debug add is disabled in server mode.");
     } catch (err) {
       setError((err as Error).message);
     }
@@ -26,15 +23,7 @@ function ScalingNumberDemo(): JSX.Element {
 
   const handleSubtract = () => {
     try {
-      setError("");
-      if (!inputValue.trim()) {
-        setError("Please enter a number");
-        return;
-      }
-      const numToSubtract = Math.floor(parseFloat(inputValue));
-      const result = scalingNumber - numToSubtract;
-      setScalingNumber(result);
-      setInputValue("");
+      setError("Debug subtract is disabled in server mode.");
     } catch (err) {
       setError((err as Error).message);
     }
@@ -59,10 +48,47 @@ function ScalingNumberDemo(): JSX.Element {
     setScientific(setting);
   };
 
-  const increment = () => {
-    const result = scalingNumber + 1;
-    setScalingNumber(result);
+  const increment = async () => {
+    try {
+      setError("");
+      const count = await incrementGlobalCount();
+      setScalingNumber(count);
+    } catch (err) {
+      setError((err as Error).message || "Failed to increment");
+    }
   };
+
+  useEffect(() => {
+    let isMounted = true;
+
+    fetchGlobalCount()
+      .then((count) => {
+        if (isMounted) {
+          setScalingNumber(count);
+        }
+      })
+      .catch((err) => {
+        if (isMounted) {
+          setError((err as Error).message || "Failed to fetch count");
+        }
+      });
+
+    const disconnect = connectGlobalCountSocket(
+      (count) => {
+        setScalingNumber(count);
+      },
+      (status) => {
+        if (status === "error") {
+          setError("WebSocket connection error");
+        }
+      },
+    );
+
+    return () => {
+      isMounted = false;
+      disconnect();
+    };
+  }, []);
 
   return (
     <div className="scaling-number-demo">
