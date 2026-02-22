@@ -5,6 +5,7 @@ import {
   incrementGlobalCount,
 } from "../api/globalTicket";
 import GlobalTicketDisplay from "./GlobalTicketDisplay";
+import "./ScalingNumberDemo.css";
 
 function ScalingNumberDemo(): JSX.Element {
   const [scalingNumber, setScalingNumber] = useState(0);
