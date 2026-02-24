@@ -1,4 +1,5 @@
 import { JSX, useEffect, useState } from "react";
+import type { User } from "../api/auth";
 import {
   connectGlobalCountSocket,
   fetchGlobalCount,
@@ -7,7 +8,15 @@ import {
 import GlobalTicketDisplay from "./GlobalTicketDisplay";
 import "./ScalingNumberDemo.css";
 
-function ScalingNumberDemo(): JSX.Element {
+type ScalingNumberDemoProps = {
+  onLogout: () => void;
+  currentUser: User;
+};
+
+function ScalingNumberDemo({
+  onLogout,
+  currentUser,
+}: ScalingNumberDemoProps): JSX.Element {
   const [scalingNumber, setScalingNumber] = useState(0);
   const [error, setError] = useState("");
 
@@ -55,6 +64,18 @@ function ScalingNumberDemo(): JSX.Element {
 
   return (
     <div className="scaling-number-demo">
+      <div className="user-header">
+        <div className="user-info">
+          <span className="user-email">{currentUser.email}</span>
+          <span className="user-contributed">
+            Tickets contributed: {currentUser.tickets_contributed}
+          </span>
+        </div>
+        <button onClick={onLogout} className="logout-button">
+          Logout
+        </button>
+      </div>
+
       <div className="scaling-number-display">
         <GlobalTicketDisplay
           scalingNumber={scalingNumber}

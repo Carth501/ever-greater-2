@@ -1,0 +1,107 @@
+const DEFAULT_API_BASE = "http://localhost:4000";
+const apiBase = process.env.REACT_APP_API_BASE || DEFAULT_API_BASE;
+
+export type User = {
+  id: number;
+  email: string;
+  tickets_contributed: number;
+};
+
+type RegisterResponse = {
+  user: User;
+};
+
+type LoginResponse = {
+  user: User;
+};
+
+type MeResponse = {
+  user: User;
+};
+
+/**
+ * Register a new user
+ * @param email User email
+ * @param password User password
+ * @returns User object
+ */
+export async function register(email: string, password: string): Promise<User> {
+  const response = await fetch(`${apiBase}/api/auth/register`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "include",
+    body: JSON.stringify({ email, password }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to register");
+  }
+
+  const data = (await response.json()) as RegisterResponse;
+  return data.user;
+}
+
+/**
+ * Login user
+ * @param email User email
+ * @param password User password
+ * @returns User object
+ */
+export async function login(email: string, password: string): Promise<User> {
+  const response = await fetch(`${apiBase}/api/auth/login`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "include",
+    body: JSON.stringify({ email, password }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to login");
+  }
+
+  const data = (await response.json()) as LoginResponse;
+  return data.user;
+}
+
+/**
+ * Get current authenticated user
+ * @returns User object or null if not authenticated
+ */
+export async function getCurrentUser(): Promise<User | null> {
+  try {
+    const response = await fetch(`${apiBase}/api/auth/me`, {
+      method: "GET",
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = (await response.json()) as MeResponse;
+    return data.user;
+  } catch (error) {
+    console.error("Error fetching current user:", error);
+    return null;
+  }
+}
+
+/**
+ * Logout user
+ */
+export async function logout(): Promise<void> {
+  const response = await fetch(`${apiBase}/api/auth/logout`, {
+    method: "POST",
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to logout");
+  }
+}

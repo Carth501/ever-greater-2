@@ -3,13 +3,47 @@ const http = require("http");
 const express = require("express");
 const cors = require("cors");
 const { WebSocketServer, WebSocket } = require("ws");
-const { initializeDatabase, getGlobalCount, incrementGlobalCount, closePool } = require('./db');
+const session = require("express-session");
+const pgSession = require("connect-pg-simple")(session);
+const bcrypt = require("bcryptjs");
+const { 
+  initializeDatabase, 
+  getGlobalCount, 
+  incrementGlobalCount, 
+  closePool,
+  pool,
+  getUserByEmail,
+  createUser,
+  updateUserTickets,
+  getUserById
+} = require('./db');
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
 const app = express();
 
-app.use(cors());
+app.use(cors({
+  origin: process.env.CLIENT_URL || "http://localhost:3000",
+  credentials: true
+}));
 app.use(express.json());
+
+// Session configuration
+app.use(
+  session({
+    store: new pgSession({
+      pool: pool,
+      tableName: 'session'
+    }),
+    secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
+      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+    }
+  })
+);
 
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server, path: "/ws" });
@@ -23,6 +57,136 @@ function broadcastCount(count) {
   });
 }
 
+// ============ AUTH ENDPOINTS ============
+
+/**
+ * Register a new user
+ * POST /api/auth/register
+ * Body: { email: string, password: string }
+ */
+app.post("/api/auth/register", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    // Check if user already exists
+    const existingUser = await getUserByEmail(email);
+    if (existingUser) {
+      return res.status(409).json({ error: 'Email already in use' });
+    }
+
+    // Hash password
+    const saltRounds = 10;
+    const passwordHash = await bcrypt.hash(password, saltRounds);
+
+    // Create user
+    const user = await createUser(email, passwordHash);
+
+    // Set session
+    req.session.userId = user.id;
+
+    res.status(201).json({
+      user: {
+        id: user.id,
+        email: user.email,
+        tickets_contributed: user.tickets_contributed
+      }
+    });
+  } catch (error) {
+    console.error('Error registering user:', error);
+    res.status(500).json({ error: 'Failed to register user' });
+  }
+});
+
+/**
+ * Login user
+ * POST /api/auth/login
+ * Body: { email: string, password: string }
+ */
+app.post("/api/auth/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    // Find user
+    const user = await getUserByEmail(email);
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    // Compare password
+    const isValidPassword = await bcrypt.compare(password, user.password_hash);
+    if (!isValidPassword) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    // Set session
+    req.session.userId = user.id;
+
+    res.json({
+      user: {
+        id: user.id,
+        email: user.email,
+        tickets_contributed: user.tickets_contributed
+      }
+    });
+  } catch (error) {
+    console.error('Error logging in user:', error);
+    res.status(500).json({ error: 'Failed to login' });
+  }
+});
+
+/**
+ * Get current user
+ * GET /api/auth/me
+ * Requires active session
+ */
+app.get("/api/auth/me", async (req, res) => {
+  try {
+    if (!req.session.userId) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    const user = await getUserById(req.session.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json({
+      user: {
+        id: user.id,
+        email: user.email,
+        tickets_contributed: user.tickets_contributed
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching current user:', error);
+    res.status(500).json({ error: 'Failed to fetch user' });
+  }
+});
+
+/**
+ * Logout user
+ * POST /api/auth/logout
+ */
+app.post("/api/auth/logout", (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      console.error('Error destroying session:', err);
+      return res.status(500).json({ error: 'Failed to logout' });
+    }
+    res.json({ message: 'Logged out successfully' });
+  });
+});
+
+// ============ GLOBAL COUNT ENDPOINTS ============
+
 app.get("/api/count", async (req, res) => {
   try {
     const count = await getGlobalCount();
@@ -35,7 +199,17 @@ app.get("/api/count", async (req, res) => {
 
 app.post("/api/increment", async (req, res) => {
   try {
+    // Check if user is authenticated
+    if (!req.session.userId) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    // Increment global count
     const newCount = await incrementGlobalCount();
+    
+    // Update user's ticket contribution
+    await updateUserTickets(req.session.userId, 1);
+
     broadcastCount(newCount);
     res.json({ count: newCount });
   } catch (error) {

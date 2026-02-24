@@ -14,19 +14,44 @@ pool.on('error', (err) => {
 
 /**
  * Initialize database schema and default data
- * Creates global_state table if it doesn't exist
+ * Creates global_state and users tables if they don't exist
  * Inserts initial row with count=0 if table is empty
  */
 async function initializeDatabase() {
   const client = await pool.connect();
   try {
-    // Create table if not exists
+    // Create global_state table if not exists
     await client.query(`
       CREATE TABLE IF NOT EXISTS global_state (
         id INTEGER PRIMARY KEY,
         count INTEGER NOT NULL DEFAULT 0,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
+    `);
+
+    // Create users table if not exists
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        tickets_contributed INTEGER NOT NULL DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Create session table for express-session if not exists
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS session (
+        sid VARCHAR NOT NULL COLLATE "default" PRIMARY KEY,
+        sess JSON NOT NULL,
+        expire TIMESTAMP(6) NOT NULL
+      )
+    `);
+
+    // Create index on session expiration for cleanup
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_session_expire ON session (expire)
     `);
 
     // Insert initial row if table is empty
@@ -73,6 +98,60 @@ async function incrementGlobalCount() {
 }
 
 /**
+ * Get user by email
+ * @param {string} email User email
+ * @returns {Promise<object|null>} User object or null if not found
+ */
+async function getUserByEmail(email) {
+  const result = await pool.query(
+    'SELECT id, email, password_hash, tickets_contributed, created_at FROM users WHERE email = $1',
+    [email]
+  );
+  return result.rows[0] || null;
+}
+
+/**
+ * Create a new user
+ * @param {string} email User email
+ * @param {string} passwordHash Hashed password
+ * @returns {Promise<object>} Created user object
+ */
+async function createUser(email, passwordHash) {
+  const result = await pool.query(
+    'INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id, email, tickets_contributed, created_at',
+    [email, passwordHash]
+  );
+  return result.rows[0];
+}
+
+/**
+ * Update user's ticket contribution count
+ * @param {number} userId User ID
+ * @param {number} increment Amount to increment by (positive or negative)
+ * @returns {Promise<number>} Updated tickets_contributed count
+ */
+async function updateUserTickets(userId, increment) {
+  const result = await pool.query(
+    'UPDATE users SET tickets_contributed = tickets_contributed + $1 WHERE id = $2 RETURNING tickets_contributed',
+    [increment, userId]
+  );
+  return result.rows[0].tickets_contributed;
+}
+
+/**
+ * Get user by ID
+ * @param {number} userId User ID
+ * @returns {Promise<object|null>} User object or null if not found
+ */
+async function getUserById(userId) {
+  const result = await pool.query(
+    'SELECT id, email, tickets_contributed, created_at FROM users WHERE id = $1',
+    [userId]
+  );
+  return result.rows[0] || null;
+}
+
+/**
  * Close the database connection pool
  * Should be called during graceful shutdown
  */
@@ -87,4 +166,8 @@ module.exports = {
   getGlobalCount,
   incrementGlobalCount,
   closePool,
+  getUserByEmail,
+  createUser,
+  updateUserTickets,
+  getUserById,
 };
