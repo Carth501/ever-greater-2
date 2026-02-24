@@ -13,6 +13,7 @@ function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [authPage, setAuthPage] = useState<AuthPage>("login");
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [isVisible, setIsVisible] = useState(true);
 
   // Check if user is already logged in on mount
   useEffect(() => {
@@ -29,6 +30,40 @@ function App() {
 
     checkAuth();
   }, []);
+
+  // Track page visibility for polling
+  useEffect(() => {
+    function handleVisibilityChange() {
+      setIsVisible(!document.hidden);
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
+  // Refresh user data when visible (every 15 seconds)
+  useEffect(() => {
+    if (!currentUser || !isVisible) return;
+
+    async function refreshUserData() {
+      try {
+        const user = await getCurrentUser();
+        setCurrentUser(user);
+      } catch (error) {
+        console.error("Error refreshing user data:", error);
+      }
+    }
+
+    // Initial refresh
+    refreshUserData();
+
+    // Set up interval
+    const interval = setInterval(refreshUserData, 2000);
+
+    return () => clearInterval(interval);
+  }, [currentUser, isVisible]);
 
   async function handleLogout() {
     try {
