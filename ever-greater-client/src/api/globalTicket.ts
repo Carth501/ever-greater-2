@@ -27,6 +27,7 @@ export async function incrementGlobalCount(): Promise<number> {
     headers: {
       "Content-Type": "application/json",
     },
+    credentials: "include",
   });
   if (!response.ok) {
     throw new Error("Failed to increment ticket count");
