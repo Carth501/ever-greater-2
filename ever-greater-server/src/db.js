@@ -62,6 +62,17 @@ async function initializeDatabase() {
       ADD COLUMN IF NOT EXISTS printer_supplies INTEGER NOT NULL DEFAULT 100
     `);
 
+    await client.query(`
+      ALTER TABLE users
+      ALTER COLUMN printer_supplies SET DEFAULT 100
+    `);
+
+    await client.query(`
+      UPDATE users
+      SET printer_supplies = 100
+      WHERE printer_supplies IS NULL OR printer_supplies = 0
+    `);
+
     // Insert initial row if table is empty
     const result = await client.query('SELECT COUNT(*) FROM global_state');
     const rowCount = parseInt(result.rows[0].count);
@@ -126,8 +137,8 @@ async function getUserByEmail(email) {
  */
 async function createUser(email, passwordHash) {
   const result = await pool.query(
-    'INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id, email, tickets_contributed, printer_supplies, created_at',
-    [email, passwordHash]
+    'INSERT INTO users (email, password_hash, printer_supplies) VALUES ($1, $2, $3) RETURNING id, email, tickets_contributed, printer_supplies, created_at',
+    [email, passwordHash, 100]
   );
   return result.rows[0];
 }
