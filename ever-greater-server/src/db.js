@@ -56,6 +56,12 @@ async function initializeDatabase() {
       CREATE INDEX IF NOT EXISTS idx_session_expire ON session (expire)
     `);
 
+    // Add printer_supplies column to users table if it doesn't exist
+    await client.query(`
+      ALTER TABLE users 
+      ADD COLUMN IF NOT EXISTS printer_supplies INTEGER NOT NULL DEFAULT 100
+    `);
+
     // Insert initial row if table is empty
     const result = await client.query('SELECT COUNT(*) FROM global_state');
     const rowCount = parseInt(result.rows[0].count);
@@ -106,7 +112,7 @@ async function incrementGlobalCount() {
  */
 async function getUserByEmail(email) {
   const result = await pool.query(
-    'SELECT id, email, password_hash, tickets_contributed, created_at FROM users WHERE email = $1',
+    'SELECT id, email, password_hash, tickets_contributed, printer_supplies, created_at FROM users WHERE email = $1',
     [email]
   );
   return result.rows[0] || null;
@@ -120,7 +126,7 @@ async function getUserByEmail(email) {
  */
 async function createUser(email, passwordHash) {
   const result = await pool.query(
-    'INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id, email, tickets_contributed, created_at',
+    'INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id, email, tickets_contributed, printer_supplies, created_at',
     [email, passwordHash]
   );
   return result.rows[0];
@@ -147,10 +153,43 @@ async function updateUserTickets(userId, increment) {
  */
 async function getUserById(userId) {
   const result = await pool.query(
-    'SELECT id, email, tickets_contributed, created_at FROM users WHERE id = $1',
+    'SELECT id, email, tickets_contributed, printer_supplies, created_at FROM users WHERE id = $1',
     [userId]
   );
   return result.rows[0] || null;
+}
+
+/**
+ * Get user's current printer supplies count
+ * @param {number} userId User ID
+ * @returns {Promise<number>} Current supplies count
+ */
+async function getUserSupplies(userId) {
+  const result = await pool.query(
+    'SELECT printer_supplies FROM users WHERE id = $1',
+    [userId]
+  );
+  if (!result.rows[0]) {
+    throw new Error('User not found');
+  }
+  return result.rows[0].printer_supplies;
+}
+
+/**
+ * Decrement user's printer supplies atomically
+ * @param {number} userId User ID
+ * @returns {Promise<number>} New supplies count after decrement
+ * @throws {Error} If user has no supplies remaining
+ */
+async function decrementUserSupplies(userId) {
+  const result = await pool.query(
+    'UPDATE users SET printer_supplies = printer_supplies - 1 WHERE id = $1 AND printer_supplies > 0 RETURNING printer_supplies',
+    [userId]
+  );
+  if (result.rows.length === 0) {
+    throw new Error('Out of supplies');
+  }
+  return result.rows[0].printer_supplies;
 }
 
 /**
@@ -172,4 +211,6 @@ module.exports = {
   createUser,
   updateUserTickets,
   getUserById,
+  getUserSupplies,
+  decrementUserSupplies,
 };

@@ -88,6 +88,11 @@ const authSlice = createSlice({
     clearError: (state) => {
       state.error = null;
     },
+    updateSupplies: (state, action) => {
+      if (state.user) {
+        state.user.printer_supplies = action.payload;
+      }
+    },
   },
   extraReducers: (builder) => {
     // checkAuthThunk
@@ -157,5 +162,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { clearError } = authSlice.actions;
+export const { clearError, updateSupplies } = authSlice.actions;
 export default authSlice.reducer;

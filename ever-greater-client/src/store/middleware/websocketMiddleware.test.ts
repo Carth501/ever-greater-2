@@ -14,6 +14,7 @@ const mockUser: User = {
   id: 1,
   email: "test@example.com",
   tickets_contributed: 5,
+  printer_supplies: 100,
 };
 
 describe("websocketMiddleware", () => {

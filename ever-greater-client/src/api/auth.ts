@@ -5,6 +5,7 @@ export type User = {
   id: number;
   email: string;
   tickets_contributed: number;
+  printer_supplies: number;
 };
 
 type RegisterResponse = {

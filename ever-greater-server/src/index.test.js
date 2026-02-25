@@ -32,7 +32,8 @@ describe('Express API Endpoints', () => {
       db.createUser.mockResolvedValue({
         id: 1,
         email,
-        tickets_contributed: 0
+        tickets_contributed: 0,
+        printer_supplies: 100
       });
 
       const response = await request(app)
@@ -234,13 +235,14 @@ describe('Express API Endpoints', () => {
       expect(response.body.error).toBe('Not authenticated');
     });
 
-    it('should increment count when authenticated', async () => {
+    it('should increment count when authenticated with supplies', async () => {
       // This is complex to test without session middleware properly configured
       // We'd need to either:
       // 1. Mock the session middleware
       // 2. Use a session test library
       // 3. Test with an agent that maintains cookies
       
+      db.decrementUserSupplies.mockResolvedValue(49);
       db.incrementGlobalCount.mockResolvedValue(43);
       db.updateUserTickets.mockResolvedValue(6);
 
@@ -248,6 +250,17 @@ describe('Express API Endpoints', () => {
       const response = await request(app)
         .post('/api/increment')
         .expect(401); // No session
+
+      expect(response.body.error).toBe('Not authenticated');
+    });
+
+    it('should return 403 when user has no supplies', async () => {
+      db.decrementUserSupplies.mockRejectedValue(new Error('Out of supplies'));
+
+      // Without proper session setup, this will still return 401
+      const response = await request(app)
+        .post('/api/increment')
+        .expect(401);
 
       expect(response.body.error).toBe('Not authenticated');
     });

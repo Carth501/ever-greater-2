@@ -1,5 +1,6 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import * as ticketApi from "../../api/globalTicket";
+import { updateSupplies } from "./authSlice";
 
 export interface TicketState {
   count: number;
@@ -30,10 +31,12 @@ export const fetchCountThunk = createAsyncThunk(
 
 export const incrementCountThunk = createAsyncThunk(
   "ticket/incrementCount",
-  async (_, { rejectWithValue }) => {
+  async (_, { rejectWithValue, dispatch }) => {
     try {
-      const count = await ticketApi.incrementGlobalCount();
-      return count;
+      const result = await ticketApi.incrementGlobalCount();
+      // Update supplies in auth state
+      dispatch(updateSupplies(result.supplies));
+      return result.count;
     } catch (error) {
       return rejectWithValue(
         error instanceof Error ? error.message : "Failed to increment count",

@@ -15,7 +15,8 @@ const {
   getUserByEmail,
   createUser,
   updateUserTickets,
-  getUserById
+  getUserById,
+  decrementUserSupplies
 } = require('./db');
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
@@ -94,7 +95,8 @@ function createApp() {
         user: {
           id: user.id,
           email: user.email,
-          tickets_contributed: user.tickets_contributed
+          tickets_contributed: user.tickets_contributed,
+          printer_supplies: user.printer_supplies
         }
       });
     } catch (error) {
@@ -135,7 +137,8 @@ function createApp() {
         user: {
           id: user.id,
           email: user.email,
-          tickets_contributed: user.tickets_contributed
+          tickets_contributed: user.tickets_contributed,
+          printer_supplies: user.printer_supplies
         }
       });
     } catch (error) {
@@ -164,7 +167,8 @@ function createApp() {
         user: {
           id: user.id,
           email: user.email,
-          tickets_contributed: user.tickets_contributed
+          tickets_contributed: user.tickets_contributed,
+          printer_supplies: user.printer_supplies
         }
       });
     } catch (error) {
@@ -206,6 +210,17 @@ function createApp() {
         return res.status(401).json({ error: 'Not authenticated' });
       }
 
+      // Check and decrement user's printer supplies
+      let newSupplies;
+      try {
+        newSupplies = await decrementUserSupplies(req.session.userId);
+      } catch (error) {
+        if (error.message === 'Out of supplies') {
+          return res.status(403).json({ error: 'Out of supplies' });
+        }
+        throw error; // Re-throw other errors
+      }
+
       // Increment global count
       const newCount = await incrementGlobalCount();
       
@@ -213,7 +228,7 @@ function createApp() {
       await updateUserTickets(req.session.userId, 1);
 
       broadcastCount(newCount);
-      res.json({ count: newCount });
+      res.json({ count: newCount, supplies: newSupplies });
     } catch (error) {
       console.error('Error incrementing count:', error);
       res.status(500).json({ error: 'Failed to increment count' });

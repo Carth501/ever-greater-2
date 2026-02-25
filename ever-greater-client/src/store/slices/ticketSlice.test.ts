@@ -73,13 +73,17 @@ describe("ticketSlice", () => {
 
     it("should increment count successfully", async () => {
       const mockNewCount = 101;
+      const mockNewSupplies = 99;
       const stateWithCount: TicketState = { ...initialState, count: 100 };
       store = configureStore({
         reducer: { ticket: ticketReducer },
         preloadedState: { ticket: stateWithCount },
       });
 
-      mockTicketApi.incrementGlobalCount.mockResolvedValueOnce(mockNewCount);
+      mockTicketApi.incrementGlobalCount.mockResolvedValueOnce({
+        count: mockNewCount,
+        supplies: mockNewSupplies,
+      });
 
       await store.dispatch(incrementCountThunk() as any);
 
@@ -91,6 +95,19 @@ describe("ticketSlice", () => {
 
     it("should handle increment error (not authenticated)", async () => {
       const errorMessage = "Not authenticated";
+      mockTicketApi.incrementGlobalCount.mockRejectedValueOnce(
+        new Error(errorMessage),
+      );
+
+      await store.dispatch(incrementCountThunk() as any);
+
+      const state = (store.getState() as { ticket: TicketState }).ticket;
+      expect(state.isLoading).toBe(false);
+      expect(state.error).toBe(errorMessage);
+    });
+
+    it("should handle increment error (out of supplies)", async () => {
+      const errorMessage = "Out of supplies";
       mockTicketApi.incrementGlobalCount.mockRejectedValueOnce(
         new Error(errorMessage),
       );

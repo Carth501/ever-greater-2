@@ -8,6 +8,7 @@ import authReducer, {
   loginThunk,
   logoutThunk,
   signupThunk,
+  updateSupplies,
 } from "./authSlice";
 
 jest.mock("../../api/auth");
@@ -18,6 +19,7 @@ const mockUser: User = {
   id: 1,
   email: "test@example.com",
   tickets_contributed: 5,
+  printer_supplies: 100,
 };
 
 describe("authSlice", () => {
@@ -39,6 +41,30 @@ describe("authSlice", () => {
 
       const newState = authReducer(state, clearError());
       expect(newState.error).toBeNull();
+    });
+
+    it("should update supplies when user exists", () => {
+      const state: AuthState = {
+        user: mockUser,
+        isCheckingAuth: false,
+        isLoading: false,
+        error: null,
+      };
+
+      const newState = authReducer(state, updateSupplies(75));
+      expect(newState.user?.printer_supplies).toBe(75);
+    });
+
+    it("should not crash when updating supplies with no user", () => {
+      const state: AuthState = {
+        user: null,
+        isCheckingAuth: false,
+        isLoading: false,
+        error: null,
+      };
+
+      const newState = authReducer(state, updateSupplies(75));
+      expect(newState.user).toBeNull();
     });
   });
 

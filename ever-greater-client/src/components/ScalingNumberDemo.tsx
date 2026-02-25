@@ -31,6 +31,10 @@ function ScalingNumberDemo({ onLogout }: ScalingNumberDemoProps): JSX.Element {
     return <div>Loading user data...</div>;
   }
 
+  const supplies = currentUser.printer_supplies ?? 0;
+  const isOutOfSupplies = supplies === 0;
+  const isButtonDisabled = isLoading || isOutOfSupplies;
+
   return (
     <div className="scaling-number-demo">
       <div className="user-header">
@@ -55,10 +59,20 @@ function ScalingNumberDemo({ onLogout }: ScalingNumberDemoProps): JSX.Element {
         <button
           onClick={handleIncrement}
           className="demo-button"
-          disabled={isLoading}
+          disabled={isButtonDisabled}
         >
-          {isLoading ? "Printing..." : "Print a ticket"}
+          {isLoading
+            ? "Printing..."
+            : isOutOfSupplies
+              ? "Out of Supplies"
+              : "Print a ticket"}
         </button>
+        <div
+          className={`supplies-count ${isOutOfSupplies ? "supplies-depleted" : ""}`}
+        >
+          <span className="supplies-label">Supplies:</span>
+          <span className="supplies-value">{supplies}</span>
+        </div>
       </div>
 
       {error && <p className="error-message">{error}</p>}

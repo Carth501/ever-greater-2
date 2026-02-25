@@ -56,6 +56,7 @@ describe('Database Functions', () => {
         .mockResolvedValueOnce({ rows: [] }) // CREATE TABLE users
         .mockResolvedValueOnce({ rows: [] }) // CREATE TABLE session
         .mockResolvedValueOnce({ rows: [] }) // CREATE INDEX
+        .mockResolvedValueOnce({ rows: [] }) // ALTER TABLE - add printer_supplies
         .mockResolvedValueOnce({ rows: [{ count: 1 }] }); // SELECT COUNT - table not empty
 
       await db.initializeDatabase();
@@ -248,6 +249,58 @@ describe('Database Functions', () => {
       mockPool.query.mockRejectedValue(new Error('Query failed'));
 
       await expect(db.getUserById(1)).rejects.toThrow('Query failed');
+    });
+  });
+
+  describe('getUserSupplies', () => {
+    it('should return user supplies count', async () => {
+      mockPool.query.mockResolvedValue({ rows: [{ printer_supplies: 50 }] });
+
+      const supplies = await db.getUserSupplies(1);
+
+      expect(supplies).toBe(50);
+      expect(mockPool.query).toHaveBeenCalledWith(
+        'SELECT printer_supplies FROM users WHERE id = $1',
+        [1]
+      );
+    });
+
+    it('should throw error when user not found', async () => {
+      mockPool.query.mockResolvedValue({ rows: [] });
+
+      await expect(db.getUserSupplies(999)).rejects.toThrow('User not found');
+    });
+
+    it('should handle database errors', async () => {
+      mockPool.query.mockRejectedValue(new Error('Query failed'));
+
+      await expect(db.getUserSupplies(1)).rejects.toThrow('Query failed');
+    });
+  });
+
+  describe('decrementUserSupplies', () => {
+    it('should decrement supplies and return new value', async () => {
+      mockPool.query.mockResolvedValue({ rows: [{ printer_supplies: 49 }] });
+
+      const newSupplies = await db.decrementUserSupplies(1);
+
+      expect(newSupplies).toBe(49);
+      expect(mockPool.query).toHaveBeenCalledWith(
+        'UPDATE users SET printer_supplies = printer_supplies - 1 WHERE id = $1 AND printer_supplies > 0 RETURNING printer_supplies',
+        [1]
+      );
+    });
+
+    it('should throw error when user has no supplies', async () => {
+      mockPool.query.mockResolvedValue({ rows: [] });
+
+      await expect(db.decrementUserSupplies(1)).rejects.toThrow('Out of supplies');
+    });
+
+    it('should handle database errors', async () => {
+      mockPool.query.mockRejectedValue(new Error('Update failed'));
+
+      await expect(db.decrementUserSupplies(1)).rejects.toThrow('Update failed');
     });
   });
 

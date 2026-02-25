@@ -29,6 +29,7 @@ const mockUser: User = {
   id: 1,
   email: "test@example.com",
   tickets_contributed: 5,
+  printer_supplies: 100,
 };
 
 type TestRootState = {
@@ -119,7 +120,10 @@ describe("Redux Store Integration", () => {
 
     it("should handle increment count", async () => {
       mockTicketApi.fetchGlobalCount.mockResolvedValueOnce(50);
-      mockTicketApi.incrementGlobalCount.mockResolvedValueOnce(51);
+      mockTicketApi.incrementGlobalCount.mockResolvedValueOnce({
+        count: 51,
+        supplies: 99,
+      });
 
       await store.dispatch(fetchCountThunk() as any);
       let state = store.getState();
