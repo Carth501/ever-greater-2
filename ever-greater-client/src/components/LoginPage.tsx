@@ -1,42 +1,44 @@
 import { useState } from "react";
-import { login } from "../api/auth";
+import { useAppDispatch, useAppSelector } from "../store/hooks";
+import { loginThunk } from "../store/slices/authSlice";
 import "./AuthPage.css";
 
 type LoginPageProps = {
-  onLoginSuccess: () => void;
   onSwitchToSignup: () => void;
 };
 
-export default function LoginPage({
-  onLoginSuccess,
-  onSwitchToSignup,
-}: LoginPageProps) {
+export default function LoginPage({ onSwitchToSignup }: LoginPageProps) {
+  const dispatch = useAppDispatch();
+  const { isLoading, error: authError } = useAppSelector((state) => state.auth);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [localError, setLocalError] = useState("");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setError("");
-    setIsLoading(true);
+    setLocalError("");
 
-    try {
-      await login(email, password);
-      onLoginSuccess();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
-    } finally {
-      setIsLoading(false);
+    if (!email || !password) {
+      setLocalError("Email and password are required");
+      return;
     }
+
+    dispatch(
+      loginThunk({
+        email,
+        password,
+      }),
+    );
   }
+
+  const displayError = authError || localError;
 
   return (
     <div className="auth-container">
       <div className="auth-card">
         <h1>Login</h1>
 
-        {error && <div className="auth-error">{error}</div>}
+        {displayError && <div className="auth-error">{displayError}</div>}
 
         <form onSubmit={handleSubmit} className="auth-form">
           <input

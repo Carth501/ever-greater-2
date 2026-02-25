@@ -1,66 +1,35 @@
-import { JSX, useEffect, useState } from "react";
-import type { User } from "../api/auth";
-import {
-  connectGlobalCountSocket,
-  fetchGlobalCount,
-  incrementGlobalCount,
-} from "../api/globalTicket";
+import { JSX } from "react";
+import { useAppDispatch, useAppSelector } from "../store/hooks";
+import { logoutThunk } from "../store/slices/authSlice";
+import { incrementCountThunk } from "../store/slices/ticketSlice";
 import GlobalTicketDisplay from "./GlobalTicketDisplay";
 import "./ScalingNumberDemo.css";
 
 type ScalingNumberDemoProps = {
   onLogout: () => void;
-  currentUser: User;
 };
 
-function ScalingNumberDemo({
-  onLogout,
-  currentUser,
-}: ScalingNumberDemoProps): JSX.Element {
-  const [scalingNumber, setScalingNumber] = useState(0);
-  const [error, setError] = useState("");
+function ScalingNumberDemo({ onLogout }: ScalingNumberDemoProps): JSX.Element {
+  const dispatch = useAppDispatch();
+  const { user: currentUser } = useAppSelector((state) => state.auth);
+  const {
+    count: scalingNumber,
+    error,
+    isLoading,
+  } = useAppSelector((state) => state.ticket);
 
-  const increment = async () => {
-    try {
-      setError("");
-      const count = await incrementGlobalCount();
-      setScalingNumber(count);
-    } catch (err) {
-      setError((err as Error).message || "Failed to increment");
-    }
+  const handleIncrement = () => {
+    dispatch(incrementCountThunk());
   };
 
-  useEffect(() => {
-    let isMounted = true;
+  const handleLogout = () => {
+    dispatch(logoutThunk());
+    onLogout();
+  };
 
-    fetchGlobalCount()
-      .then((count) => {
-        if (isMounted) {
-          setScalingNumber(count);
-        }
-      })
-      .catch((err) => {
-        if (isMounted) {
-          setError((err as Error).message || "Failed to fetch count");
-        }
-      });
-
-    const disconnect = connectGlobalCountSocket(
-      (count) => {
-        setScalingNumber(count);
-      },
-      (status) => {
-        if (status === "error") {
-          setError("WebSocket connection error");
-        }
-      },
-    );
-
-    return () => {
-      isMounted = false;
-      disconnect();
-    };
-  }, []);
+  if (!currentUser) {
+    return <div>Loading user data...</div>;
+  }
 
   return (
     <div className="scaling-number-demo">
@@ -71,7 +40,7 @@ function ScalingNumberDemo({
             Tickets contributed: {currentUser.tickets_contributed}
           </span>
         </div>
-        <button onClick={onLogout} className="logout-button">
+        <button onClick={handleLogout} className="logout-button">
           Logout
         </button>
       </div>
@@ -83,8 +52,12 @@ function ScalingNumberDemo({
       </div>
 
       <div className="demo-controls">
-        <button onClick={() => increment()} className="demo-button">
-          Print a ticket
+        <button
+          onClick={handleIncrement}
+          className="demo-button"
+          disabled={isLoading}
+        >
+          {isLoading ? "Printing..." : "Print a ticket"}
         </button>
       </div>
 

@@ -1,54 +1,50 @@
 import { useState } from "react";
-import { register } from "../api/auth";
+import { useAppDispatch, useAppSelector } from "../store/hooks";
+import { signupThunk } from "../store/slices/authSlice";
 import "./AuthPage.css";
 
 type SignupPageProps = {
-  onSignupSuccess: () => void;
   onSwitchToLogin: () => void;
 };
 
-export default function SignupPage({
-  onSignupSuccess,
-  onSwitchToLogin,
-}: SignupPageProps) {
+export default function SignupPage({ onSwitchToLogin }: SignupPageProps) {
+  const dispatch = useAppDispatch();
+  const { isLoading, error: authError } = useAppSelector((state) => state.auth);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [localError, setLocalError] = useState("");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setError("");
+    setLocalError("");
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
+      setLocalError("Passwords do not match");
       return;
     }
 
     if (password.length < 6) {
-      setError("Password must be at least 6 characters long");
+      setLocalError("Password must be at least 6 characters long");
       return;
     }
 
-    setIsLoading(true);
-
-    try {
-      await register(email, password);
-      onSignupSuccess();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Signup failed");
-    } finally {
-      setIsLoading(false);
-    }
+    dispatch(
+      signupThunk({
+        email,
+        password,
+      }),
+    );
   }
+
+  const displayError = authError || localError;
 
   return (
     <div className="auth-container">
       <div className="auth-card">
         <h1>Create Account</h1>
 
-        {error && <div className="auth-error">{error}</div>}
+        {displayError && <div className="auth-error">{displayError}</div>}
 
         <form onSubmit={handleSubmit} className="auth-form">
           <input
