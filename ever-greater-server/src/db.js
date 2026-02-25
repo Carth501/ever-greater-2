@@ -7,10 +7,12 @@ const pool = new Pool({
   idleTimeoutMillis: process.env.DB_POOL_IDLE_TIMEOUT ? parseInt(process.env.DB_POOL_IDLE_TIMEOUT) : 30000,
 });
 
-// Handle pool errors
-pool.on('error', (err) => {
-  console.error('Unexpected error on idle client', err);
-});
+// Handle pool errors (only if pool.on exists, for testing compatibility)
+if (pool.on && typeof pool.on === 'function') {
+  pool.on('error', (err) => {
+    console.error('Unexpected error on idle client', err);
+  });
+}
 
 /**
  * Initialize database schema and default data
