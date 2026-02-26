@@ -1,3 +1,9 @@
+import Alert from "@mui/material/Alert";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import { styled } from "@mui/material/styles";
 import { JSX } from "react";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { buySuppliesThunk } from "../store/slices/authSlice";
@@ -5,6 +11,17 @@ import { buySuppliesThunk } from "../store/slices/authSlice";
 type ShopProps = {
   onPurchaseError?: (error: string) => void;
 };
+
+const ShopRow = styled(Box)(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: theme.spacing(2),
+  padding: theme.spacing(1.5, 2),
+  borderRadius: theme.shape.borderRadius,
+  border: `1px solid ${theme.palette.divider}`,
+  flexWrap: "wrap",
+}));
 
 function Shop({ onPurchaseError }: ShopProps): JSX.Element {
   const dispatch = useAppDispatch();
@@ -24,7 +41,7 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
   };
 
   if (!currentUser) {
-    return <div>Loading...</div>;
+    return <Typography>Loading...</Typography>;
   }
 
   const money = currentUser.money ?? 0;
@@ -33,22 +50,26 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
   const isButtonDisabled = isLoading || !canAfford;
 
   return (
-    <div className="shop-container">
-      <div className="shop-header">
-        <h2 className="money-display">
-          Money:
-          <span className="money-value"> ${money}</span>
-        </h2>
-      </div>
+    <Stack spacing={2}>
+      <Typography variant="h6" fontWeight={700}>
+        Shop
+      </Typography>
+      <Typography variant="body1" color="text.secondary">
+        Money: <strong>${money}</strong>
+      </Typography>
 
-      <div className="shop-item">
-        <div className="shop-item-details">
-          <span className="shop-item-name">100 Supplies for </span>
-          <span className="shop-item-price">${moneyCost}</span>
-        </div>
-        <button
+      <ShopRow>
+        <Box>
+          <Typography variant="subtitle1" fontWeight={600}>
+            100 Supplies
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Cost: ${moneyCost}
+          </Typography>
+        </Box>
+        <Button
           onClick={handleBuySupplies}
-          className="buy-button demo-button"
+          variant="contained"
           disabled={isButtonDisabled}
         >
           {isLoading
@@ -56,11 +77,11 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
             : canAfford
               ? "Buy"
               : "Insufficient Money"}
-        </button>
-      </div>
+        </Button>
+      </ShopRow>
 
-      {error && <p className="shop-error-message">{error}</p>}
-    </div>
+      {error && <Alert severity="error">{error}</Alert>}
+    </Stack>
   );
 }
 

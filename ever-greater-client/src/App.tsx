@@ -1,5 +1,8 @@
+import Box from "@mui/material/Box";
+import CircularProgress from "@mui/material/CircularProgress";
+import Container from "@mui/material/Container";
+import { styled } from "@mui/material/styles";
 import { useEffect, useState } from "react";
-import "./App.css";
 import LoginPage from "./components/LoginPage";
 import ScalingNumberDemo from "./components/ScalingNumberDemo";
 import SignupPage from "./components/SignupPage";
@@ -9,6 +12,29 @@ import { checkAuthThunk, logoutThunk } from "./store/slices/authSlice";
 import { fetchCountThunk } from "./store/slices/ticketSlice";
 
 type AuthPage = "login" | "signup";
+
+const AppRoot = styled(Box)(({ theme }) => ({
+  minHeight: "100vh",
+  display: "flex",
+  flexDirection: "column",
+  background: `radial-gradient(circle at top, ${theme.palette.grey[100]} 0%, ${theme.palette.grey[200]} 55%, ${theme.palette.grey[300]} 100%)`,
+}));
+
+const AppFooter = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'component',
+})(({ theme }) => ({
+  width: "100%",
+  height: 56,
+  backgroundColor: theme.palette.primary.main,
+  display: "flex",
+  alignItems: "center",
+  paddingLeft: theme.spacing(2),
+}));
+
+const FooterLogo = styled("img")({
+  height: 40,
+  width: 40,
+});
 
 function App() {
   const dispatch = useAppDispatch();
@@ -35,29 +61,40 @@ function App() {
   }
 
   if (isCheckingAuth) {
-    return <div className="App">Loading...</div>;
+    return (
+      <Box
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        minHeight="100vh"
+      >
+        <CircularProgress />
+      </Box>
+    );
   }
 
   if (!currentUser) {
     return (
-      <div className="App">
+      <AppRoot>
         {authPage === "login" ? (
           <LoginPage onSwitchToSignup={() => setAuthPage("signup")} />
         ) : (
           <SignupPage onSwitchToLogin={() => setAuthPage("login")} />
         )}
-      </div>
+      </AppRoot>
     );
   }
 
   return (
-    <div className="App">
-      <ScalingNumberDemo onLogout={handleLogout} />
+    <AppRoot>
+      <Container maxWidth="md" sx={{ flex: 1, py: 4 }}>
+        <ScalingNumberDemo onLogout={handleLogout} />
+      </Container>
 
-      <footer className="App-footer">
-        <img src={cLogo} alt="site by C" className="designer-logo" />
-      </footer>
-    </div>
+      <AppFooter as="footer">
+        <FooterLogo src={cLogo} alt="site by C" />
+      </AppFooter>
+    </AppRoot>
   );
 }
 

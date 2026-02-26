@@ -1,11 +1,34 @@
+import Alert from "@mui/material/Alert";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Paper from "@mui/material/Paper";
+import Stack from "@mui/material/Stack";
+import TextField from "@mui/material/TextField";
+import Typography from "@mui/material/Typography";
+import { styled } from "@mui/material/styles";
 import { useState } from "react";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { loginThunk } from "../store/slices/authSlice";
-import "./AuthPage.css";
 
 type LoginPageProps = {
   onSwitchToSignup: () => void;
 };
+
+const AuthBackground = styled(Box)(({ theme }) => ({
+  minHeight: "100vh",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: theme.spacing(3),
+  background: "linear-gradient(135deg, #4b6cb7 0%, #182848 100%)",
+}));
+
+const AuthCard = styled(Paper)(({ theme }) => ({
+  width: "100%",
+  maxWidth: 420,
+  padding: theme.spacing(4),
+  borderRadius: theme.shape.borderRadius * 2,
+}));
 
 export default function LoginPage({ onSwitchToSignup }: LoginPageProps) {
   const dispatch = useAppDispatch();
@@ -34,46 +57,56 @@ export default function LoginPage({ onSwitchToSignup }: LoginPageProps) {
   const displayError = authError || localError;
 
   return (
-    <div className="auth-container">
-      <div className="auth-card">
-        <h1>Login</h1>
+    <AuthBackground>
+      <AuthCard elevation={8}>
+        <Stack spacing={2.5}>
+          <Typography variant="h5" align="center" fontWeight={700}>
+            Login
+          </Typography>
 
-        {displayError && <div className="auth-error">{displayError}</div>}
+          {displayError && <Alert severity="error">{displayError}</Alert>}
 
-        <form onSubmit={handleSubmit} className="auth-form">
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            disabled={isLoading}
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            disabled={isLoading}
-          />
+          <Box component="form" onSubmit={handleSubmit} noValidate>
+            <Stack spacing={2}>
+              <TextField
+                label="Email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled={isLoading}
+                fullWidth
+              />
+              <TextField
+                label="Password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={isLoading}
+                fullWidth
+              />
 
-          <button type="submit" disabled={isLoading}>
-            {isLoading ? "Logging in..." : "Login"}
-          </button>
-        </form>
+              <Button
+                type="submit"
+                variant="contained"
+                size="large"
+                fullWidth
+                disabled={isLoading}
+              >
+                {isLoading ? "Logging in..." : "Login"}
+              </Button>
+            </Stack>
+          </Box>
 
-        <p className="auth-switch">
-          Don't have an account?{" "}
-          <button
-            type="button"
-            onClick={onSwitchToSignup}
-            className="switch-button"
-          >
-            Create one
-          </button>
-        </p>
-      </div>
-    </div>
+          <Typography variant="body2" align="center">
+            Don't have an account?{" "}
+            <Button variant="text" onClick={onSwitchToSignup}>
+              Create one
+            </Button>
+          </Typography>
+        </Stack>
+      </AuthCard>
+    </AuthBackground>
   );
 }

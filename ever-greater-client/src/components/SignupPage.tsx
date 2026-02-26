@@ -1,11 +1,34 @@
+import Alert from "@mui/material/Alert";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Paper from "@mui/material/Paper";
+import Stack from "@mui/material/Stack";
+import TextField from "@mui/material/TextField";
+import Typography from "@mui/material/Typography";
+import { styled } from "@mui/material/styles";
 import { useState } from "react";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { signupThunk } from "../store/slices/authSlice";
-import "./AuthPage.css";
 
 type SignupPageProps = {
   onSwitchToLogin: () => void;
 };
+
+const AuthBackground = styled(Box)(({ theme }) => ({
+  minHeight: "100vh",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: theme.spacing(3),
+  background: "linear-gradient(135deg, #4b6cb7 0%, #182848 100%)",
+}));
+
+const AuthCard = styled(Paper)(({ theme }) => ({
+  width: "100%",
+  maxWidth: 420,
+  padding: theme.spacing(4),
+  borderRadius: theme.shape.borderRadius * 2,
+}));
 
 export default function SignupPage({ onSwitchToLogin }: SignupPageProps) {
   const dispatch = useAppDispatch();
@@ -40,54 +63,65 @@ export default function SignupPage({ onSwitchToLogin }: SignupPageProps) {
   const displayError = authError || localError;
 
   return (
-    <div className="auth-container">
-      <div className="auth-card">
-        <h1>Create Account</h1>
+    <AuthBackground>
+      <AuthCard elevation={8}>
+        <Stack spacing={2.5}>
+          <Typography variant="h5" align="center" fontWeight={700}>
+            Create Account
+          </Typography>
 
-        {displayError && <div className="auth-error">{displayError}</div>}
+          {displayError && <Alert severity="error">{displayError}</Alert>}
 
-        <form onSubmit={handleSubmit} className="auth-form">
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            disabled={isLoading}
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            disabled={isLoading}
-          />
-          <input
-            type="password"
-            placeholder="Confirm Password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            required
-            disabled={isLoading}
-          />
+          <Box component="form" onSubmit={handleSubmit} noValidate>
+            <Stack spacing={2}>
+              <TextField
+                label="Email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled={isLoading}
+                fullWidth
+              />
+              <TextField
+                label="Password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={isLoading}
+                fullWidth
+              />
+              <TextField
+                label="Confirm Password"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                disabled={isLoading}
+                fullWidth
+              />
 
-          <button type="submit" disabled={isLoading}>
-            {isLoading ? "Creating account..." : "Create Account"}
-          </button>
-        </form>
+              <Button
+                type="submit"
+                variant="contained"
+                size="large"
+                fullWidth
+                disabled={isLoading}
+              >
+                {isLoading ? "Creating account..." : "Create Account"}
+              </Button>
+            </Stack>
+          </Box>
 
-        <p className="auth-switch">
-          Already have an account?{" "}
-          <button
-            type="button"
-            onClick={onSwitchToLogin}
-            className="switch-button"
-          >
-            Login
-          </button>
-        </p>
-      </div>
-    </div>
+          <Typography variant="body2" align="center">
+            Already have an account?{" "}
+            <Button variant="text" onClick={onSwitchToLogin}>
+              Login
+            </Button>
+          </Typography>
+        </Stack>
+      </AuthCard>
+    </AuthBackground>
   );
 }
