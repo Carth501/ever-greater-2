@@ -55,7 +55,7 @@ function ScalingNumberDemo({ onLogout }: ScalingNumberDemoProps): JSX.Element {
         ></GlobalTicketDisplay>
       </div>
 
-      <div className="demo-controls">
+      <div className="box demo-controls">
         <button
           onClick={handleIncrement}
           className="demo-button"
