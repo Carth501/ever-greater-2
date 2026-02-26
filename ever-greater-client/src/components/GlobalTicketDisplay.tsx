@@ -7,21 +7,24 @@ interface Props {
   scalingNumber: number;
 }
 
-const TicketCard = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(3),
-  textAlign: "center",
+const Organizer = styled(Paper)(({ theme }) => ({
+  display: "flex",
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "flex-start",
+  gap: theme.spacing(2),
 }));
 
 function GlobalTicketDisplay({ scalingNumber }: Props): JSX.Element {
   return (
-    <TicketCard elevation={3}>
-      <Typography variant="overline" color="text.secondary">
+    <Organizer>
+      <Typography variant="h3" color="text.secondary">
         Ticket Pool
       </Typography>
-      <Typography variant="h3" fontWeight={700}>
+      <Typography variant="h1" fontWeight={700}>
         {scalingNumber.toLocaleString()}
       </Typography>
-    </TicketCard>
+    </Organizer>
   );
 }
 

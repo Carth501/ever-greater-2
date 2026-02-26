@@ -34,6 +34,11 @@ const ControlsRow = styled(Stack)(({ theme }) => ({
   flexWrap: "wrap",
 }));
 
+const TicketCard = styled(Paper)(({ theme }) => ({
+  padding: theme.spacing(3),
+  textAlign: "left",
+}));
+
 interface SuppliesCardProps {
   depleted: boolean;
 }
@@ -85,16 +90,18 @@ function ScalingNumberDemo({ onLogout }: ScalingNumberDemoProps): JSX.Element {
           <Typography variant="body1" fontWeight={600}>
             {currentUser.email}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Tickets contributed: {currentUser.tickets_contributed}
-          </Typography>
         </Box>
         <Button variant="outlined" color="inherit" onClick={handleLogout}>
           Logout
         </Button>
       </HeaderCard>
 
-      <GlobalTicketDisplay scalingNumber={scalingNumber} />
+      <TicketCard elevation={3}>
+        <GlobalTicketDisplay scalingNumber={scalingNumber} />
+        <Typography variant="body1" color="text.secondary">
+          Tickets contributed: {currentUser.tickets_contributed}
+        </Typography>
+      </TicketCard>
 
       <Paper elevation={2} sx={{ p: 2 }}>
         <ControlsRow>
