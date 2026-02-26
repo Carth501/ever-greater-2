@@ -17,11 +17,11 @@ const AppRoot = styled(Box)(({ theme }) => ({
   minHeight: "100vh",
   display: "flex",
   flexDirection: "column",
-  background: `radial-gradient(circle at top, ${theme.palette.grey[100]} 0%, ${theme.palette.grey[200]} 55%, ${theme.palette.grey[300]} 100%)`,
+  backgroundColor: theme.palette.background.default,
 }));
 
 const AppFooter = styled(Box, {
-  shouldForwardProp: (prop) => prop !== 'component',
+  shouldForwardProp: (prop) => prop !== "component",
 })(({ theme }) => ({
   width: "100%",
   height: 56,
