@@ -20,6 +20,7 @@ const mockUser: User = {
   email: "test@example.com",
   tickets_contributed: 5,
   printer_supplies: 100,
+  money: 0,
 };
 
 describe("authSlice", () => {

@@ -81,6 +81,20 @@ export const logoutThunk = createAsyncThunk(
   },
 );
 
+export const buySuppliesThunk = createAsyncThunk(
+  "auth/buySupplies",
+  async (_, { rejectWithValue }) => {
+    try {
+      const result = await authApi.buySupplies();
+      return result;
+    } catch (error) {
+      return rejectWithValue(
+        error instanceof Error ? error.message : "Failed to buy supplies",
+      );
+    }
+  },
+);
+
 const authSlice = createSlice({
   name: "auth",
   initialState,
@@ -91,6 +105,11 @@ const authSlice = createSlice({
     updateSupplies: (state, action) => {
       if (state.user) {
         state.user.printer_supplies = action.payload;
+      }
+    },
+    updateMoney: (state, action) => {
+      if (state.user) {
+        state.user.money = action.payload;
       }
     },
   },
@@ -159,8 +178,27 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload as string;
       });
+
+    // buySuppliesThunk
+    builder
+      .addCase(buySuppliesThunk.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(buySuppliesThunk.fulfilled, (state, action) => {
+        state.isLoading = false;
+        if (state.user) {
+          state.user.money = action.payload.money;
+          state.user.printer_supplies = action.payload.printer_supplies;
+        }
+        state.error = null;
+      })
+      .addCase(buySuppliesThunk.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      });
   },
 });
 
-export const { clearError, updateSupplies } = authSlice.actions;
+export const { clearError, updateSupplies, updateMoney } = authSlice.actions;
 export default authSlice.reducer;

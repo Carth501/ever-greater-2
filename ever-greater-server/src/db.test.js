@@ -57,6 +57,9 @@ describe('Database Functions', () => {
         .mockResolvedValueOnce({ rows: [] }) // CREATE TABLE session
         .mockResolvedValueOnce({ rows: [] }) // CREATE INDEX
         .mockResolvedValueOnce({ rows: [] }) // ALTER TABLE - add printer_supplies
+        .mockResolvedValueOnce({ rows: [] }) // ALTER TABLE - set printer_supplies default
+        .mockResolvedValueOnce({ rows: [] }) // UPDATE users - set printer_supplies
+        .mockResolvedValueOnce({ rows: [] }) // ALTER TABLE - add money
         .mockResolvedValueOnce({ rows: [{ count: 1 }] }); // SELECT COUNT - table not empty
 
       await db.initializeDatabase();
@@ -164,6 +167,8 @@ describe('Database Functions', () => {
         id: 1,
         email: 'newuser@example.com',
         tickets_contributed: 0,
+        printer_supplies: 100,
+        money: 0,
         created_at: '2024-01-01',
       };
 
@@ -174,7 +179,7 @@ describe('Database Functions', () => {
       expect(user).toEqual(mockUser);
       expect(mockPool.query).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO users'),
-        ['newuser@example.com', 'hashed_password']
+        ['newuser@example.com', 'hashed_password', 100, 0]
       );
     });
 

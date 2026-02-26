@@ -6,6 +6,7 @@ export type User = {
   email: string;
   tickets_contributed: number;
   printer_supplies: number;
+  money: number;
 };
 
 type RegisterResponse = {
@@ -105,4 +106,31 @@ export async function logout(): Promise<void> {
   if (!response.ok) {
     throw new Error("Failed to logout");
   }
+}
+
+/**
+ * Buy supplies with money
+ * @returns Object with updated money and printer_supplies
+ */
+type BuySuppliesResponse = {
+  money: number;
+  printer_supplies: number;
+};
+
+export async function buySupplies(): Promise<BuySuppliesResponse> {
+  const response = await fetch(`${apiBase}/api/shop/buy-supplies`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to buy supplies");
+  }
+
+  const data = (await response.json()) as BuySuppliesResponse;
+  return data;
 }

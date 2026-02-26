@@ -73,6 +73,12 @@ async function initializeDatabase() {
       WHERE printer_supplies IS NULL OR printer_supplies = 0
     `);
 
+    // Add money column to users table if it doesn't exist
+    await client.query(`
+      ALTER TABLE users 
+      ADD COLUMN IF NOT EXISTS money INTEGER NOT NULL DEFAULT 0
+    `);
+
     // Insert initial row if table is empty
     const result = await client.query('SELECT COUNT(*) FROM global_state');
     const rowCount = parseInt(result.rows[0].count);
@@ -123,7 +129,7 @@ async function incrementGlobalCount() {
  */
 async function getUserByEmail(email) {
   const result = await pool.query(
-    'SELECT id, email, password_hash, tickets_contributed, printer_supplies, created_at FROM users WHERE email = $1',
+    'SELECT id, email, password_hash, tickets_contributed, printer_supplies, money, created_at FROM users WHERE email = $1',
     [email]
   );
   return result.rows[0] || null;
@@ -137,8 +143,8 @@ async function getUserByEmail(email) {
  */
 async function createUser(email, passwordHash) {
   const result = await pool.query(
-    'INSERT INTO users (email, password_hash, printer_supplies) VALUES ($1, $2, $3) RETURNING id, email, tickets_contributed, printer_supplies, created_at',
-    [email, passwordHash, 100]
+    'INSERT INTO users (email, password_hash, printer_supplies, money) VALUES ($1, $2, $3, $4) RETURNING id, email, tickets_contributed, printer_supplies, money, created_at',
+    [email, passwordHash, 100, 0]
   );
   return result.rows[0];
 }
@@ -164,7 +170,7 @@ async function updateUserTickets(userId, increment) {
  */
 async function getUserById(userId) {
   const result = await pool.query(
-    'SELECT id, email, tickets_contributed, printer_supplies, created_at FROM users WHERE id = $1',
+    'SELECT id, email, tickets_contributed, printer_supplies, money, created_at FROM users WHERE id = $1',
     [userId]
   );
   return result.rows[0] || null;
@@ -204,6 +210,42 @@ async function decrementUserSupplies(userId) {
 }
 
 /**
+ * Increment user's money by a certain amount
+ * @param {number} userId User ID
+ * @param {number} amount Amount to increment by
+ * @returns {Promise<number>} New money count after increment
+ */
+async function incrementUserMoney(userId, amount = 1) {
+  const result = await pool.query(
+    'UPDATE users SET money = money + $1 WHERE id = $2 RETURNING money',
+    [amount, userId]
+  );
+  if (result.rows.length === 0) {
+    throw new Error('User not found');
+  }
+  return result.rows[0].money;
+}
+
+/**
+ * Decrement user's money and increment supplies atomically
+ * @param {number} userId User ID
+ * @param {number} moneyCost Cost in money
+ * @param {number} suppliesGain Amount of supplies to gain
+ * @returns {Promise<object>} Object with new money and printer_supplies counts
+ * @throws {Error} If user has insufficient money
+ */
+async function buySupplies(userId, moneyCost, suppliesGain) {
+  const result = await pool.query(
+    'UPDATE users SET money = money - $1, printer_supplies = printer_supplies + $2 WHERE id = $3 AND money >= $1 RETURNING money, printer_supplies',
+    [moneyCost, suppliesGain, userId]
+  );
+  if (result.rows.length === 0) {
+    throw new Error('Insufficient money');
+  }
+  return result.rows[0];
+}
+
+/**
  * Close the database connection pool
  * Should be called during graceful shutdown
  */
@@ -224,4 +266,6 @@ module.exports = {
   getUserById,
   getUserSupplies,
   decrementUserSupplies,
+  incrementUserMoney,
+  buySupplies,
 };

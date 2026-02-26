@@ -83,6 +83,7 @@ describe("ticketSlice", () => {
       mockTicketApi.incrementGlobalCount.mockResolvedValueOnce({
         count: mockNewCount,
         supplies: mockNewSupplies,
+        money: 0,
       });
 
       await store.dispatch(incrementCountThunk() as any);

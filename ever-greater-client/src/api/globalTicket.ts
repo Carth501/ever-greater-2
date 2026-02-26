@@ -8,6 +8,7 @@ type CountPayload = {
 type IncrementPayload = {
   count: number;
   supplies: number;
+  money: number;
 };
 
 function getWsUrl(): string {
@@ -29,6 +30,7 @@ export async function fetchGlobalCount(): Promise<number> {
 export async function incrementGlobalCount(): Promise<{
   count: number;
   supplies: number;
+  money: number;
 }> {
   const response = await fetch(`${apiBase}/api/increment`, {
     method: "POST",
@@ -42,7 +44,7 @@ export async function incrementGlobalCount(): Promise<{
     throw new Error(error.error || "Failed to increment ticket count");
   }
   const data = (await response.json()) as IncrementPayload;
-  return { count: data.count, supplies: data.supplies };
+  return { count: data.count, supplies: data.supplies, money: data.money };
 }
 
 export function connectGlobalCountSocket(

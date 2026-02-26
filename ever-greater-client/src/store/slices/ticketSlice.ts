@@ -1,6 +1,6 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import * as ticketApi from "../../api/globalTicket";
-import { updateSupplies } from "./authSlice";
+import { updateMoney, updateSupplies } from "./authSlice";
 
 export interface TicketState {
   count: number;
@@ -36,6 +36,8 @@ export const incrementCountThunk = createAsyncThunk(
       const result = await ticketApi.incrementGlobalCount();
       // Update supplies in auth state
       dispatch(updateSupplies(result.supplies));
+      // Update money in auth state
+      dispatch(updateMoney(result.money));
       return result.count;
     } catch (error) {
       return rejectWithValue(

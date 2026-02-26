@@ -4,6 +4,7 @@ import { logoutThunk } from "../store/slices/authSlice";
 import { incrementCountThunk } from "../store/slices/ticketSlice";
 import GlobalTicketDisplay from "./GlobalTicketDisplay";
 import "./ScalingNumberDemo.css";
+import Shop from "./Shop";
 
 type ScalingNumberDemoProps = {
   onLogout: () => void;
@@ -73,6 +74,11 @@ function ScalingNumberDemo({ onLogout }: ScalingNumberDemoProps): JSX.Element {
           <span className="supplies-label">Supplies:</span>
           <span className="supplies-value">{supplies}</span>
         </div>
+      </div>
+      <div className="box demo-shop">
+        <Shop
+          onPurchaseError={(message) => alert(`Purchase error: ${message}`)}
+        />
       </div>
 
       {error && <p className="error-message">{error}</p>}

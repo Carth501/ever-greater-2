@@ -16,7 +16,9 @@ const {
   createUser,
   updateUserTickets,
   getUserById,
-  decrementUserSupplies
+  decrementUserSupplies,
+  incrementUserMoney,
+  buySupplies
 } = require('./db');
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
@@ -96,7 +98,8 @@ function createApp() {
           id: user.id,
           email: user.email,
           tickets_contributed: user.tickets_contributed,
-          printer_supplies: user.printer_supplies
+          printer_supplies: user.printer_supplies,
+          money: user.money
         }
       });
     } catch (error) {
@@ -138,7 +141,8 @@ function createApp() {
           id: user.id,
           email: user.email,
           tickets_contributed: user.tickets_contributed,
-          printer_supplies: user.printer_supplies
+          printer_supplies: user.printer_supplies,
+          money: user.money
         }
       });
     } catch (error) {
@@ -168,7 +172,8 @@ function createApp() {
           id: user.id,
           email: user.email,
           tickets_contributed: user.tickets_contributed,
-          printer_supplies: user.printer_supplies
+          printer_supplies: user.printer_supplies,
+          money: user.money
         }
       });
     } catch (error) {
@@ -227,11 +232,52 @@ function createApp() {
       // Update user's ticket contribution
       await updateUserTickets(req.session.userId, 1);
 
+      // Increment user's money
+      const newMoney = await incrementUserMoney(req.session.userId, 1);
+
       broadcastCount(newCount);
-      res.json({ count: newCount, supplies: newSupplies });
+      res.json({ count: newCount, supplies: newSupplies, money: newMoney });
     } catch (error) {
       console.error('Error incrementing count:', error);
       res.status(500).json({ error: 'Failed to increment count' });
+    }
+  });
+
+  // ============ SHOP ENDPOINTS ============
+
+  /**
+   * Buy supplies with money
+   * POST /api/shop/buy-supplies
+   * Body: { amount: number } (optional, defaults to 1)
+   */
+  app.post("/api/shop/buy-supplies", async (req, res) => {
+    try {
+      // Check if user is authenticated
+      if (!req.session.userId) {
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+
+      const moneyCost = 10;
+      const suppliesGain = 100;
+
+      // Try to buy supplies (deduct money and add supplies atomically)
+      let result;
+      try {
+        result = await buySupplies(req.session.userId, moneyCost, suppliesGain);
+      } catch (error) {
+        if (error.message === 'Insufficient money') {
+          return res.status(403).json({ error: 'Insufficient money' });
+        }
+        throw error; // Re-throw other errors
+      }
+
+      res.json({
+        money: result.money,
+        printer_supplies: result.printer_supplies
+      });
+    } catch (error) {
+      console.error('Error buying supplies:', error);
+      res.status(500).json({ error: 'Failed to buy supplies' });
     }
   });
 
