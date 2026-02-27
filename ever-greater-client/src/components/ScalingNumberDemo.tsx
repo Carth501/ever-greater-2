@@ -111,11 +111,7 @@ function ScalingNumberDemo({ onLogout }: ScalingNumberDemoProps): JSX.Element {
             size="large"
             disabled={isButtonDisabled}
           >
-            {isLoading
-              ? "Printing..."
-              : isOutOfSupplies
-                ? "Out of Supplies"
-                : "Print a ticket"}
+            Print a ticket
           </Button>
           <SuppliesCard elevation={0} depleted={isOutOfSupplies}>
             <Typography variant="subtitle2" color="text.secondary">

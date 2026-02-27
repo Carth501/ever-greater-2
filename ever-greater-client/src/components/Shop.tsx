@@ -72,11 +72,7 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
           variant="contained"
           disabled={isButtonDisabled}
         >
-          {isLoading
-            ? "Purchasing..."
-            : canAfford
-              ? "Buy"
-              : "Insufficient Money"}
+          {canAfford ? "Buy" : "Insufficient Money"}
         </Button>
       </ShopRow>
 
