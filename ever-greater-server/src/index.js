@@ -19,13 +19,16 @@ const {
   decrementUserSupplies,
   incrementUserMoney,
   buySupplies,
-  buyGold
+  buyGold,
+  buyAutoprinter,
+  processAutoprinters
 } = require('./db');
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
 
 let wss; // WebSocket server instance
 let server; // HTTP server instance
+let autoprinterInterval; // Autoprinter timer interval
 
 function broadcastCount(count) {
   if (!wss) return;
@@ -102,7 +105,8 @@ function createApp() {
           tickets_contributed: user.tickets_contributed,
           printer_supplies: user.printer_supplies,
           money: user.money,
-          gold: user.gold
+          gold: user.gold,
+          autoprinters: user.autoprinters || 0
         }
       });
     } catch (error) {
@@ -146,7 +150,9 @@ function createApp() {
           tickets_contributed: user.tickets_contributed,
           printer_supplies: user.printer_supplies,
           money: user.money,
-          gold: user.gold
+          gold: user.gold,
+          autoprinters: user.autoprinters || 0,
+          autoprinters: user.autoprinters || 0
         }
       });
     } catch (error) {
@@ -178,7 +184,8 @@ function createApp() {
           tickets_contributed: user.tickets_contributed,
           printer_supplies: user.printer_supplies,
           money: user.money,
-          gold: user.gold
+          gold: user.gold,
+          autoprinters: user.autoprinters || 0
         }
       });
     } catch (error) {
@@ -329,6 +336,39 @@ function createApp() {
     }
   });
 
+  /**
+   * Buy an autoprinter with gold
+   * POST /api/shop/buy-autoprinter
+   * Cost: 3 * (current_autoprinters + 1)^2 gold
+   */
+  app.post("/api/shop/buy-autoprinter", async (req, res) => {
+    try {
+      // Check if user is authenticated
+      if (!req.session.userId) {
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+
+      // Try to buy autoprinter (deduct gold and add autoprinter atomically)
+      let result;
+      try {
+        result = await buyAutoprinter(req.session.userId);
+      } catch (error) {
+        if (error.message === 'Insufficient gold') {
+          return res.status(403).json({ error: 'Insufficient gold' });
+        }
+        throw error; // Re-throw other errors
+      }
+
+      res.json({
+        gold: result.gold,
+        autoprinters: result.autoprinters
+      });
+    } catch (error) {
+      console.error('Error buying autoprinter:', error);
+      res.status(500).json({ error: 'Failed to buy autoprinter' });
+    }
+  });
+
   return app;
 }
 
@@ -361,6 +401,20 @@ if (require.main === module) {
       server.listen(PORT, () => {
         console.log(`ever-greater-server listening on http://localhost:${PORT}`);
       });
+
+      // Start autoprinter processor (runs every 4 seconds)
+      autoprinterInterval = setInterval(async () => {
+        try {
+          const result = await processAutoprinters();
+          if (result.totalTickets > 0) {
+            console.log(`Autoprinters processed: ${result.totalTickets} tickets, new count: ${result.newGlobalCount}`);
+            broadcastCount(result.newGlobalCount);
+          }
+        } catch (error) {
+          console.error('Error processing autoprinters:', error);
+        }
+      }, 4000);
+      console.log('Autoprinter processor started (4 second interval)');
     } catch (error) {
       console.error('Failed to initialize database:', error);
       process.exit(1);
@@ -370,6 +424,12 @@ if (require.main === module) {
   // Graceful shutdown handlers
   const shutdown = async (signal) => {
     console.log(`\n${signal} received, shutting down gracefully...`);
+
+    // Clear autoprinter interval
+    if (autoprinterInterval) {
+      clearInterval(autoprinterInterval);
+      console.log('Autoprinter processor stopped');
+    }
 
     // Close HTTP server first to stop accepting new connections
     if (server) {

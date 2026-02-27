@@ -7,7 +7,11 @@ import Typography from "@mui/material/Typography";
 import { styled } from "@mui/material/styles";
 import { JSX, useState } from "react";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
-import { buyGoldThunk, buySuppliesThunk } from "../store/slices/authSlice";
+import {
+  buyAutoprinterThunk,
+  buyGoldThunk,
+  buySuppliesThunk,
+} from "../store/slices/authSlice";
 
 type ShopProps = {
   onPurchaseError?: (error: string) => void;
@@ -59,12 +63,22 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
     });
   };
 
+  const handleBuyAutoprinter = () => {
+    if (isLoading) return;
+    dispatch(buyAutoprinterThunk()).then((result) => {
+      if (result.type === buyAutoprinterThunk.rejected.type) {
+        onPurchaseError?.(result.payload as string);
+      }
+    });
+  };
+
   if (!currentUser) {
     return <Typography>Loading...</Typography>;
   }
 
   const money = currentUser.money ?? 0;
   const gold = currentUser.gold ?? 0;
+  const autoprinters = currentUser.autoprinters ?? 0;
   const moneyCost = 10;
   const canAfford = money >= moneyCost;
   const isButtonDisabled = isLoading || !canAfford;
@@ -77,6 +91,10 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
   const canAffordGold10 = money >= goldCostPerUnit * 10;
   const canAffordGold100 = money >= goldCostPerUnit * 100;
 
+  // Autoprinter calculations
+  const autoprinterCost = 3 * Math.pow(autoprinters + 1, 2);
+  const canAffordAutoprinter = gold >= autoprinterCost;
+
   return (
     <Stack spacing={2}>
       <Typography variant="h6" fontWeight={700}>
@@ -87,6 +105,9 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
       </Typography>
       <Typography variant="body1" color="text.secondary">
         Gold: <strong>{gold}g</strong>
+      </Typography>
+      <Typography variant="body1" color="text.secondary">
+        Autoprinters: <strong>{autoprinters}</strong>
       </Typography>
 
       <ShopRow>
@@ -170,6 +191,27 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
             {canAffordGold100 ? "Buy 100" : "Insufficient"}
           </Button>
         </Box>
+      </ShopRow>
+
+      <ShopRow>
+        <Box>
+          <Typography variant="subtitle1" fontWeight={600}>
+            Autoprinter
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Cost: {autoprinterCost}g
+          </Typography>
+          <Typography variant="caption" color="text.secondary" display="block">
+            Prints 1 ticket every 4 seconds (uses supplies)
+          </Typography>
+        </Box>
+        <Button
+          onClick={handleBuyAutoprinter}
+          variant="contained"
+          disabled={isLoading || !canAffordAutoprinter}
+        >
+          {canAffordAutoprinter ? "Buy" : "Insufficient Gold"}
+        </Button>
       </ShopRow>
 
       {error && <Alert severity="error">{error}</Alert>}

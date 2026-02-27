@@ -109,6 +109,20 @@ export const buyGoldThunk = createAsyncThunk(
   },
 );
 
+export const buyAutoprinterThunk = createAsyncThunk(
+  "auth/buyAutoprinter",
+  async (_, { rejectWithValue }) => {
+    try {
+      const result = await authApi.buyAutoprinter();
+      return result;
+    } catch (error) {
+      return rejectWithValue(
+        error instanceof Error ? error.message : "Failed to buy autoprinter",
+      );
+    }
+  },
+);
+
 const authSlice = createSlice({
   name: "auth",
   initialState,
@@ -227,6 +241,25 @@ const authSlice = createSlice({
         state.error = null;
       })
       .addCase(buyGoldThunk.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      });
+
+    // buyAutoprinterThunk
+    builder
+      .addCase(buyAutoprinterThunk.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(buyAutoprinterThunk.fulfilled, (state, action) => {
+        state.isLoading = false;
+        if (state.user) {
+          state.user.gold = action.payload.gold;
+          state.user.autoprinters = action.payload.autoprinters;
+        }
+        state.error = null;
+      })
+      .addCase(buyAutoprinterThunk.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
       });

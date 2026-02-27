@@ -32,6 +32,7 @@ const mockUser: User = {
   printer_supplies: 100,
   money: 0,
   gold: 0,
+  autoprinters: 0,
 };
 
 type TestRootState = {

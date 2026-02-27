@@ -85,6 +85,12 @@ async function initializeDatabase() {
       ADD COLUMN IF NOT EXISTS gold INTEGER NOT NULL DEFAULT 0
     `);
 
+    // Add autoprinters column to users table if it doesn't exist
+    await client.query(`
+      ALTER TABLE users 
+      ADD COLUMN IF NOT EXISTS autoprinters INTEGER NOT NULL DEFAULT 0
+    `);
+
     // Insert initial row if table is empty
     const result = await client.query('SELECT COUNT(*) FROM global_state');
     const rowCount = parseInt(result.rows[0].count);
@@ -135,7 +141,7 @@ async function incrementGlobalCount() {
  */
 async function getUserByEmail(email) {
   const result = await pool.query(
-    'SELECT id, email, password_hash, tickets_contributed, printer_supplies, money, gold, created_at FROM users WHERE email = $1',
+    'SELECT id, email, password_hash, tickets_contributed, printer_supplies, money, gold, autoprinters, created_at FROM users WHERE email = $1',
     [email]
   );
   return result.rows[0] || null;
@@ -149,8 +155,8 @@ async function getUserByEmail(email) {
  */
 async function createUser(email, passwordHash) {
   const result = await pool.query(
-    'INSERT INTO users (email, password_hash, printer_supplies, money, gold) VALUES ($1, $2, $3, $4, $5) RETURNING id, email, tickets_contributed, printer_supplies, money, gold, created_at',
-    [email, passwordHash, 100, 0, 0]
+    'INSERT INTO users (email, password_hash, printer_supplies, money, gold, autoprinters) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, email, tickets_contributed, printer_supplies, money, gold, autoprinters, created_at',
+    [email, passwordHash, 100, 0, 0, 0]
   );
   return result.rows[0];
 }
@@ -176,7 +182,7 @@ async function updateUserTickets(userId, increment) {
  */
 async function getUserById(userId) {
   const result = await pool.query(
-    'SELECT id, email, tickets_contributed, printer_supplies, money, gold, created_at FROM users WHERE id = $1',
+    'SELECT id, email, tickets_contributed, printer_supplies, money, gold, autoprinters, created_at FROM users WHERE id = $1',
     [userId]
   );
   return result.rows[0] || null;
@@ -271,6 +277,100 @@ async function buyGold(userId, moneyCost, goldQuantity) {
 }
 
 /**
+ * Buy an autoprinter with gold
+ * Cost formula: 3 * (current_autoprinters + 1)^2
+ * @param {number} userId User ID
+ * @returns {Promise<object>} Object with new gold and autoprinters counts
+ * @throws {Error} If user has insufficient gold
+ */
+async function buyAutoprinter(userId) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // Get current autoprinter count
+    const userResult = await client.query(
+      'SELECT autoprinters, gold FROM users WHERE id = $1',
+      [userId]
+    );
+    
+    if (userResult.rows.length === 0) {
+      throw new Error('User not found');
+    }
+
+    const currentAutoprinters = userResult.rows[0].autoprinters;
+    const currentGold = userResult.rows[0].gold;
+    
+    // Calculate cost: 3 * (autoprinters + 1)^2
+    const goldCost = 3 * Math.pow(currentAutoprinters + 1, 2);
+
+    // Check if user has enough gold
+    if (currentGold < goldCost) {
+      throw new Error('Insufficient gold');
+    }
+
+    // Purchase autoprinter
+    const result = await client.query(
+      'UPDATE users SET gold = gold - $1, autoprinters = autoprinters + 1 WHERE id = $2 RETURNING gold, autoprinters',
+      [goldCost, userId]
+    );
+
+    await client.query('COMMIT');
+    return result.rows[0];
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Process all autoprinters for all users atomically
+ * Each user prints min(autoprinters, printer_supplies) tickets
+ * Updates supplies, money, tickets_contributed for users and global_state count
+ * @returns {Promise<object>} Object with totalTickets processed and newGlobalCount
+ */
+async function processAutoprinters() {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // Process all users with autoprinters and supplies in a single UPDATE
+    const usersResult = await client.query(`
+      UPDATE users 
+      SET 
+        printer_supplies = printer_supplies - LEAST(autoprinters, printer_supplies),
+        money = money + LEAST(autoprinters, printer_supplies),
+        tickets_contributed = tickets_contributed + LEAST(autoprinters, printer_supplies)
+      WHERE autoprinters > 0 AND printer_supplies > 0
+      RETURNING LEAST(autoprinters, printer_supplies) as tickets_printed
+    `);
+
+    // Calculate total tickets printed
+    const totalTickets = usersResult.rows.reduce((sum, row) => sum + row.tickets_printed, 0);
+
+    // Update global count if any tickets were printed
+    let newGlobalCount = null;
+    if (totalTickets > 0) {
+      const globalResult = await client.query(
+        'UPDATE global_state SET count = count + $1, updated_at = CURRENT_TIMESTAMP WHERE id = 1 RETURNING count',
+        [totalTickets]
+      );
+      newGlobalCount = globalResult.rows[0].count;
+    }
+
+    await client.query('COMMIT');
+    return { totalTickets, newGlobalCount };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+/**
  * Close the database connection pool
  * Should be called during graceful shutdown
  */
@@ -294,4 +394,6 @@ module.exports = {
   incrementUserMoney,
   buySupplies,
   buyGold,
+  buyAutoprinter,
+  processAutoprinters,
 };

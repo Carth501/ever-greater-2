@@ -8,6 +8,7 @@ export type User = {
   printer_supplies: number;
   money: number;
   gold: number;
+  autoprinters: number;
 };
 
 type RegisterResponse = {
@@ -162,5 +163,33 @@ export async function buyGold(quantity: number): Promise<BuyGoldResponse> {
   }
 
   const data = (await response.json()) as BuyGoldResponse;
+  return data;
+}
+
+/**
+ * Buy an autoprinter with gold
+ * Cost: 3 * (current_autoprinters + 1)^2 gold
+ * @returns Object with updated gold and autoprinters
+ */
+type BuyAutoprinterResponse = {
+  gold: number;
+  autoprinters: number;
+};
+
+export async function buyAutoprinter(): Promise<BuyAutoprinterResponse> {
+  const response = await fetch(`${apiBase}/api/shop/buy-autoprinter`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to buy autoprinter");
+  }
+
+  const data = (await response.json()) as BuyAutoprinterResponse;
   return data;
 }
