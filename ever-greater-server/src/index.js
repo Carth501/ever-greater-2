@@ -25,6 +25,7 @@ const {
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
 
 let wss; // WebSocket server instance
+let server; // HTTP server instance
 
 function broadcastCount(count) {
   if (!wss) return;
@@ -355,7 +356,7 @@ if (require.main === module) {
       console.log('Database initialized successfully');
       
       const app = createApp();
-      const server = createServer(app);
+      server = createServer(app);
       
       server.listen(PORT, () => {
         console.log(`ever-greater-server listening on http://localhost:${PORT}`);
@@ -370,19 +371,45 @@ if (require.main === module) {
   const shutdown = async (signal) => {
     console.log(`\n${signal} received, shutting down gracefully...`);
 
-    if (wss) {
-      wss.close(() => {
-        console.log('WebSocket server closed');
+    // Close HTTP server first to stop accepting new connections
+    if (server) {
+      server.close(() => {
+        console.log('HTTP server closed');
 
-        // Note: In production, the server would be properly closed here
-        // For now, we just close the pool
-        closePool().then(() => {
-          process.exit(0);
-        });
+        // Then close WebSocket server
+        if (wss) {
+          wss.close(() => {
+            console.log('WebSocket server closed');
+
+            // Finally close database pool
+            closePool().then(() => {
+              console.log('Database pool closed');
+              process.exit(0);
+            });
+          });
+        } else {
+          // No WebSocket server, just close pool
+          closePool().then(() => {
+            console.log('Database pool closed');
+            process.exit(0);
+          });
+        }
       });
     } else {
-      await closePool();
-      process.exit(0);
+      // No HTTP server, close remaining resources
+      if (wss) {
+        wss.close(() => {
+          console.log('WebSocket server closed');
+          closePool().then(() => {
+            console.log('Database pool closed');
+            process.exit(0);
+          });
+        });
+      } else {
+        await closePool();
+        console.log('Database pool closed');
+        process.exit(0);
+      }
     }
     
     // Force shutdown after 10 seconds
