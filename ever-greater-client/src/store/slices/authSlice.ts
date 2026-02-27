@@ -95,6 +95,20 @@ export const buySuppliesThunk = createAsyncThunk(
   },
 );
 
+export const buyGoldThunk = createAsyncThunk(
+  "auth/buyGold",
+  async (quantity: number, { rejectWithValue }) => {
+    try {
+      const result = await authApi.buyGold(quantity);
+      return result;
+    } catch (error) {
+      return rejectWithValue(
+        error instanceof Error ? error.message : "Failed to buy gold",
+      );
+    }
+  },
+);
+
 const authSlice = createSlice({
   name: "auth",
   initialState,
@@ -194,6 +208,25 @@ const authSlice = createSlice({
         state.error = null;
       })
       .addCase(buySuppliesThunk.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      });
+
+    // buyGoldThunk
+    builder
+      .addCase(buyGoldThunk.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(buyGoldThunk.fulfilled, (state, action) => {
+        state.isLoading = false;
+        if (state.user) {
+          state.user.money = action.payload.money;
+          state.user.gold = action.payload.gold;
+        }
+        state.error = null;
+      })
+      .addCase(buyGoldThunk.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
       });

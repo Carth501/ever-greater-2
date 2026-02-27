@@ -7,6 +7,7 @@ export type User = {
   tickets_contributed: number;
   printer_supplies: number;
   money: number;
+  gold: number;
 };
 
 type RegisterResponse = {
@@ -132,5 +133,34 @@ export async function buySupplies(): Promise<BuySuppliesResponse> {
   }
 
   const data = (await response.json()) as BuySuppliesResponse;
+  return data;
+}
+
+/**
+ * Buy gold with money
+ * @param quantity Number of gold to purchase
+ * @returns Object with updated money and gold
+ */
+type BuyGoldResponse = {
+  money: number;
+  gold: number;
+};
+
+export async function buyGold(quantity: number): Promise<BuyGoldResponse> {
+  const response = await fetch(`${apiBase}/api/shop/buy-gold`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "include",
+    body: JSON.stringify({ quantity }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to buy gold");
+  }
+
+  const data = (await response.json()) as BuyGoldResponse;
   return data;
 }

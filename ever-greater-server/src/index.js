@@ -18,7 +18,8 @@ const {
   getUserById,
   decrementUserSupplies,
   incrementUserMoney,
-  buySupplies
+  buySupplies,
+  buyGold
 } = require('./db');
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
@@ -99,7 +100,8 @@ function createApp() {
           email: user.email,
           tickets_contributed: user.tickets_contributed,
           printer_supplies: user.printer_supplies,
-          money: user.money
+          money: user.money,
+          gold: user.gold
         }
       });
     } catch (error) {
@@ -142,7 +144,8 @@ function createApp() {
           email: user.email,
           tickets_contributed: user.tickets_contributed,
           printer_supplies: user.printer_supplies,
-          money: user.money
+          money: user.money,
+          gold: user.gold
         }
       });
     } catch (error) {
@@ -173,7 +176,8 @@ function createApp() {
           email: user.email,
           tickets_contributed: user.tickets_contributed,
           printer_supplies: user.printer_supplies,
-          money: user.money
+          money: user.money,
+          gold: user.gold
         }
       });
     } catch (error) {
@@ -278,6 +282,49 @@ function createApp() {
     } catch (error) {
       console.error('Error buying supplies:', error);
       res.status(500).json({ error: 'Failed to buy supplies' });
+    }
+  });
+
+  /**
+   * Buy gold with money
+   * POST /api/shop/buy-gold
+   * Body: { quantity: number }
+   */
+  app.post("/api/shop/buy-gold", async (req, res) => {
+    try {
+      // Check if user is authenticated
+      if (!req.session.userId) {
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+
+      const { quantity } = req.body;
+
+      // Validate quantity
+      if (!quantity || typeof quantity !== 'number' || quantity < 1 || !Number.isInteger(quantity)) {
+        return res.status(400).json({ error: 'Invalid quantity. Must be a positive integer.' });
+      }
+
+      const goldCostPerUnit = 100;
+      const moneyCost = quantity * goldCostPerUnit;
+
+      // Try to buy gold (deduct money and add gold atomically)
+      let result;
+      try {
+        result = await buyGold(req.session.userId, moneyCost, quantity);
+      } catch (error) {
+        if (error.message === 'Insufficient money') {
+          return res.status(403).json({ error: 'Insufficient money' });
+        }
+        throw error; // Re-throw other errors
+      }
+
+      res.json({
+        money: result.money,
+        gold: result.gold
+      });
+    } catch (error) {
+      console.error('Error buying gold:', error);
+      res.status(500).json({ error: 'Failed to buy gold' });
     }
   });
 

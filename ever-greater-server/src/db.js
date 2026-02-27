@@ -79,6 +79,12 @@ async function initializeDatabase() {
       ADD COLUMN IF NOT EXISTS money INTEGER NOT NULL DEFAULT 0
     `);
 
+    // Add gold column to users table if it doesn't exist
+    await client.query(`
+      ALTER TABLE users 
+      ADD COLUMN IF NOT EXISTS gold INTEGER NOT NULL DEFAULT 0
+    `);
+
     // Insert initial row if table is empty
     const result = await client.query('SELECT COUNT(*) FROM global_state');
     const rowCount = parseInt(result.rows[0].count);
@@ -129,7 +135,7 @@ async function incrementGlobalCount() {
  */
 async function getUserByEmail(email) {
   const result = await pool.query(
-    'SELECT id, email, password_hash, tickets_contributed, printer_supplies, money, created_at FROM users WHERE email = $1',
+    'SELECT id, email, password_hash, tickets_contributed, printer_supplies, money, gold, created_at FROM users WHERE email = $1',
     [email]
   );
   return result.rows[0] || null;
@@ -143,8 +149,8 @@ async function getUserByEmail(email) {
  */
 async function createUser(email, passwordHash) {
   const result = await pool.query(
-    'INSERT INTO users (email, password_hash, printer_supplies, money) VALUES ($1, $2, $3, $4) RETURNING id, email, tickets_contributed, printer_supplies, money, created_at',
-    [email, passwordHash, 100, 0]
+    'INSERT INTO users (email, password_hash, printer_supplies, money, gold) VALUES ($1, $2, $3, $4, $5) RETURNING id, email, tickets_contributed, printer_supplies, money, gold, created_at',
+    [email, passwordHash, 100, 0, 0]
   );
   return result.rows[0];
 }
@@ -170,7 +176,7 @@ async function updateUserTickets(userId, increment) {
  */
 async function getUserById(userId) {
   const result = await pool.query(
-    'SELECT id, email, tickets_contributed, printer_supplies, money, created_at FROM users WHERE id = $1',
+    'SELECT id, email, tickets_contributed, printer_supplies, money, gold, created_at FROM users WHERE id = $1',
     [userId]
   );
   return result.rows[0] || null;
@@ -246,6 +252,25 @@ async function buySupplies(userId, moneyCost, suppliesGain) {
 }
 
 /**
+ * Decrement user's money and increment gold atomically
+ * @param {number} userId User ID
+ * @param {number} moneyCost Cost in money
+ * @param {number} goldQuantity Amount of gold to gain
+ * @returns {Promise<object>} Object with new money and gold counts
+ * @throws {Error} If user has insufficient money
+ */
+async function buyGold(userId, moneyCost, goldQuantity) {
+  const result = await pool.query(
+    'UPDATE users SET money = money - $1, gold = gold + $2 WHERE id = $3 AND money >= $1 RETURNING money, gold',
+    [moneyCost, goldQuantity, userId]
+  );
+  if (result.rows.length === 0) {
+    throw new Error('Insufficient money');
+  }
+  return result.rows[0];
+}
+
+/**
  * Close the database connection pool
  * Should be called during graceful shutdown
  */
@@ -268,4 +293,5 @@ module.exports = {
   decrementUserSupplies,
   incrementUserMoney,
   buySupplies,
+  buyGold,
 };

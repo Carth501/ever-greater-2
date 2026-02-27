@@ -31,6 +31,7 @@ const mockUser: User = {
   tickets_contributed: 5,
   printer_supplies: 100,
   money: 0,
+  gold: 0,
 };
 
 type TestRootState = {
