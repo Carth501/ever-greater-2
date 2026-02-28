@@ -11,6 +11,20 @@ type IncrementPayload = {
   money: number;
 };
 
+type UserUpdate = {
+  supplies?: number;
+  money?: number;
+  tickets_contributed?: number;
+  gold?: number;
+  autoprinters?: number;
+};
+
+type WebSocketPayload = {
+  count?: number;
+  user_update?: UserUpdate;
+  authenticated?: boolean;
+};
+
 function getWsUrl(): string {
   if (apiBase.startsWith("https://")) {
     return `wss://${apiBase.replace("https://", "")}/ws`;
@@ -49,18 +63,42 @@ export async function incrementGlobalCount(): Promise<{
 
 export function connectGlobalCountSocket(
   onCount: (count: number) => void,
+  onUserUpdate?: (update: UserUpdate) => void,
   onStatus?: (status: "open" | "closed" | "error") => void,
 ): () => void {
   const socket = new WebSocket(getWsUrl());
 
-  socket.addEventListener("open", () => onStatus?.("open"));
+  socket.addEventListener("open", () => {
+    onStatus?.("open");
+
+    // Send authentication message with userId from localStorage or session
+    try {
+      const userIdStr = localStorage.getItem("userId");
+      if (userIdStr) {
+        const userId = parseInt(userIdStr, 10);
+        if (!isNaN(userId)) {
+          socket.send(JSON.stringify({ type: "authenticate", userId }));
+        }
+      }
+    } catch (err) {
+      console.error("Error sending authentication message:", err);
+    }
+  });
+
   socket.addEventListener("close", () => onStatus?.("closed"));
   socket.addEventListener("error", () => onStatus?.("error"));
   socket.addEventListener("message", (event) => {
     try {
-      const payload = JSON.parse(event.data as string) as CountPayload;
+      const payload = JSON.parse(event.data as string) as WebSocketPayload;
+
+      // Handle global count update
       if (typeof payload.count === "number") {
         onCount(payload.count);
+      }
+
+      // Handle user-specific updates
+      if (payload.user_update && onUserUpdate) {
+        onUserUpdate(payload.user_update);
       }
     } catch (err) {
       // Ignore malformed payloads.

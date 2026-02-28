@@ -1,6 +1,14 @@
 import { Middleware, isAction } from "@reduxjs/toolkit";
 import { connectGlobalCountSocket } from "../../api/globalTicket";
-import { checkAuthThunk, logoutThunk } from "../slices/authSlice";
+import {
+  checkAuthThunk,
+  logoutThunk,
+  updateAutoprinters,
+  updateGold,
+  updateMoney,
+  updateSupplies,
+  updateTicketsContributed,
+} from "../slices/authSlice";
 import { setError } from "../slices/errorSlice";
 import {
   clearError as clearTicketError,
@@ -17,16 +25,39 @@ const wsState: WebSocketState = {
   disconnectFn: null,
 };
 
-function connectWebSocket(dispatch: any) {
+function connectWebSocket(dispatch: any, userId?: number) {
   // Disconnect existing connection if any
   if (wsState.disconnectFn) {
     wsState.disconnectFn();
+  }
+
+  // Store userId in localStorage for WebSocket authentication
+  if (userId) {
+    localStorage.setItem("userId", userId.toString());
   }
 
   wsState.disconnectFn = connectGlobalCountSocket(
     (count: number) => {
       dispatch(updateCount(count));
       dispatch(clearTicketError());
+    },
+    (update) => {
+      // Handle user-specific updates
+      if (update.supplies !== undefined) {
+        dispatch(updateSupplies(update.supplies));
+      }
+      if (update.money !== undefined) {
+        dispatch(updateMoney(update.money));
+      }
+      if (update.tickets_contributed !== undefined) {
+        dispatch(updateTicketsContributed(update.tickets_contributed));
+      }
+      if (update.gold !== undefined) {
+        dispatch(updateGold(update.gold));
+      }
+      if (update.autoprinters !== undefined) {
+        dispatch(updateAutoprinters(update.autoprinters));
+      }
     },
     (status: "open" | "closed" | "error") => {
       if (status === "error") {
@@ -43,6 +74,8 @@ function disconnectWebSocket() {
     wsState.disconnectFn();
     wsState.disconnectFn = null;
   }
+  // Clear userId from localStorage
+  localStorage.removeItem("userId");
 }
 
 export const websocketMiddleware: Middleware =
@@ -57,7 +90,7 @@ export const websocketMiddleware: Middleware =
       (isAction(action) && action.type === "auth/signup/fulfilled")
     ) {
       if (state.auth.user) {
-        connectWebSocket(store.dispatch);
+        connectWebSocket(store.dispatch, state.auth.user.id);
       }
     }
 

@@ -230,6 +230,7 @@ describe("websocketMiddleware", () => {
       mockGlobalTicketApi.connectGlobalCountSocket.mockImplementation(
         (
           _onCount: (count: number) => void,
+          _onUserUpdate?: (update: any) => void,
           onStatus?: (status: "open" | "closed" | "error") => void,
         ) => {
           if (onStatus) {

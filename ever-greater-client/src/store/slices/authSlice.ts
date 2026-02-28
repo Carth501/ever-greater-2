@@ -140,6 +140,30 @@ const authSlice = createSlice({
         state.user.money = action.payload;
       }
     },
+    updateTicketsContributed: (state, action) => {
+      if (state.user) {
+        // Handle both absolute value and incremental updates
+        if (typeof action.payload === "number") {
+          // If it's less than 100, treat as increment (common for WebSocket updates)
+          if (action.payload < 100) {
+            state.user.tickets_contributed += action.payload;
+          } else {
+            // Otherwise, treat as absolute value
+            state.user.tickets_contributed = action.payload;
+          }
+        }
+      }
+    },
+    updateGold: (state, action) => {
+      if (state.user) {
+        state.user.gold = action.payload;
+      }
+    },
+    updateAutoprinters: (state, action) => {
+      if (state.user) {
+        state.user.autoprinters = action.payload;
+      }
+    },
   },
   extraReducers: (builder) => {
     // checkAuthThunk
@@ -266,5 +290,12 @@ const authSlice = createSlice({
   },
 });
 
-export const { clearError, updateSupplies, updateMoney } = authSlice.actions;
+export const {
+  clearError,
+  updateSupplies,
+  updateMoney,
+  updateTicketsContributed,
+  updateGold,
+  updateAutoprinters,
+} = authSlice.actions;
 export default authSlice.reducer;

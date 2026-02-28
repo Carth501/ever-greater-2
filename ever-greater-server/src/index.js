@@ -29,6 +29,7 @@ const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
 let wss; // WebSocket server instance
 let server; // HTTP server instance
 let autoprinterInterval; // Autoprinter timer interval
+const socketUserMap = new Map(); // Map of socket -> userId
 
 function broadcastCount(count) {
   if (!wss) return;
@@ -38,6 +39,59 @@ function broadcastCount(count) {
       client.send(payload);
     }
   });
+}
+
+/**
+ * Send user-specific updates (supplies, money, contributions) to a specific user's WebSocket
+ * @param {number} userId - User ID
+ * @param {object} updates - Object with optional: supplies, money, tickets_contributed
+ */
+async function sendUserUpdate(userId, updates) {
+  if (!wss) return;
+  
+  wss.clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN && socketUserMap.get(client) === userId) {
+      const payload = JSON.stringify({ user_update: updates });
+      client.send(payload);
+    }
+  });
+}
+
+/**
+ * Broadcast autoprinter updates to all users
+ * Gets the latest user data for each connected user and sends their updates
+ */
+async function broadcastAutoprinterUpdates() {
+  if (!wss) return;
+  
+  // Create a set of unique userIds from connected sockets
+  const userIds = new Set();
+  socketUserMap.forEach((userId) => {
+    userIds.add(userId);
+  });
+
+  // Get updated data for each user and send to their socket(s)
+  for (const userId of userIds) {
+    try {
+      const user = await getUserById(userId);
+      if (user) {
+        wss.clients.forEach((client) => {
+          if (client.readyState === WebSocket.OPEN && socketUserMap.get(client) === userId) {
+            const payload = JSON.stringify({
+              user_update: {
+                supplies: user.printer_supplies,
+                money: user.money,
+                tickets_contributed: user.tickets_contributed
+              }
+            });
+            client.send(payload);
+          }
+        });
+      }
+    } catch (error) {
+      console.error(`Error sending autoprinter update to user ${userId}:`, error);
+    }
+  }
 }
 
 function createApp() {
@@ -248,6 +302,14 @@ function createApp() {
       const newMoney = await incrementUserMoney(req.session.userId, 1);
 
       broadcastCount(newCount);
+      
+      // Send user-specific updates via WebSocket
+      await sendUserUpdate(req.session.userId, {
+        supplies: newSupplies,
+        money: newMoney,
+        tickets_contributed: 1 // This is incrementing by 1
+      });
+      
       res.json({ count: newCount, supplies: newSupplies, money: newMoney });
     } catch (error) {
       console.error('Error incrementing count:', error);
@@ -282,6 +344,12 @@ function createApp() {
         }
         throw error; // Re-throw other errors
       }
+
+      // Send user-specific updates via WebSocket
+      await sendUserUpdate(req.session.userId, {
+        money: result.money,
+        supplies: result.printer_supplies
+      });
 
       res.json({
         money: result.money,
@@ -326,6 +394,12 @@ function createApp() {
         throw error; // Re-throw other errors
       }
 
+      // Send user-specific updates via WebSocket
+      await sendUserUpdate(req.session.userId, {
+        money: result.money,
+        gold: result.gold
+      });
+
       res.json({
         money: result.money,
         gold: result.gold
@@ -359,6 +433,12 @@ function createApp() {
         throw error; // Re-throw other errors
       }
 
+      // Send user-specific updates via WebSocket
+      await sendUserUpdate(req.session.userId, {
+        gold: result.gold,
+        autoprinters: result.autoprinters
+      });
+
       res.json({
         gold: result.gold,
         autoprinters: result.autoprinters
@@ -383,6 +463,29 @@ function createServer(app) {
     } catch (error) {
       console.error('Error sending initial count to WebSocket client:', error);
     }
+
+    // Handle incoming messages (authentication)
+    socket.on("message", (data) => {
+      try {
+        const message = JSON.parse(data.toString());
+        
+        // Handle authentication message with userId
+        if (message.type === "authenticate" && message.userId) {
+          const userId = parseInt(message.userId, 10);
+          if (!isNaN(userId)) {
+            socketUserMap.set(socket, userId);
+            socket.send(JSON.stringify({ authenticated: true }));
+          }
+        }
+      } catch (error) {
+        console.error('Error processing WebSocket message:', error);
+      }
+    });
+
+    // Clean up on socket close
+    socket.on("close", () => {
+      socketUserMap.delete(socket);
+    });
   });
 
   return server;
@@ -408,6 +511,8 @@ if (require.main === module) {
           const result = await processAutoprinters();
           if (result.totalTickets > 0) {
             broadcastCount(result.newGlobalCount);
+            // Also broadcast user-specific updates to all connected users
+            await broadcastAutoprinterUpdates();
           }
         } catch (error) {
           console.error('Error processing autoprinters:', error);
