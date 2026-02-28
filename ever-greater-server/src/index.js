@@ -407,7 +407,6 @@ if (require.main === module) {
         try {
           const result = await processAutoprinters();
           if (result.totalTickets > 0) {
-            console.log(`Autoprinters processed: ${result.totalTickets} tickets, new count: ${result.newGlobalCount}`);
             broadcastCount(result.newGlobalCount);
           }
         } catch (error) {

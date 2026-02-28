@@ -301,8 +301,8 @@ async function buyAutoprinter(userId) {
     const currentAutoprinters = userResult.rows[0].autoprinters;
     const currentGold = userResult.rows[0].gold;
     
-    // Calculate cost: 3 * (autoprinters + 1)^2
-    const goldCost = 3 * Math.pow(currentAutoprinters + 1, 2);
+    // Calculate cost: 2 * (autoprinters + 1)^1.2
+    const goldCost = 2 * Math.floor(Math.pow(currentAutoprinters + 1, 1.2));
 
     // Check if user has enough gold
     if (currentGold < goldCost) {

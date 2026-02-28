@@ -92,7 +92,7 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
   const canAffordGold100 = money >= goldCostPerUnit * 100;
 
   // Autoprinter calculations
-  const autoprinterCost = 3 * Math.pow(autoprinters + 1, 2);
+  const autoprinterCost = 2 * Math.floor(Math.pow(autoprinters + 1, 1.2));
   const canAffordAutoprinter = gold >= autoprinterCost;
 
   return (
