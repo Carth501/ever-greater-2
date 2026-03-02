@@ -1,0 +1,23 @@
+{
+	"name": "ever-greater-shared",
+	"version": "1.0.0",
+	"description": "Shared types and definitions for ever-greater client and server",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"scripts": {
+		"build": "tsc",
+		"prepare": "npm run build",
+		"watch": "tsc --watch",
+		"clean": "rimraf dist"
+	},
+	"keywords": [
+		"shared",
+		"types"
+	],
+	"author": "",
+	"license": "ISC",
+	"devDependencies": {
+		"typescript": "^4.9.5",
+		"rimraf": "^5.0.0"
+	}
+}

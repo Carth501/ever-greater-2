@@ -1,13 +1,9 @@
 import { Middleware, isAction } from "@reduxjs/toolkit";
 import { connectGlobalCountSocket } from "../../api/globalTicket";
 import {
+  applyUserUpdate,
   checkAuthThunk,
   logoutThunk,
-  updateAutoprinters,
-  updateGold,
-  updateMoney,
-  updateSupplies,
-  updateTicketsContributed,
 } from "../slices/authSlice";
 import { setError } from "../slices/errorSlice";
 import {
@@ -42,21 +38,22 @@ function connectWebSocket(dispatch: any, userId?: number) {
       dispatch(clearTicketError());
     },
     (update) => {
-      // Handle user-specific updates
-      if (update.supplies !== undefined) {
-        dispatch(updateSupplies(update.supplies));
-      }
-      if (update.money !== undefined) {
-        dispatch(updateMoney(update.money));
-      }
-      if (update.tickets_contributed !== undefined) {
-        dispatch(updateTicketsContributed(update.tickets_contributed));
-      }
-      if (update.gold !== undefined) {
-        dispatch(updateGold(update.gold));
-      }
-      if (update.autoprinters !== undefined) {
-        dispatch(updateAutoprinters(update.autoprinters));
+      const payload = {
+        ...(update.supplies !== undefined
+          ? { printer_supplies: update.supplies }
+          : {}),
+        ...(update.money !== undefined ? { money: update.money } : {}),
+        ...(update.tickets_contributed !== undefined
+          ? { tickets_contributed: update.tickets_contributed }
+          : {}),
+        ...(update.gold !== undefined ? { gold: update.gold } : {}),
+        ...(update.autoprinters !== undefined
+          ? { autoprinters: update.autoprinters }
+          : {}),
+      };
+
+      if (Object.keys(payload).length > 0) {
+        dispatch(applyUserUpdate(payload));
       }
     },
     (status: "open" | "closed" | "error") => {

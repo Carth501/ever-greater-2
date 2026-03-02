@@ -5,6 +5,13 @@ import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { styled } from "@mui/material/styles";
+import {
+  OperationId,
+  ResourceType,
+  canAfford,
+  getOperationCost,
+  operations,
+} from "ever-greater-shared";
 import { JSX, useState } from "react";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import {
@@ -79,21 +86,63 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
   const money = currentUser.money ?? 0;
   const gold = currentUser.gold ?? 0;
   const autoprinters = currentUser.autoprinters ?? 0;
-  const moneyCost = 10;
-  const canAfford = money >= moneyCost;
-  const isButtonDisabled = isLoading || !canAfford;
+  const operationContext = { user: currentUser };
+
+  const buySuppliesOperation = operations[OperationId.BUY_SUPPLIES];
+  const buyGoldOperation = operations[OperationId.BUY_GOLD];
+  const buyAutoprinterOperation = operations[OperationId.BUY_AUTOPRINTER];
+
+  const suppliesCost = getOperationCost(buySuppliesOperation, operationContext);
+  const moneyCost = suppliesCost[ResourceType.MONEY] ?? 0;
+  const canAffordSupplies = canAfford(currentUser, suppliesCost);
+  const isButtonDisabled = isLoading || !canAffordSupplies;
 
   // Gold purchase calculations
-  const goldCostPerUnit = 100;
-  const totalGoldCost = goldQuantity * goldCostPerUnit;
-  const canAffordGold = money >= totalGoldCost && goldQuantity >= 1;
-  const canAffordGold1 = money >= goldCostPerUnit * 1;
-  const canAffordGold10 = money >= goldCostPerUnit * 10;
-  const canAffordGold100 = money >= goldCostPerUnit * 100;
+  const goldCostPerUnit =
+    getOperationCost(buyGoldOperation, {
+      user: currentUser,
+      params: { quantity: 1 },
+    })[ResourceType.MONEY] ?? 0;
+  const totalGoldCost =
+    getOperationCost(buyGoldOperation, {
+      user: currentUser,
+      params: { quantity: goldQuantity },
+    })[ResourceType.MONEY] ?? 0;
+  const canAffordGold =
+    goldQuantity >= 1 &&
+    canAfford(currentUser, {
+      [ResourceType.MONEY]: totalGoldCost,
+    });
+  const canAffordGold1 = canAfford(currentUser, {
+    [ResourceType.MONEY]:
+      getOperationCost(buyGoldOperation, {
+        user: currentUser,
+        params: { quantity: 1 },
+      })[ResourceType.MONEY] ?? 0,
+  });
+  const canAffordGold10 = canAfford(currentUser, {
+    [ResourceType.MONEY]:
+      getOperationCost(buyGoldOperation, {
+        user: currentUser,
+        params: { quantity: 10 },
+      })[ResourceType.MONEY] ?? 0,
+  });
+  const canAffordGold100 = canAfford(currentUser, {
+    [ResourceType.MONEY]:
+      getOperationCost(buyGoldOperation, {
+        user: currentUser,
+        params: { quantity: 100 },
+      })[ResourceType.MONEY] ?? 0,
+  });
 
   // Autoprinter calculations
-  const autoprinterCost = 2 * Math.floor(Math.pow(autoprinters + 1, 1.2));
-  const canAffordAutoprinter = gold >= autoprinterCost;
+  const autoprinterCost =
+    getOperationCost(buyAutoprinterOperation, operationContext)[
+      ResourceType.GOLD
+    ] ?? 0;
+  const canAffordAutoprinter = canAfford(currentUser, {
+    [ResourceType.GOLD]: autoprinterCost,
+  });
 
   return (
     <Stack spacing={2}>
@@ -124,7 +173,7 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
           variant="contained"
           disabled={isButtonDisabled}
         >
-          {canAfford ? "Buy" : "Insufficient Money"}
+          {canAffordSupplies ? "Buy" : "Insufficient Money"}
         </Button>
       </ShopRow>
 

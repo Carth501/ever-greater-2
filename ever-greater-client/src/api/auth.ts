@@ -1,15 +1,9 @@
+import { type User } from "ever-greater-shared";
+
 const DEFAULT_API_BASE = "http://localhost:4000";
 const apiBase = process.env.REACT_APP_API_BASE || DEFAULT_API_BASE;
 
-export type User = {
-  id: number;
-  email: string;
-  tickets_contributed: number;
-  printer_supplies: number;
-  money: number;
-  gold: number;
-  autoprinters: number;
-};
+export type { User };
 
 type RegisterResponse = {
   user: User;

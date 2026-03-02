@@ -1,6 +1,18 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import type { User } from "../../api/auth";
 import * as authApi from "../../api/auth";
+import * as operationsApi from "../../api/operations";
+
+type UserUpdatePayload = Partial<
+  Pick<
+    User,
+    | "printer_supplies"
+    | "money"
+    | "tickets_contributed"
+    | "gold"
+    | "autoprinters"
+  >
+>;
 
 export interface AuthState {
   user: User | null;
@@ -85,8 +97,8 @@ export const buySuppliesThunk = createAsyncThunk(
   "auth/buySupplies",
   async (_, { rejectWithValue }) => {
     try {
-      const result = await authApi.buySupplies();
-      return result;
+      const user = await operationsApi.buySupplies();
+      return user;
     } catch (error) {
       return rejectWithValue(
         error instanceof Error ? error.message : "Failed to buy supplies",
@@ -99,8 +111,8 @@ export const buyGoldThunk = createAsyncThunk(
   "auth/buyGold",
   async (quantity: number, { rejectWithValue }) => {
     try {
-      const result = await authApi.buyGold(quantity);
-      return result;
+      const user = await operationsApi.buyGold(quantity);
+      return user;
     } catch (error) {
       return rejectWithValue(
         error instanceof Error ? error.message : "Failed to buy gold",
@@ -113,8 +125,8 @@ export const buyAutoprinterThunk = createAsyncThunk(
   "auth/buyAutoprinter",
   async (_, { rejectWithValue }) => {
     try {
-      const result = await authApi.buyAutoprinter();
-      return result;
+      const user = await operationsApi.buyAutoprinter();
+      return user;
     } catch (error) {
       return rejectWithValue(
         error instanceof Error ? error.message : "Failed to buy autoprinter",
@@ -162,6 +174,14 @@ const authSlice = createSlice({
     updateAutoprinters: (state, action) => {
       if (state.user) {
         state.user.autoprinters = action.payload;
+      }
+    },
+    applyUserUpdate: (state, action: { payload: UserUpdatePayload }) => {
+      if (state.user) {
+        state.user = {
+          ...state.user,
+          ...action.payload,
+        };
       }
     },
   },
@@ -239,10 +259,7 @@ const authSlice = createSlice({
       })
       .addCase(buySuppliesThunk.fulfilled, (state, action) => {
         state.isLoading = false;
-        if (state.user) {
-          state.user.money = action.payload.money;
-          state.user.printer_supplies = action.payload.printer_supplies;
-        }
+        state.user = action.payload;
         state.error = null;
       })
       .addCase(buySuppliesThunk.rejected, (state, action) => {
@@ -258,10 +275,7 @@ const authSlice = createSlice({
       })
       .addCase(buyGoldThunk.fulfilled, (state, action) => {
         state.isLoading = false;
-        if (state.user) {
-          state.user.money = action.payload.money;
-          state.user.gold = action.payload.gold;
-        }
+        state.user = action.payload;
         state.error = null;
       })
       .addCase(buyGoldThunk.rejected, (state, action) => {
@@ -277,10 +291,7 @@ const authSlice = createSlice({
       })
       .addCase(buyAutoprinterThunk.fulfilled, (state, action) => {
         state.isLoading = false;
-        if (state.user) {
-          state.user.gold = action.payload.gold;
-          state.user.autoprinters = action.payload.autoprinters;
-        }
+        state.user = action.payload;
         state.error = null;
       })
       .addCase(buyAutoprinterThunk.rejected, (state, action) => {
@@ -297,5 +308,6 @@ export const {
   updateTicketsContributed,
   updateGold,
   updateAutoprinters,
+  applyUserUpdate,
 } = authSlice.actions;
 export default authSlice.reducer;

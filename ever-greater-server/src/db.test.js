@@ -51,16 +51,26 @@ describe('Database Functions', () => {
     });
 
     it('should skip inserting initial data if table is already populated', async () => {
-      mockClient.query
-        .mockResolvedValueOnce({ rows: [] }) // CREATE TABLE global_state
-        .mockResolvedValueOnce({ rows: [] }) // CREATE TABLE users
-        .mockResolvedValueOnce({ rows: [] }) // CREATE TABLE session
-        .mockResolvedValueOnce({ rows: [] }) // CREATE INDEX
-        .mockResolvedValueOnce({ rows: [] }) // ALTER TABLE - add printer_supplies
-        .mockResolvedValueOnce({ rows: [] }) // ALTER TABLE - set printer_supplies default
-        .mockResolvedValueOnce({ rows: [] }) // UPDATE users - set printer_supplies
-        .mockResolvedValueOnce({ rows: [] }) // ALTER TABLE - add money
-        .mockResolvedValueOnce({ rows: [{ count: 1 }] }); // SELECT COUNT - table not empty
+      mockClient.query.mockImplementation(async (query) => {
+        if (query.includes('information_schema.columns')) {
+          return {
+            rows: [
+              { column_name: 'tickets_contributed' },
+              { column_name: 'printer_supplies' },
+              { column_name: 'money' },
+              { column_name: 'gold' },
+              { column_name: 'autoprinters' },
+              { column_name: 'milk' },
+            ],
+          };
+        }
+
+        if (query.includes('SELECT COUNT(*) FROM global_state')) {
+          return { rows: [{ count: 1 }] };
+        }
+
+        return { rows: [] };
+      });
 
       await db.initializeDatabase();
 
@@ -169,7 +179,9 @@ describe('Database Functions', () => {
         tickets_contributed: 0,
         printer_supplies: 100,
         money: 0,
-        created_at: '2024-01-01',
+        gold: 0,
+        autoprinters: 0,
+        milk: 0,
       };
 
       mockPool.query.mockResolvedValue({ rows: [mockUser] });
@@ -179,7 +191,7 @@ describe('Database Functions', () => {
       expect(user).toEqual(mockUser);
       expect(mockPool.query).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO users'),
-        ['newuser@example.com', 'hashed_password', 100, 0]
+        ['newuser@example.com', 'hashed_password', 100, 0, 0, 0]
       );
     });
 

@@ -2,29 +2,42 @@
 	"name": "ever-greater-server",
 	"version": "1.0.0",
 	"private": true,
-	"main": "src/index.js",
+	"main": "dist/index.js",
 	"type": "commonjs",
 	"scripts": {
-		"start": "node src/index.js",
-		"dev": "node src/index.js",
+		"build": "tsc",
+		"start": "npm run build && node dist/index.js",
+		"dev": "tsc && node dist/index.js",
 		"test": "jest --detectOpenHandles",
 		"test:watch": "jest --watch --detectOpenHandles",
-		"test:coverage": "jest --coverage --detectOpenHandles"
+		"test:coverage": "jest --coverage --detectOpenHandles",
+		"clean": "rimraf dist"
 	},
 	"dependencies": {
 		"bcryptjs": "^3.0.3",
 		"connect-pg-simple": "^10.0.0",
 		"cors": "^2.8.5",
 		"dotenv": "^17.3.1",
+		"ever-greater-shared": "file:../ever-greater-shared",
 		"express": "^4.19.2",
 		"express-session": "^1.19.0",
 		"pg": "^8.18.0",
 		"ws": "^8.18.0"
 	},
 	"devDependencies": {
+		"@types/bcryptjs": "^2.4.6",
+		"@types/connect-pg-simple": "^7.0.3",
+		"@types/cors": "^2.8.17",
+		"@types/express": "^4.17.21",
+		"@types/express-session": "^1.18.0",
 		"@types/jest": "^30.0.0",
+		"@types/node": "^20.0.0",
+		"@types/pg": "^8.11.0",
+		"@types/ws": "^8.5.10",
 		"jest": "^30.2.0",
-		"supertest": "^7.2.2"
+		"rimraf": "^5.0.0",
+		"supertest": "^7.2.2",
+		"typescript": "^4.9.5"
 	},
 	"jest": {
 		"testEnvironment": "node",
@@ -32,7 +45,8 @@
 			"/node_modules/"
 		],
 		"testMatch": [
-			"**/*.test.js"
+			"**/*.test.js",
+			"**/*.test.ts"
 		],
 		"forceExit": true,
 		"testTimeout": 10000
