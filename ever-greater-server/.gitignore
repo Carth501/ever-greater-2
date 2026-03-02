@@ -4,6 +4,9 @@
 # Dependency directories
 node_modules/
 
+# Build artifacts
+dist/
+
 # Logs
 logs
 *.log
