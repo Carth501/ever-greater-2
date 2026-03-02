@@ -136,6 +136,16 @@ const theme = createTheme({
         },
       },
     },
+    MuiCssBaseline: {
+      styleOverrides: {
+        html: {
+          overflow: "hidden",
+        },
+        body: {
+          overflow: "hidden",
+        },
+      },
+    },
     MuiPaper: {
       styleOverrides: {
         root: {

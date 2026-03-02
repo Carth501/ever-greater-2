@@ -14,9 +14,7 @@ import { fetchCountThunk } from "./store/slices/ticketSlice";
 type AuthPage = "login" | "signup";
 
 const AppRoot = styled(Box)(({ theme }) => ({
-  minHeight: "100vh",
-  display: "flex",
-  flexDirection: "column",
+  height: "100vh",
   backgroundColor: theme.palette.background.default,
 }));
 
@@ -85,9 +83,14 @@ function App() {
     );
   }
 
+  const contentHeight = `calc(100vh - 56px)`;
+
   return (
     <AppRoot>
-      <Container maxWidth="md" sx={{ flex: 1, py: 4 }}>
+      <Container
+        maxWidth="md"
+        sx={{ flex: 1, py: 4, overflowY: "scroll", maxHeight: contentHeight }}
+      >
         <ScalingNumberDemo onLogout={handleLogout} />
       </Container>
 
