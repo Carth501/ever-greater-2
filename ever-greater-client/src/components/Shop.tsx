@@ -18,7 +18,10 @@ import {
   buyAutoprinterThunk,
   buyGoldThunk,
   buySuppliesThunk,
+  increaseCreditCapacityThunk,
+  increaseCreditGenerationThunk,
 } from "../store/slices/authSlice";
+import CreditDisplay from "./CreditDisplay";
 
 type ShopProps = {
   onPurchaseError?: (error: string) => void;
@@ -79,6 +82,24 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
     });
   };
 
+  const handleIncreaseCreditGeneration = () => {
+    if (isLoading) return;
+    dispatch(increaseCreditGenerationThunk()).then((result) => {
+      if (result.type === increaseCreditGenerationThunk.rejected.type) {
+        onPurchaseError?.(result.payload as string);
+      }
+    });
+  };
+
+  const handleIncreaseCreditCapacity = () => {
+    if (isLoading) return;
+    dispatch(increaseCreditCapacityThunk()).then((result) => {
+      if (result.type === increaseCreditCapacityThunk.rejected.type) {
+        onPurchaseError?.(result.payload as string);
+      }
+    });
+  };
+
   if (!currentUser) {
     return <Typography>Loading...</Typography>;
   }
@@ -91,9 +112,13 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
   const buySuppliesOperation = operations[OperationId.BUY_SUPPLIES];
   const buyGoldOperation = operations[OperationId.BUY_GOLD];
   const buyAutoprinterOperation = operations[OperationId.BUY_AUTOPRINTER];
+  const increaseCreditGenerationOperation =
+    operations[OperationId.INCREASE_CREDIT_GENERATION];
+  const increaseCreditCapacityOperation =
+    operations[OperationId.INCREASE_CREDIT_CAPACITY];
 
   const suppliesCost = getOperationCost(buySuppliesOperation, operationContext);
-  const moneyCost = suppliesCost[ResourceType.MONEY] ?? 0;
+  const suppliesCostInGold = suppliesCost[ResourceType.GOLD] ?? 0;
   const canAffordSupplies = canAfford(currentUser, suppliesCost);
   const isButtonDisabled = isLoading || !canAffordSupplies;
 
@@ -138,10 +163,28 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
   // Autoprinter calculations
   const autoprinterCost =
     getOperationCost(buyAutoprinterOperation, operationContext)[
-      ResourceType.GOLD
+      ResourceType.CREDIT
     ] ?? 0;
   const canAffordAutoprinter = canAfford(currentUser, {
-    [ResourceType.GOLD]: autoprinterCost,
+    [ResourceType.CREDIT]: autoprinterCost,
+  });
+
+  // Credit generation upgrade calculations
+  const creditGenerationCost =
+    getOperationCost(increaseCreditGenerationOperation, operationContext)[
+      ResourceType.GOLD
+    ] ?? 0;
+  const canAffordCreditGeneration = canAfford(currentUser, {
+    [ResourceType.GOLD]: creditGenerationCost,
+  });
+
+  // Credit capacity upgrade calculations
+  const creditCapacityCost =
+    getOperationCost(increaseCreditCapacityOperation, operationContext)[
+      ResourceType.TICKETS_CONTRIBUTED
+    ] ?? 0;
+  const canAffordCreditCapacity = canAfford(currentUser, {
+    [ResourceType.TICKETS_CONTRIBUTED]: creditCapacityCost,
   });
 
   return (
@@ -149,6 +192,9 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
       <Typography variant="h6" fontWeight={700}>
         Shop
       </Typography>
+
+      <CreditDisplay user={currentUser} />
+
       <Typography variant="body1" color="text.secondary">
         Money: <strong>${money}</strong>
       </Typography>
@@ -162,10 +208,10 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
       <ShopRow>
         <Box>
           <Typography variant="subtitle1" fontWeight={600}>
-            100 Supplies
+            200 Supplies
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Cost: ${moneyCost}
+            Cost: {suppliesCostInGold}g
           </Typography>
         </Box>
         <Button
@@ -248,7 +294,7 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
             Autoprinter
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Cost: {autoprinterCost}g
+            Cost: {autoprinterCost} credit
           </Typography>
           <Typography variant="caption" color="text.secondary" display="block">
             Prints 1 ticket every 4 seconds (uses supplies)
@@ -259,7 +305,49 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
           variant="contained"
           disabled={isLoading || !canAffordAutoprinter}
         >
-          {canAffordAutoprinter ? "Buy" : "Insufficient Gold"}
+          {canAffordAutoprinter ? "Buy" : "Insufficient Credit"}
+        </Button>
+      </ShopRow>
+
+      <ShopRow>
+        <Box>
+          <Typography variant="subtitle1" fontWeight={600}>
+            Increase Credit Generation
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Cost: {creditGenerationCost}g
+          </Typography>
+          <Typography variant="caption" color="text.secondary" display="block">
+            Permanently increase credit generation by 0.1 per second
+          </Typography>
+        </Box>
+        <Button
+          onClick={handleIncreaseCreditGeneration}
+          variant="contained"
+          disabled={isLoading || !canAffordCreditGeneration}
+        >
+          {canAffordCreditGeneration ? "Buy" : "Insufficient Gold"}
+        </Button>
+      </ShopRow>
+
+      <ShopRow>
+        <Box>
+          <Typography variant="subtitle1" fontWeight={600}>
+            Increase Credit Capacity
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Cost: {creditCapacityCost} tickets
+          </Typography>
+          <Typography variant="caption" color="text.secondary" display="block">
+            Permanently increase maximum credit by 1
+          </Typography>
+        </Box>
+        <Button
+          onClick={handleIncreaseCreditCapacity}
+          variant="contained"
+          disabled={isLoading || !canAffordCreditCapacity}
+        >
+          {canAffordCreditCapacity ? "Buy" : "Insufficient Tickets"}
         </Button>
       </ShopRow>
 

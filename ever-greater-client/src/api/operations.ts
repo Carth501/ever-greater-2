@@ -76,3 +76,17 @@ export async function buyAutoprinter(): Promise<User> {
 export async function printTicket(): Promise<User> {
   return executeOperation(OperationId.PRINT_TICKET);
 }
+
+/**
+ * Increase credit generation rate by 0.1 per second
+ */
+export async function increaseCreditGeneration(): Promise<User> {
+  return executeOperation(OperationId.INCREASE_CREDIT_GENERATION);
+}
+
+/**
+ * Increase credit capacity maximum by 1
+ */
+export async function increaseCreditCapacity(): Promise<User> {
+  return executeOperation(OperationId.INCREASE_CREDIT_CAPACITY);
+}

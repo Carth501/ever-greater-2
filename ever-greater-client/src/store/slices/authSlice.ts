@@ -11,6 +11,9 @@ type UserUpdatePayload = Partial<
     | "tickets_contributed"
     | "gold"
     | "autoprinters"
+    | "credit_value"
+    | "credit_generation_level"
+    | "credit_capacity_level"
   >
 >;
 
@@ -130,6 +133,38 @@ export const buyAutoprinterThunk = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(
         error instanceof Error ? error.message : "Failed to buy autoprinter",
+      );
+    }
+  },
+);
+
+export const increaseCreditGenerationThunk = createAsyncThunk(
+  "auth/increaseCreditGeneration",
+  async (_, { rejectWithValue }) => {
+    try {
+      const user = await operationsApi.increaseCreditGeneration();
+      return user;
+    } catch (error) {
+      return rejectWithValue(
+        error instanceof Error
+          ? error.message
+          : "Failed to increase credit generation",
+      );
+    }
+  },
+);
+
+export const increaseCreditCapacityThunk = createAsyncThunk(
+  "auth/increaseCreditCapacity",
+  async (_, { rejectWithValue }) => {
+    try {
+      const user = await operationsApi.increaseCreditCapacity();
+      return user;
+    } catch (error) {
+      return rejectWithValue(
+        error instanceof Error
+          ? error.message
+          : "Failed to increase credit capacity",
       );
     }
   },
@@ -295,6 +330,38 @@ const authSlice = createSlice({
         state.error = null;
       })
       .addCase(buyAutoprinterThunk.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      });
+
+    // increaseCreditGenerationThunk
+    builder
+      .addCase(increaseCreditGenerationThunk.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(increaseCreditGenerationThunk.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = action.payload;
+        state.error = null;
+      })
+      .addCase(increaseCreditGenerationThunk.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      });
+
+    // increaseCreditCapacityThunk
+    builder
+      .addCase(increaseCreditCapacityThunk.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(increaseCreditCapacityThunk.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = action.payload;
+        state.error = null;
+      })
+      .addCase(increaseCreditCapacityThunk.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
       });

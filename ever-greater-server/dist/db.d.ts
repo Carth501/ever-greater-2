@@ -16,6 +16,7 @@ export declare function processAutoprinters(): Promise<{
     totalTickets: number;
     newGlobalCount: number | null;
 }>;
+export declare function updateAllUsersCreditValues(): Promise<void>;
 export declare function closePool(): Promise<void>;
 export {};
 //# sourceMappingURL=db.d.ts.map

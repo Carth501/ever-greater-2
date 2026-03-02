@@ -17,6 +17,7 @@ type UserUpdate = {
   tickets_contributed?: number;
   gold?: number;
   autoprinters?: number;
+  credit_value?: number;
 };
 
 type WebSocketPayload = {

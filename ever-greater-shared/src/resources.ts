@@ -8,6 +8,9 @@ export enum ResourceType {
   MONEY = "MONEY",
   GOLD = "GOLD",
   AUTOPRINTERS = "AUTOPRINTERS",
+  CREDIT = "CREDIT",
+  CREDIT_GENERATION_LEVEL = "CREDIT_GENERATION_LEVEL",
+  CREDIT_CAPACITY_LEVEL = "CREDIT_CAPACITY_LEVEL",
 }
 
 /**
@@ -20,6 +23,9 @@ export const RESOURCE_DB_FIELDS: Record<ResourceType, string> = {
   [ResourceType.MONEY]: "money",
   [ResourceType.GOLD]: "gold",
   [ResourceType.AUTOPRINTERS]: "autoprinters",
+  [ResourceType.CREDIT]: "credit_value",
+  [ResourceType.CREDIT_GENERATION_LEVEL]: "credit_generation_level",
+  [ResourceType.CREDIT_CAPACITY_LEVEL]: "credit_capacity_level",
 };
 
 /**
@@ -32,6 +38,9 @@ export const DB_FIELD_TO_RESOURCE: Record<string, ResourceType> = {
   money: ResourceType.MONEY,
   gold: ResourceType.GOLD,
   autoprinters: ResourceType.AUTOPRINTERS,
+  credit_value: ResourceType.CREDIT,
+  credit_generation_level: ResourceType.CREDIT_GENERATION_LEVEL,
+  credit_capacity_level: ResourceType.CREDIT_CAPACITY_LEVEL,
 };
 
 /**
@@ -52,6 +61,9 @@ export interface User {
   money: number;
   gold: number;
   autoprinters: number;
+  credit_value: number;
+  credit_generation_level: number;
+  credit_capacity_level: number;
 }
 
 /**

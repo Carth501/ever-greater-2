@@ -23,6 +23,9 @@ const mockUser: User = {
   money: 0,
   gold: 0,
   autoprinters: 0,
+  credit_value: 0,
+  credit_generation_level: 0,
+  credit_capacity_level: 0,
 };
 
 describe("authSlice", () => {

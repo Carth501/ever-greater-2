@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.closePool = exports.processAutoprinters = exports.executeResourceTransaction = exports.getUserById = exports.createUser = exports.getUserByEmail = exports.incrementGlobalCount = exports.getGlobalCount = exports.initializeDatabase = exports.pool = void 0;
+exports.closePool = exports.updateAllUsersCreditValues = exports.processAutoprinters = exports.executeResourceTransaction = exports.getUserById = exports.createUser = exports.getUserByEmail = exports.incrementGlobalCount = exports.getGlobalCount = exports.initializeDatabase = exports.pool = void 0;
 const ever_greater_shared_1 = require("ever-greater-shared");
 const pg_1 = require("pg");
 exports.pool = new pg_1.Pool({
@@ -69,6 +69,18 @@ async function initializeDatabase() {
       ALTER TABLE users 
       ADD COLUMN IF NOT EXISTS autoprinters INTEGER NOT NULL DEFAULT 0
     `);
+        await client.query(`
+      ALTER TABLE users 
+      ADD COLUMN IF NOT EXISTS credit_value INTEGER NOT NULL DEFAULT 0
+    `);
+        await client.query(`
+      ALTER TABLE users 
+      ADD COLUMN IF NOT EXISTS credit_generation_level INTEGER NOT NULL DEFAULT 0
+    `);
+        await client.query(`
+      ALTER TABLE users 
+      ADD COLUMN IF NOT EXISTS credit_capacity_level INTEGER NOT NULL DEFAULT 0
+    `);
         const columnsResult = await client.query(`SELECT column_name FROM information_schema.columns WHERE table_name = 'users'`);
         const existingColumns = new Set(columnsResult.rows.map((row) => row.column_name));
         for (const mappedField of Object.values(ever_greater_shared_1.RESOURCE_DB_FIELDS)) {
@@ -110,17 +122,17 @@ async function incrementGlobalCount() {
 }
 exports.incrementGlobalCount = incrementGlobalCount;
 async function getUserByEmail(email) {
-    const result = await exports.pool.query("SELECT id, email, password_hash, tickets_contributed, printer_supplies, money, gold, autoprinters, created_at FROM users WHERE email = $1", [email]);
+    const result = await exports.pool.query("SELECT id, email, password_hash, tickets_contributed, printer_supplies, money, gold, autoprinters, credit_value, credit_generation_level, credit_capacity_level, created_at FROM users WHERE email = $1", [email]);
     return result.rows[0] || null;
 }
 exports.getUserByEmail = getUserByEmail;
 async function createUser(email, passwordHash) {
-    const result = await exports.pool.query("INSERT INTO users (email, password_hash, printer_supplies, money, gold, autoprinters) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, email, tickets_contributed, printer_supplies, money, gold, autoprinters", [email, passwordHash, 100, 0, 0, 0]);
+    const result = await exports.pool.query("INSERT INTO users (email, password_hash, printer_supplies, money, gold, autoprinters, credit_value, credit_generation_level, credit_capacity_level) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id, email, tickets_contributed, printer_supplies, money, gold, autoprinters, credit_value, credit_generation_level, credit_capacity_level", [email, passwordHash, 100, 0, 0, 0, 0, 0, 0]);
     return result.rows[0];
 }
 exports.createUser = createUser;
 async function getUserById(userId) {
-    const result = await exports.pool.query("SELECT id, email, tickets_contributed, printer_supplies, money, gold, autoprinters FROM users WHERE id = $1", [userId]);
+    const result = await exports.pool.query("SELECT id, email, tickets_contributed, printer_supplies, money, gold, autoprinters, credit_value, credit_generation_level, credit_capacity_level FROM users WHERE id = $1", [userId]);
     return result.rows[0] || null;
 }
 exports.getUserById = getUserById;
@@ -166,7 +178,7 @@ async function executeResourceTransaction(userId, cost, gain, client) {
     UPDATE users 
     SET ${setClauses.join(", ")}
     WHERE ${whereClauses.join(" AND ")}
-    RETURNING id, email, tickets_contributed, printer_supplies, money, gold, autoprinters
+    RETURNING id, email, tickets_contributed, printer_supplies, money, gold, autoprinters, credit_value, credit_generation_level, credit_capacity_level
   `;
     const result = await dbClient.query(query, values);
     if (result.rows.length === 0) {
@@ -206,6 +218,23 @@ async function processAutoprinters() {
     }
 }
 exports.processAutoprinters = processAutoprinters;
+async function updateAllUsersCreditValues() {
+    const client = await exports.pool.connect();
+    try {
+        await client.query(`
+      UPDATE users
+      SET credit_value = LEAST(
+        credit_value + FLOOR(credit_generation_level * 10)::INTEGER / 100,
+        credit_capacity_level
+      )
+      WHERE credit_generation_level > 0 OR credit_value < credit_capacity_level
+    `);
+    }
+    finally {
+        client.release();
+    }
+}
+exports.updateAllUsersCreditValues = updateAllUsersCreditValues;
 async function closePool() {
     await exports.pool.end();
     console.log("Database pool closed");

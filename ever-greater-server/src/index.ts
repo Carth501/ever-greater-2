@@ -23,6 +23,7 @@ import {
   initializeDatabase,
   pool,
   processAutoprinters,
+  updateAllUsersCreditValues,
 } from "./db";
 
 declare module "express-session" {
@@ -36,6 +37,7 @@ const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
 let wss: WebSocketServer | undefined;
 let server: Server | undefined;
 let autoprinterInterval: NodeJS.Timeout | undefined;
+let creditUpdateInterval: NodeJS.Timeout | undefined;
 const socketUserMap = new Map<WebSocket, number>();
 
 const PgSession = connectPgSimple(session);
@@ -46,6 +48,7 @@ type UserUpdatePayload = Partial<{
   gold: number;
   autoprinters: number;
   tickets_contributed: number;
+  credit_value: number;
 }>;
 
 interface IncomingSocketMessage {
@@ -121,6 +124,38 @@ async function broadcastAutoprinterUpdates(): Promise<void> {
   }
 }
 
+async function broadcastCreditUpdates(): Promise<void> {
+  if (!wss) return;
+
+  const userIds = new Set<number>();
+  socketUserMap.forEach((userId) => {
+    userIds.add(userId);
+  });
+
+  for (const userId of userIds) {
+    try {
+      const user = await getUserById(userId);
+      if (user) {
+        wss.clients.forEach((client) => {
+          if (
+            client.readyState === WebSocket.OPEN &&
+            socketUserMap.get(client) === userId
+          ) {
+            const payload = JSON.stringify({
+              user_update: {
+                credit_value: user.credit_value,
+              },
+            });
+            client.send(payload);
+          }
+        });
+      }
+    } catch (error) {
+      console.error(`Error sending credit update to user ${userId}:`, error);
+    }
+  }
+}
+
 function createApp(): Express {
   const app = express();
 
@@ -183,6 +218,9 @@ function createApp(): Express {
           money: user.money,
           gold: user.gold,
           autoprinters: user.autoprinters || 0,
+          credit_value: user.credit_value || 0,
+          credit_generation_level: user.credit_generation_level || 0,
+          credit_capacity_level: user.credit_capacity_level || 0,
         },
       });
     } catch (error) {
@@ -228,6 +266,9 @@ function createApp(): Express {
           money: user.money,
           gold: user.gold,
           autoprinters: user.autoprinters || 0,
+          credit_value: user.credit_value || 0,
+          credit_generation_level: user.credit_generation_level || 0,
+          credit_capacity_level: user.credit_capacity_level || 0,
         },
       });
     } catch (error) {
@@ -256,6 +297,9 @@ function createApp(): Express {
           money: user.money,
           gold: user.gold,
           autoprinters: user.autoprinters || 0,
+          credit_value: user.credit_value || 0,
+          credit_generation_level: user.credit_generation_level || 0,
+          credit_capacity_level: user.credit_capacity_level || 0,
         },
       });
     } catch (error) {
@@ -352,6 +396,7 @@ function createApp(): Express {
         gold: updatedUser.gold,
         autoprinters: updatedUser.autoprinters,
         tickets_contributed: updatedUser.tickets_contributed,
+        credit_value: updatedUser.credit_value,
       });
 
       return res.json({
@@ -367,6 +412,9 @@ function createApp(): Express {
           money: updatedUser.money,
           gold: updatedUser.gold,
           autoprinters: updatedUser.autoprinters || 0,
+          credit_value: updatedUser.credit_value || 0,
+          credit_generation_level: updatedUser.credit_generation_level || 0,
+          credit_capacity_level: updatedUser.credit_capacity_level || 0,
         },
       });
     } catch (error) {
@@ -449,6 +497,17 @@ if (require.main === module) {
       }, 4000);
 
       console.log("Autoprinter processor started (4 second interval)");
+
+      creditUpdateInterval = setInterval(async () => {
+        try {
+          await updateAllUsersCreditValues();
+          await broadcastCreditUpdates();
+        } catch (error) {
+          console.error("Error updating user credit values:", error);
+        }
+      }, 1000);
+
+      console.log("Credit value updater started (1 second interval)");
     } catch (error) {
       console.error("Failed to initialize database:", error);
       process.exit(1);
@@ -461,6 +520,11 @@ if (require.main === module) {
     if (autoprinterInterval) {
       clearInterval(autoprinterInterval);
       console.log("Autoprinter processor stopped");
+    }
+
+    if (creditUpdateInterval) {
+      clearInterval(creditUpdateInterval);
+      console.log("Credit value updater stopped");
     }
 
     if (server) {

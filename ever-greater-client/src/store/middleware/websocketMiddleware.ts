@@ -50,6 +50,9 @@ function connectWebSocket(dispatch: any, userId?: number) {
         ...(update.autoprinters !== undefined
           ? { autoprinters: update.autoprinters }
           : {}),
+        ...(update.credit_value !== undefined
+          ? { credit_value: update.credit_value }
+          : {}),
       };
 
       if (Object.keys(payload).length > 0) {

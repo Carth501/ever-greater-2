@@ -99,6 +99,24 @@ export async function initializeDatabase(): Promise<void> {
       ADD COLUMN IF NOT EXISTS autoprinters INTEGER NOT NULL DEFAULT 0
     `);
 
+    // Add credit_value column to users table if it doesn't exist
+    await client.query(`
+      ALTER TABLE users 
+      ADD COLUMN IF NOT EXISTS credit_value INTEGER NOT NULL DEFAULT 0
+    `);
+
+    // Add credit_generation_level column to users table if it doesn't exist
+    await client.query(`
+      ALTER TABLE users 
+      ADD COLUMN IF NOT EXISTS credit_generation_level INTEGER NOT NULL DEFAULT 0
+    `);
+
+    // Add credit_capacity_level column to users table if it doesn't exist
+    await client.query(`
+      ALTER TABLE users 
+      ADD COLUMN IF NOT EXISTS credit_capacity_level INTEGER NOT NULL DEFAULT 0
+    `);
+
     // Validate shared resource mapping against users table columns
     const columnsResult = await client.query(
       `SELECT column_name FROM information_schema.columns WHERE table_name = 'users'`,
@@ -166,7 +184,7 @@ interface DbUser extends User {
  */
 export async function getUserByEmail(email: string): Promise<DbUser | null> {
   const result = await pool.query(
-    "SELECT id, email, password_hash, tickets_contributed, printer_supplies, money, gold, autoprinters, created_at FROM users WHERE email = $1",
+    "SELECT id, email, password_hash, tickets_contributed, printer_supplies, money, gold, autoprinters, credit_value, credit_generation_level, credit_capacity_level, created_at FROM users WHERE email = $1",
     [email],
   );
   return result.rows[0] || null;
@@ -180,8 +198,8 @@ export async function createUser(
   passwordHash: string,
 ): Promise<User> {
   const result = await pool.query(
-    "INSERT INTO users (email, password_hash, printer_supplies, money, gold, autoprinters) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, email, tickets_contributed, printer_supplies, money, gold, autoprinters",
-    [email, passwordHash, 100, 0, 0, 0],
+    "INSERT INTO users (email, password_hash, printer_supplies, money, gold, autoprinters, credit_value, credit_generation_level, credit_capacity_level) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id, email, tickets_contributed, printer_supplies, money, gold, autoprinters, credit_value, credit_generation_level, credit_capacity_level",
+    [email, passwordHash, 100, 0, 0, 0, 0, 0, 0],
   );
   return result.rows[0];
 }
@@ -191,7 +209,7 @@ export async function createUser(
  */
 export async function getUserById(userId: number): Promise<User | null> {
   const result = await pool.query(
-    "SELECT id, email, tickets_contributed, printer_supplies, money, gold, autoprinters FROM users WHERE id = $1",
+    "SELECT id, email, tickets_contributed, printer_supplies, money, gold, autoprinters, credit_value, credit_generation_level, credit_capacity_level FROM users WHERE id = $1",
     [userId],
   );
   return result.rows[0] || null;
@@ -260,7 +278,7 @@ export async function executeResourceTransaction(
     UPDATE users 
     SET ${setClauses.join(", ")}
     WHERE ${whereClauses.join(" AND ")}
-    RETURNING id, email, tickets_contributed, printer_supplies, money, gold, autoprinters
+    RETURNING id, email, tickets_contributed, printer_supplies, money, gold, autoprinters, credit_value, credit_generation_level, credit_capacity_level
   `;
 
   const result = await dbClient.query(query, values);
@@ -318,6 +336,30 @@ export async function processAutoprinters(): Promise<{
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Update all users' credit values based on their generation level and capacity.
+ * Adds (0.1 * generation_level) to each user's credit_value, capped by capacity_level.
+ * This atomic operation should be called once per second.
+ *
+ * Formula: credit_value = MIN(credit_value + 0.1 * credit_generation_level, credit_capacity_level)
+ * Uses integer arithmetic by computing: credit_value + FLOOR(credit_generation_level * 0.1 * 100) / 100
+ */
+export async function updateAllUsersCreditValues(): Promise<void> {
+  const client = await pool.connect();
+  try {
+    await client.query(`
+      UPDATE users
+      SET credit_value = LEAST(
+        credit_value + FLOOR(credit_generation_level * 10)::INTEGER / 100,
+        credit_capacity_level
+      )
+      WHERE credit_generation_level > 0 OR credit_value < credit_capacity_level
+    `);
   } finally {
     client.release();
   }

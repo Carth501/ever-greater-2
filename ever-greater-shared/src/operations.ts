@@ -38,6 +38,8 @@ export enum OperationId {
   BUY_GOLD = "BUY_GOLD",
   BUY_AUTOPRINTER = "BUY_AUTOPRINTER",
   PRINT_TICKET = "PRINT_TICKET",
+  INCREASE_CREDIT_GENERATION = "INCREASE_CREDIT_GENERATION",
+  INCREASE_CREDIT_CAPACITY = "INCREASE_CREDIT_CAPACITY",
 }
 
 /**
@@ -48,12 +50,12 @@ export const operations: Record<OperationId, Operation> = {
   [OperationId.BUY_SUPPLIES]: {
     id: OperationId.BUY_SUPPLIES,
     name: "Buy Supplies",
-    description: "Purchase printer supplies with money",
+    description: "Purchase printer supplies with gold",
     cost: {
-      [ResourceType.MONEY]: 10,
+      [ResourceType.GOLD]: 1,
     },
     gain: {
-      [ResourceType.PRINTER_SUPPLIES]: 100,
+      [ResourceType.PRINTER_SUPPLIES]: 200,
     },
   },
 
@@ -78,12 +80,12 @@ export const operations: Record<OperationId, Operation> = {
   [OperationId.BUY_AUTOPRINTER]: {
     id: OperationId.BUY_AUTOPRINTER,
     name: "Buy Autoprinter",
-    description: "Purchase an autoprinter with gold",
+    description: "Purchase an autoprinter with credit",
     cost: (ctx: OperationContext) => {
       const currentAutoprinters = ctx.user.autoprinters;
-      const goldCost = 2 * Math.floor(Math.pow(currentAutoprinters + 1, 1.2));
+      const creditCost = 2 * Math.floor(Math.pow(currentAutoprinters + 1, 1.2));
       return {
-        [ResourceType.GOLD]: goldCost,
+        [ResourceType.CREDIT]: creditCost,
       };
     },
     gain: {
@@ -101,6 +103,30 @@ export const operations: Record<OperationId, Operation> = {
     gain: {
       [ResourceType.MONEY]: 1,
       [ResourceType.TICKETS_CONTRIBUTED]: 1,
+    },
+  },
+
+  [OperationId.INCREASE_CREDIT_GENERATION]: {
+    id: OperationId.INCREASE_CREDIT_GENERATION,
+    name: "Increase Credit Generation",
+    description: "Increase credit generation by 0.1 per second",
+    cost: {
+      [ResourceType.GOLD]: 1,
+    },
+    gain: {
+      [ResourceType.CREDIT_GENERATION_LEVEL]: 1,
+    },
+  },
+
+  [OperationId.INCREASE_CREDIT_CAPACITY]: {
+    id: OperationId.INCREASE_CREDIT_CAPACITY,
+    name: "Increase Credit Capacity",
+    description: "Increase your maximum credit by 1",
+    cost: {
+      [ResourceType.TICKETS_CONTRIBUTED]: 200,
+    },
+    gain: {
+      [ResourceType.CREDIT_CAPACITY_LEVEL]: 1,
     },
   },
 };
