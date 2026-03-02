@@ -219,6 +219,7 @@ export async function getUserById(userId: number): Promise<User | null> {
  * Execute a resource transaction atomically
  * Deducts costs and adds gains in a single database operation
  * Uses optimistic locking to ensure user has sufficient resources
+ * Handles special case of GLOBAL_TICKETS cost by deducting from global_state.count
  */
 export async function executeResourceTransaction(
   userId: number,
@@ -226,68 +227,129 @@ export async function executeResourceTransaction(
   gain: ResourceAmount,
   client?: PoolClient,
 ): Promise<User> {
-  const dbClient = client || pool;
+  const useTransaction = !client;
+  let dbClient: PoolClient | typeof pool;
+  let txClient: PoolClient | null = null;
 
-  // Build SET clause for the UPDATE
-  const setClauses: string[] = [];
-  const values: (number | string)[] = [];
-  let paramCount = 1;
-
-  // Add cost deductions to SET clause
-  for (const [resourceTypeStr, amount] of Object.entries(cost)) {
-    if (amount === undefined) {
-      continue;
+  try {
+    if (useTransaction) {
+      // Get a client from the pool for transaction
+      txClient = await pool.connect();
+      dbClient = txClient;
+      await dbClient.query("BEGIN");
+    } else {
+      dbClient = client;
     }
-    const resourceType = resourceTypeStr as ResourceType;
-    const dbField = RESOURCE_DB_FIELDS[resourceType];
-    setClauses.push(`${dbField} = ${dbField} - $${paramCount}`);
-    values.push(amount);
-    paramCount++;
-  }
 
-  // Add gain increments to SET clause
-  for (const [resourceTypeStr, amount] of Object.entries(gain)) {
-    if (amount === undefined) {
-      continue;
+    // Check if this operation costs global tickets
+    const globalTicketCost = cost[ResourceType.GLOBAL_TICKETS];
+    if (globalTicketCost !== undefined && globalTicketCost > 0) {
+      // Validate and deduct from global_state atomically
+      const globalResult = await dbClient.query(
+        `UPDATE global_state 
+         SET count = count - $1, updated_at = CURRENT_TIMESTAMP 
+         WHERE id = 1 AND count >= $1 
+         RETURNING count`,
+        [globalTicketCost],
+      );
+
+      if (globalResult.rows.length === 0) {
+        throw new Error("Insufficient global tickets");
+      }
     }
-    const resourceType = resourceTypeStr as ResourceType;
-    const dbField = RESOURCE_DB_FIELDS[resourceType];
-    setClauses.push(`${dbField} = ${dbField} + $${paramCount}`);
-    values.push(amount);
-    paramCount++;
-  }
 
-  // Build WHERE clause for affordability checks
-  const whereClauses: string[] = [`id = $${paramCount}`];
-  values.push(userId);
-  paramCount++;
+    // Separate global ticket cost from other costs for user update
+    const userCost = { ...cost };
+    delete userCost[ResourceType.GLOBAL_TICKETS];
 
-  for (const [resourceTypeStr, amount] of Object.entries(cost)) {
-    if (amount === undefined) {
-      continue;
+    // Build SET clause for the UPDATE
+    const setClauses: string[] = [];
+    const values: (number | string)[] = [];
+    let paramCount = 1;
+
+    // Add cost deductions to SET clause (excluding global tickets already handled)
+    for (const [resourceTypeStr, amount] of Object.entries(userCost)) {
+      if (amount === undefined) {
+        continue;
+      }
+      const resourceType = resourceTypeStr as ResourceType;
+      const dbField = RESOURCE_DB_FIELDS[resourceType];
+      if (!dbField) {
+        // Skip resources that don't have a user database mapping
+        continue;
+      }
+      setClauses.push(`${dbField} = ${dbField} - $${paramCount}`);
+      values.push(amount);
+      paramCount++;
     }
-    const resourceType = resourceTypeStr as ResourceType;
-    const dbField = RESOURCE_DB_FIELDS[resourceType];
-    whereClauses.push(`${dbField} >= $${paramCount}`);
-    values.push(amount);
+
+    // Add gain increments to SET clause
+    for (const [resourceTypeStr, amount] of Object.entries(gain)) {
+      if (amount === undefined) {
+        continue;
+      }
+      const resourceType = resourceTypeStr as ResourceType;
+      const dbField = RESOURCE_DB_FIELDS[resourceType];
+      if (!dbField) {
+        // Skip resources that don't have a user database mapping
+        continue;
+      }
+      setClauses.push(`${dbField} = ${dbField} + $${paramCount}`);
+      values.push(amount);
+      paramCount++;
+    }
+
+    // Build WHERE clause for affordability checks
+    const whereClauses: string[] = [`id = $${paramCount}`];
+    values.push(userId);
     paramCount++;
+
+    for (const [resourceTypeStr, amount] of Object.entries(userCost)) {
+      if (amount === undefined) {
+        continue;
+      }
+      const resourceType = resourceTypeStr as ResourceType;
+      const dbField = RESOURCE_DB_FIELDS[resourceType];
+      if (!dbField) {
+        // Skip resources that don't have a user database mapping
+        continue;
+      }
+      whereClauses.push(`${dbField} >= $${paramCount}`);
+      values.push(amount);
+      paramCount++;
+    }
+
+    // Execute the transaction
+    const query = `
+      UPDATE users 
+      SET ${setClauses.join(", ")}
+      WHERE ${whereClauses.join(" AND ")}
+      RETURNING id, email, tickets_contributed, printer_supplies, money, gold, autoprinters, credit_value, credit_generation_level, credit_capacity_level
+    `;
+
+    const result = await dbClient.query(query, values);
+
+    if (result.rows.length === 0) {
+      throw new Error("Insufficient resources or user not found");
+    }
+
+    if (useTransaction && txClient) {
+      await txClient.query("COMMIT");
+    }
+
+    return result.rows[0];
+  } catch (error) {
+    if (useTransaction && txClient) {
+      await txClient.query("ROLLBACK").catch(() => {
+        // Ignore rollback errors
+      });
+    }
+    throw error;
+  } finally {
+    if (useTransaction && txClient) {
+      txClient.release();
+    }
   }
-
-  // Execute the transaction
-  const query = `
-    UPDATE users 
-    SET ${setClauses.join(", ")}
-    WHERE ${whereClauses.join(" AND ")}
-    RETURNING id, email, tickets_contributed, printer_supplies, money, gold, autoprinters, credit_value, credit_generation_level, credit_capacity_level
-  `;
-
-  const result = await dbClient.query(query, values);
-
-  if (result.rows.length === 0) {
-    throw new Error("Insufficient resources or user not found");
-  }
-
-  return result.rows[0];
 }
 
 /**

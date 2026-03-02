@@ -348,8 +348,16 @@ function createApp(): Express {
         return res.status(404).json({ error: "User not found" });
       }
 
+      // Get global ticket count for validation
+      const globalTicketCount = await getGlobalCount();
+
       // Validate operation
-      const validation = validateOperation(user, operation, req.body);
+      const validation = validateOperation(
+        user,
+        operation,
+        req.body,
+        globalTicketCount,
+      );
       if (!validation.valid) {
         if (validation.error === "Insufficient resources") {
           return res.status(403).json({
@@ -387,6 +395,15 @@ function createApp(): Express {
         if (newCount !== null) {
           broadcastCount(newCount);
         }
+      }
+
+      // Handle global ticket cost and broadcast updated count
+      const globalTicketCost =
+        validation.cost[ResourceType.GLOBAL_TICKETS] ?? 0;
+      if (globalTicketCost > 0) {
+        // Fetch and broadcast the new global count
+        newCount = await getGlobalCount();
+        broadcastCount(newCount);
       }
 
       // Broadcast user updates

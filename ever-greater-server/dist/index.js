@@ -262,7 +262,8 @@ function createApp() {
             if (!user) {
                 return res.status(404).json({ error: "User not found" });
             }
-            const validation = (0, ever_greater_shared_1.validateOperation)(user, operation, req.body);
+            const globalTicketCount = await (0, db_1.getGlobalCount)();
+            const validation = (0, ever_greater_shared_1.validateOperation)(user, operation, req.body, globalTicketCount);
             if (!validation.valid) {
                 if (validation.error === "Insufficient resources") {
                     return res.status(403).json({
@@ -288,6 +289,11 @@ function createApp() {
                 if (newCount !== null) {
                     broadcastCount(newCount);
                 }
+            }
+            const globalTicketCost = validation.cost[ever_greater_shared_1.ResourceType.GLOBAL_TICKETS] ?? 0;
+            if (globalTicketCost > 0) {
+                newCount = await (0, db_1.getGlobalCount)();
+                broadcastCount(newCount);
             }
             await sendUserUpdate(req.session.userId, {
                 supplies: updatedUser.printer_supplies,

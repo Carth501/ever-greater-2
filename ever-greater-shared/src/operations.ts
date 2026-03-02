@@ -11,6 +11,7 @@ import {
 export interface OperationContext {
   user: User;
   params?: any;
+  globalTicketCount?: number;
 }
 
 /**
@@ -123,7 +124,7 @@ export const operations: Record<OperationId, Operation> = {
     name: "Increase Credit Capacity",
     description: "Increase your maximum credit by 1",
     cost: {
-      [ResourceType.TICKETS_CONTRIBUTED]: 200,
+      [ResourceType.GLOBAL_TICKETS]: 200,
     },
     gain: {
       [ResourceType.CREDIT_CAPACITY_LEVEL]: 1,
@@ -233,13 +234,15 @@ export interface ValidationResult {
 /**
  * Validate that an operation can be performed by a user.
  * Returns detailed validation results including evaluated costs/gains.
+ * Pass globalTicketCount to validate operations that cost GLOBAL_TICKETS.
  */
 export function validateOperation(
   user: User,
   operation: Operation,
   params?: any,
+  globalTicketCount?: number,
 ): ValidationResult {
-  const ctx: OperationContext = { user, params };
+  const ctx: OperationContext = { user, params, globalTicketCount };
 
   const cost = getOperationCost(operation, ctx);
   const gain = getOperationGain(operation, ctx);
@@ -264,11 +267,25 @@ export function validateOperation(
       continue;
     }
     const resourceType = resourceTypeStr as ResourceType;
-    const dbField = RESOURCE_DB_FIELDS[resourceType] as keyof User;
-    const userAmount = user[dbField] as number;
 
-    if (userAmount < amount) {
-      insufficientResources.push(resourceType);
+    // Handle global tickets specially
+    if (resourceType === ResourceType.GLOBAL_TICKETS) {
+      const availableGlobalTickets = globalTicketCount ?? 0;
+      if (availableGlobalTickets < amount) {
+        insufficientResources.push(resourceType);
+      }
+    } else {
+      // Handle user resources normally
+      const dbField = RESOURCE_DB_FIELDS[resourceType];
+      if (!dbField) {
+        // Skip resources that don't have a user database mapping
+        continue;
+      }
+      const userAmount = user[dbField as keyof User] as number;
+
+      if (userAmount < amount) {
+        insufficientResources.push(resourceType);
+      }
     }
   }
 

@@ -137,54 +137,102 @@ async function getUserById(userId) {
 }
 exports.getUserById = getUserById;
 async function executeResourceTransaction(userId, cost, gain, client) {
-    const dbClient = client || exports.pool;
-    const setClauses = [];
-    const values = [];
-    let paramCount = 1;
-    for (const [resourceTypeStr, amount] of Object.entries(cost)) {
-        if (amount === undefined) {
-            continue;
+    const useTransaction = !client;
+    let dbClient;
+    let txClient = null;
+    try {
+        if (useTransaction) {
+            txClient = await exports.pool.connect();
+            dbClient = txClient;
+            await dbClient.query("BEGIN");
         }
-        const resourceType = resourceTypeStr;
-        const dbField = ever_greater_shared_1.RESOURCE_DB_FIELDS[resourceType];
-        setClauses.push(`${dbField} = ${dbField} - $${paramCount}`);
-        values.push(amount);
-        paramCount++;
-    }
-    for (const [resourceTypeStr, amount] of Object.entries(gain)) {
-        if (amount === undefined) {
-            continue;
+        else {
+            dbClient = client;
         }
-        const resourceType = resourceTypeStr;
-        const dbField = ever_greater_shared_1.RESOURCE_DB_FIELDS[resourceType];
-        setClauses.push(`${dbField} = ${dbField} + $${paramCount}`);
-        values.push(amount);
-        paramCount++;
-    }
-    const whereClauses = [`id = $${paramCount}`];
-    values.push(userId);
-    paramCount++;
-    for (const [resourceTypeStr, amount] of Object.entries(cost)) {
-        if (amount === undefined) {
-            continue;
+        const globalTicketCost = cost[ever_greater_shared_1.ResourceType.GLOBAL_TICKETS];
+        if (globalTicketCost !== undefined && globalTicketCost > 0) {
+            const globalResult = await dbClient.query(`UPDATE global_state 
+         SET count = count - $1, updated_at = CURRENT_TIMESTAMP 
+         WHERE id = 1 AND count >= $1 
+         RETURNING count`, [globalTicketCost]);
+            if (globalResult.rows.length === 0) {
+                throw new Error("Insufficient global tickets");
+            }
         }
-        const resourceType = resourceTypeStr;
-        const dbField = ever_greater_shared_1.RESOURCE_DB_FIELDS[resourceType];
-        whereClauses.push(`${dbField} >= $${paramCount}`);
-        values.push(amount);
+        const userCost = { ...cost };
+        delete userCost[ever_greater_shared_1.ResourceType.GLOBAL_TICKETS];
+        const setClauses = [];
+        const values = [];
+        let paramCount = 1;
+        for (const [resourceTypeStr, amount] of Object.entries(userCost)) {
+            if (amount === undefined) {
+                continue;
+            }
+            const resourceType = resourceTypeStr;
+            const dbField = ever_greater_shared_1.RESOURCE_DB_FIELDS[resourceType];
+            if (!dbField) {
+                continue;
+            }
+            setClauses.push(`${dbField} = ${dbField} - $${paramCount}`);
+            values.push(amount);
+            paramCount++;
+        }
+        for (const [resourceTypeStr, amount] of Object.entries(gain)) {
+            if (amount === undefined) {
+                continue;
+            }
+            const resourceType = resourceTypeStr;
+            const dbField = ever_greater_shared_1.RESOURCE_DB_FIELDS[resourceType];
+            if (!dbField) {
+                continue;
+            }
+            setClauses.push(`${dbField} = ${dbField} + $${paramCount}`);
+            values.push(amount);
+            paramCount++;
+        }
+        const whereClauses = [`id = $${paramCount}`];
+        values.push(userId);
         paramCount++;
+        for (const [resourceTypeStr, amount] of Object.entries(userCost)) {
+            if (amount === undefined) {
+                continue;
+            }
+            const resourceType = resourceTypeStr;
+            const dbField = ever_greater_shared_1.RESOURCE_DB_FIELDS[resourceType];
+            if (!dbField) {
+                continue;
+            }
+            whereClauses.push(`${dbField} >= $${paramCount}`);
+            values.push(amount);
+            paramCount++;
+        }
+        const query = `
+      UPDATE users 
+      SET ${setClauses.join(", ")}
+      WHERE ${whereClauses.join(" AND ")}
+      RETURNING id, email, tickets_contributed, printer_supplies, money, gold, autoprinters, credit_value, credit_generation_level, credit_capacity_level
+    `;
+        const result = await dbClient.query(query, values);
+        if (result.rows.length === 0) {
+            throw new Error("Insufficient resources or user not found");
+        }
+        if (useTransaction && txClient) {
+            await txClient.query("COMMIT");
+        }
+        return result.rows[0];
     }
-    const query = `
-    UPDATE users 
-    SET ${setClauses.join(", ")}
-    WHERE ${whereClauses.join(" AND ")}
-    RETURNING id, email, tickets_contributed, printer_supplies, money, gold, autoprinters, credit_value, credit_generation_level, credit_capacity_level
-  `;
-    const result = await dbClient.query(query, values);
-    if (result.rows.length === 0) {
-        throw new Error("Insufficient resources or user not found");
+    catch (error) {
+        if (useTransaction && txClient) {
+            await txClient.query("ROLLBACK").catch(() => {
+            });
+        }
+        throw error;
     }
-    return result.rows[0];
+    finally {
+        if (useTransaction && txClient) {
+            txClient.release();
+        }
+    }
 }
 exports.executeResourceTransaction = executeResourceTransaction;
 async function processAutoprinters() {

@@ -11,13 +11,15 @@ export enum ResourceType {
   CREDIT = "CREDIT",
   CREDIT_GENERATION_LEVEL = "CREDIT_GENERATION_LEVEL",
   CREDIT_CAPACITY_LEVEL = "CREDIT_CAPACITY_LEVEL",
+  GLOBAL_TICKETS = "GLOBAL_TICKETS",
 }
 
 /**
  * Maps ResourceType enum values to database column names.
  * This ensures consistent naming between the enum and database schema.
+ * Note: GLOBAL_TICKETS is not included as it is not a user resource.
  */
-export const RESOURCE_DB_FIELDS: Record<ResourceType, string> = {
+export const RESOURCE_DB_FIELDS: Partial<Record<ResourceType, string>> = {
   [ResourceType.TICKETS_CONTRIBUTED]: "tickets_contributed",
   [ResourceType.PRINTER_SUPPLIES]: "printer_supplies",
   [ResourceType.MONEY]: "money",
@@ -69,18 +71,23 @@ export interface User {
 /**
  * Helper function to get a resource value from a user object.
  * Uses the RESOURCE_DB_FIELDS mapping to access the correct property.
+ * Returns 0 for resources without a user database mapping.
  */
 export function getUserResource(
   user: User,
   resourceType: ResourceType,
 ): number {
-  const fieldName = RESOURCE_DB_FIELDS[resourceType] as keyof User;
-  return user[fieldName] as number;
+  const fieldName = RESOURCE_DB_FIELDS[resourceType];
+  if (!fieldName) {
+    return 0;
+  }
+  return user[fieldName as keyof User] as number;
 }
 
 /**
  * Helper function to set a resource value on a user object (immutably).
  * Returns a new user object with the updated resource value.
+ * Skips setting resources that don't have a user database mapping.
  */
 export function setUserResource(
   user: User,
@@ -88,6 +95,9 @@ export function setUserResource(
   value: number,
 ): User {
   const fieldName = RESOURCE_DB_FIELDS[resourceType];
+  if (!fieldName) {
+    return user;
+  }
   return {
     ...user,
     [fieldName]: value,
