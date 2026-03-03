@@ -179,20 +179,20 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
     [ResourceType.GOLD]: creditGenerationCost,
   });
 
+  // Calculate remaining draw capacity
+  const ticketsContributed = currentUser.tickets_contributed ?? 0;
+  const ticketsWithdrawn = currentUser.tickets_withdrawn ?? 0;
+  const remainingCapacity = Math.max(0, ticketsContributed - ticketsWithdrawn);
+
   // Credit capacity upgrade calculations
   const creditCapacityCost =
     getOperationCost(increaseCreditCapacityOperation, operationContext)[
       ResourceType.GLOBAL_TICKETS
     ] ?? 0;
-  const canAffordCreditCapacity = canAfford(currentUser, {
-    [ResourceType.GLOBAL_TICKETS]: creditCapacityCost,
-  });
-
-  // Calculate remaining draw capacity
-  const ticketsContributed = currentUser.tickets_contributed ?? 0;
-  const ticketsWithdrawn = currentUser.tickets_withdrawn ?? 0;
-  const remainingCapacity = Math.max(0, ticketsContributed - ticketsWithdrawn);
-  const hasDrawCapacity = remainingCapacity > 0;
+  const canAffordCreditCapacity =
+    canAfford(currentUser, {
+      [ResourceType.GLOBAL_TICKETS]: creditCapacityCost,
+    }) && remainingCapacity >= creditCapacityCost;
 
   return (
     <Stack spacing={2}>
@@ -351,10 +351,10 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
         <Button
           onClick={handleIncreaseCreditCapacity}
           variant="contained"
-          disabled={isLoading || !canAffordCreditCapacity || !hasDrawCapacity}
+          disabled={isLoading || !canAffordCreditCapacity}
         >
-          {!hasDrawCapacity
-            ? "No Draw Capacity"
+          {remainingCapacity < creditCapacityCost
+            ? "Insufficient Draw Capacity"
             : canAffordCreditCapacity
               ? "Buy"
               : "Insufficient Tickets"}
