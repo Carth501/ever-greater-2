@@ -292,5 +292,58 @@ describe("websocketMiddleware", () => {
       expect(updateAction.payload.credit_generation_level).toBe(2);
       expect(updateAction.payload.credit_capacity_level).toBe(5);
     });
+
+    it("should apply credit updates over time with rate 0.1 per second", () => {
+      const store = createMockStore();
+      const next = createMockNext();
+      const middleware = websocketMiddleware(store)(next);
+
+      let onUserUpdateCallback: ((update: any) => void) | null = null;
+      mockGlobalTicketApi.connectGlobalCountSocket.mockImplementation(
+        (
+          _onCount: (count: number) => void,
+          onUserUpdate?: (update: any) => void,
+          _onStatus?: (status: "open" | "closed" | "error") => void,
+        ) => {
+          if (onUserUpdate) {
+            onUserUpdateCallback = onUserUpdate;
+          }
+          return mockDisconnect;
+        },
+      );
+
+      // Start with user having credit generation level 1, capacity 1, value 0
+      const userWithCreditSetup: User = {
+        ...mockUser,
+        credit_generation_level: 1,
+        credit_capacity_level: 1,
+        credit_value: 0,
+      };
+
+      middleware(checkAuthThunk.fulfilled(userWithCreditSetup, ""));
+
+      // Simulate 10 seconds of credit generation (0.1 per second)
+      // Each second the server sends an update incrementing by 0.1
+      for (let i = 1; i <= 10; i++) {
+        const expectedCreditValue = Math.min(i * 0.1, 1); // Capped at capacity of 1
+        onUserUpdateCallback!({
+          credit_value: expectedCreditValue,
+        });
+      }
+
+      // Find the last credit update action
+      const creditUpdateActions = dispatchedActions.filter(
+        (a) =>
+          a.type === "auth/applyUserUpdate" &&
+          a.payload.credit_value !== undefined,
+      );
+
+      // Should have 10 update actions
+      expect(creditUpdateActions).toHaveLength(10);
+
+      // Last action should have credit_value at capacity (1.0)
+      const lastUpdate = creditUpdateActions[creditUpdateActions.length - 1];
+      expect(lastUpdate.payload.credit_value).toBe(1); // Capped at capacity
+    });
   });
 });

@@ -25,6 +25,8 @@
 		"ws": "^8.18.0"
 	},
 	"devDependencies": {
+		"@babel/preset-env": "^7.29.0",
+		"@babel/preset-typescript": "^7.28.5",
 		"@types/bcryptjs": "^2.4.6",
 		"@types/connect-pg-simple": "^7.0.3",
 		"@types/cors": "^2.8.17",
@@ -48,6 +50,9 @@
 			"**/*.test.js",
 			"**/*.test.ts"
 		],
+		"moduleNameMapper": {
+			"^(\\.{1,2}/.*)\\.js$": "$1"
+		},
 		"forceExit": true,
 		"testTimeout": 10000
 	}

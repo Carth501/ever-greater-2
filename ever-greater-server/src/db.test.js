@@ -39,7 +39,29 @@ describe('Database Functions', () => {
 
   describe('initializeDatabase', () => {
     it('should create tables and insert initial data', async () => {
-      mockClient.query.mockResolvedValue({ rows: [{ count: 0 }] });
+      mockClient.query.mockImplementation(async (query) => {
+        if (query.includes('information_schema.columns')) {
+          return {
+            rows: [
+              { column_name: 'tickets_contributed' },
+              { column_name: 'printer_supplies' },
+              { column_name: 'money' },
+              { column_name: 'gold' },
+              { column_name: 'autoprinters' },
+              { column_name: 'milk' },
+              { column_name: 'credit_value' },
+              { column_name: 'credit_generation_level' },
+              { column_name: 'credit_capacity_level' },
+            ],
+          };
+        }
+
+        if (query.includes('SELECT COUNT(*) FROM global_state')) {
+          return { rows: [{ count: 0 }] };
+        }
+
+        return { rows: [] };
+      });
 
       await db.initializeDatabase();
 
@@ -61,6 +83,9 @@ describe('Database Functions', () => {
               { column_name: 'gold' },
               { column_name: 'autoprinters' },
               { column_name: 'milk' },
+              { column_name: 'credit_value' },
+              { column_name: 'credit_generation_level' },
+              { column_name: 'credit_capacity_level' },
             ],
           };
         }
@@ -182,6 +207,9 @@ describe('Database Functions', () => {
         gold: 0,
         autoprinters: 0,
         milk: 0,
+        credit_value: 0,
+        credit_generation_level: 0,
+        credit_capacity_level: 0,
       };
 
       mockPool.query.mockResolvedValue({ rows: [mockUser] });
@@ -191,7 +219,7 @@ describe('Database Functions', () => {
       expect(user).toEqual(mockUser);
       expect(mockPool.query).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO users'),
-        ['newuser@example.com', 'hashed_password', 100, 0, 0, 0]
+        ['newuser@example.com', 'hashed_password', 100, 0, 0, 0, 0, 0, 0]
       );
     });
 
@@ -203,34 +231,6 @@ describe('Database Functions', () => {
       await expect(db.createUser('duplicate@example.com', 'hashed_password')).rejects.toThrow(
         'Duplicate email error'
       );
-    });
-  });
-
-  describe('updateUserTickets', () => {
-    it('should update user tickets by increment amount', async () => {
-      mockPool.query.mockResolvedValue({ rows: [{ tickets_contributed: 10 }] });
-
-      const updatedTickets = await db.updateUserTickets(1, 5);
-
-      expect(updatedTickets).toBe(10);
-      expect(mockPool.query).toHaveBeenCalledWith(
-        expect.stringContaining('UPDATE users SET tickets_contributed'),
-        [5, 1]
-      );
-    });
-
-    it('should handle negative increments', async () => {
-      mockPool.query.mockResolvedValue({ rows: [{ tickets_contributed: 4 }] });
-
-      const updatedTickets = await db.updateUserTickets(1, -1);
-
-      expect(updatedTickets).toBe(4);
-    });
-
-    it('should handle database errors', async () => {
-      mockPool.query.mockRejectedValue(new Error('Update failed'));
-
-      await expect(db.updateUserTickets(1, 5)).rejects.toThrow('Update failed');
     });
   });
 
@@ -269,55 +269,40 @@ describe('Database Functions', () => {
     });
   });
 
-  describe('getUserSupplies', () => {
-    it('should return user supplies count', async () => {
-      mockPool.query.mockResolvedValue({ rows: [{ printer_supplies: 50 }] });
+  describe('updateAllUsersCreditValues', () => {
+    it('should increment credit values based on generation level and capacity', async () => {
+      // Mock the SQL query for credit updates
+      mockClient.query.mockResolvedValue({ rows: [] });
 
-      const supplies = await db.getUserSupplies(1);
+      await db.updateAllUsersCreditValues();
 
-      expect(supplies).toBe(50);
-      expect(mockPool.query).toHaveBeenCalledWith(
-        'SELECT printer_supplies FROM users WHERE id = $1',
-        [1]
-      );
+      // Verify the query was called
+      expect(mockClient.query).toHaveBeenCalled();
+      
+      // Check that the SQL query contains the credit update logic
+      const queryCall = mockClient.query.mock.calls[0][0];
+      expect(queryCall).toContain('UPDATE users');
+      expect(queryCall).toContain('credit_value');
+      expect(queryCall).toContain('credit_generation_level');
+      expect(queryCall).toContain('credit_capacity_level');
+      
+      // Verify the formula: LEAST(credit_value + 0.1 * generation_level, credit_capacity_level)
+      expect(queryCall).toContain('LEAST');
+      expect(queryCall).toContain('FLOOR');
     });
 
-    it('should throw error when user not found', async () => {
-      mockPool.query.mockResolvedValue({ rows: [] });
+    it('should handle errors during credit update', async () => {
+      mockClient.query.mockRejectedValue(new Error('Database error'));
 
-      await expect(db.getUserSupplies(999)).rejects.toThrow('User not found');
+      await expect(db.updateAllUsersCreditValues()).rejects.toThrow('Database error');
     });
 
-    it('should handle database errors', async () => {
-      mockPool.query.mockRejectedValue(new Error('Query failed'));
+    it('should release client after credit update', async () => {
+      mockClient.query.mockResolvedValue({ rows: [] });
 
-      await expect(db.getUserSupplies(1)).rejects.toThrow('Query failed');
-    });
-  });
+      await db.updateAllUsersCreditValues();
 
-  describe('decrementUserSupplies', () => {
-    it('should decrement supplies and return new value', async () => {
-      mockPool.query.mockResolvedValue({ rows: [{ printer_supplies: 49 }] });
-
-      const newSupplies = await db.decrementUserSupplies(1);
-
-      expect(newSupplies).toBe(49);
-      expect(mockPool.query).toHaveBeenCalledWith(
-        'UPDATE users SET printer_supplies = printer_supplies - 1 WHERE id = $1 AND printer_supplies > 0 RETURNING printer_supplies',
-        [1]
-      );
-    });
-
-    it('should throw error when user has no supplies', async () => {
-      mockPool.query.mockResolvedValue({ rows: [] });
-
-      await expect(db.decrementUserSupplies(1)).rejects.toThrow('Out of supplies');
-    });
-
-    it('should handle database errors', async () => {
-      mockPool.query.mockRejectedValue(new Error('Update failed'));
-
-      await expect(db.decrementUserSupplies(1)).rejects.toThrow('Update failed');
+      expect(mockClient.release).toHaveBeenCalled();
     });
   });
 

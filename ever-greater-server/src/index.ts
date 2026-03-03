@@ -494,57 +494,61 @@ function createServer(app: Express): Server {
   return httpServer;
 }
 
-// Start server if this is the main module
-(async () => {
-  try {
-    await initializeDatabase();
-    console.log("Database initialized successfully");
+// Start server only if this is the main module (not when required by tests)
+if (require.main === module) {
+  (async () => {
+    try {
+      await initializeDatabase();
+      console.log("Database initialized successfully");
 
-    const app = createApp();
-    server = createServer(app);
+      const app = createApp();
+      server = createServer(app);
 
-    server.listen(PORT, () => {
-      console.log(`ever-greater-server listening on http://localhost:${PORT}`);
-    });
+      server.listen(PORT, () => {
+        console.log(
+          `ever-greater-server listening on http://localhost:${PORT}`,
+        );
+      });
 
-    autoprinterInterval = setInterval(async () => {
-      try {
-        const result = await processAutoprinters();
-        if (result.totalTickets > 0 && result.newGlobalCount !== null) {
-          broadcastCount(result.newGlobalCount);
-          await broadcastAutoprinterUpdates();
+      autoprinterInterval = setInterval(async () => {
+        try {
+          const result = await processAutoprinters();
+          if (result.totalTickets > 0 && result.newGlobalCount !== null) {
+            broadcastCount(result.newGlobalCount);
+            await broadcastAutoprinterUpdates();
+          }
+        } catch (error) {
+          console.error("Error processing autoprinters:", error);
         }
-      } catch (error) {
-        console.error("Error processing autoprinters:", error);
-      }
-    }, 4000);
+      }, 4000);
 
-    creditUpdateInterval = setInterval(async () => {
-      try {
-        await updateAllUsersCreditValues();
-        await broadcastCreditUpdates();
-      } catch (error) {
-        console.error("Error updating user credit values:", error);
-      }
-    }, 1000);
-
-    ticketCleanupInterval = setInterval(async () => {
-      try {
-        const deletedCount = await cleanupOldTicketWithdrawals();
-        if (deletedCount > 0) {
-          console.log(
-            `Cleaned up ${deletedCount} old ticket withdrawal records`,
-          );
+      creditUpdateInterval = setInterval(async () => {
+        try {
+          await updateAllUsersCreditValues();
+          await broadcastCreditUpdates();
+        } catch (error) {
+          console.error("Error updating user credit values:", error);
         }
-      } catch (error) {
-        console.error("Error cleaning up old ticket withdrawals:", error);
-      }
-    }, 3600000); // 1 hour
-  } catch (error) {
-    console.error("Failed to initialize database:", error);
-    process.exit(1);
-  }
-})();
+      }, 1000);
+
+      ticketCleanupInterval = setInterval(async () => {
+        try {
+          const deletedCount = await cleanupOldTicketWithdrawals();
+          if (deletedCount > 0) {
+            console.log(
+              `Cleaned up ${deletedCount} old ticket withdrawal records`,
+            );
+          }
+        } catch (error) {
+          console.error("Error cleaning up old ticket withdrawals:", error);
+        }
+      }, 3600000); // 1 hour
+    } catch (error) {
+      console.error("Failed to initialize database:", error);
+      process.exit(1);
+    }
+  })();
+}
 
 const shutdown = async (signal: NodeJS.Signals): Promise<void> => {
   console.log(`\n${signal} received, shutting down gracefully...`);
