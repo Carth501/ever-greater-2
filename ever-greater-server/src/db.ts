@@ -338,14 +338,15 @@ export async function executeResourceTransaction(
         throw new Error("User not found");
       }
       const userContributed = userCheck.rows[0].tickets_contributed;
-      const personalLimit = userContributed * 1.0; // modifier currently hardcoded to 1.0
+      const personalLimit = Number(userContributed) * 1.0; // modifier currently hardcoded to 1.0
 
       // Get 24-hour withdrawal total
       const withdrawnIn24h = await getTicketsWithdrawnIn24Hours(
         userId,
         dbClient,
       );
-      const projectedWithdrawal = withdrawnIn24h + globalTicketCost;
+      const projectedWithdrawal =
+        Number(withdrawnIn24h) + Number(globalTicketCost);
 
       if (projectedWithdrawal > personalLimit) {
         throw new Error(
