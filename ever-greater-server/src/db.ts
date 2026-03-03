@@ -520,11 +520,10 @@ export async function processAutoprinters(): Promise<{
 
 /**
  * Update all users' credit values based on their generation level and capacity.
- * Adds (0.1 * generation_level) to each user's credit_value, capped by capacity_level.
+ * Adds (generation_level / 10) to each user's credit_value, capped by capacity_level.
  * This atomic operation should be called once per second.
  *
- * Formula: credit_value = MIN(credit_value + 0.1 * credit_generation_level, credit_capacity_level)
- * Uses integer arithmetic by computing: credit_value + FLOOR(credit_generation_level * 0.1 * 100) / 100
+ * Formula: credit_value = MIN(credit_value + credit_generation_level / 10, credit_capacity_level)
  */
 export async function updateAllUsersCreditValues(): Promise<void> {
   const client = await pool.connect();
@@ -532,7 +531,7 @@ export async function updateAllUsersCreditValues(): Promise<void> {
     await client.query(`
       UPDATE users
       SET credit_value = LEAST(
-        credit_value + FLOOR(credit_generation_level * 10)::INTEGER / 100,
+        credit_value + credit_generation_level / 10.0, 
         credit_capacity_level
       )
       WHERE credit_generation_level > 0 OR credit_value < credit_capacity_level
