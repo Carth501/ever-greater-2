@@ -3,7 +3,7 @@ import {
   ResourceAmount,
   ResourceType,
   User,
-} from "./resources";
+} from "./resources.js";
 
 /**
  * Context provided to cost and gain calculators.

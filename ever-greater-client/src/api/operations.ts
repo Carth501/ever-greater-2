@@ -1,7 +1,7 @@
 import { OperationId, type User } from "ever-greater-shared";
 
 const DEFAULT_API_BASE = "http://localhost:4000";
-const apiBase = process.env.REACT_APP_API_BASE || DEFAULT_API_BASE;
+const apiBase = import.meta.env.VITE_API_BASE || DEFAULT_API_BASE;
 
 interface OperationResponse {
   operationId: string;

@@ -25,7 +25,7 @@ import {
   pool,
   processAutoprinters,
   updateAllUsersCreditValues,
-} from "./db";
+} from "./db.js";
 
 declare module "express-session" {
   interface SessionData {
@@ -490,131 +490,128 @@ function createServer(app: Express): Server {
   return httpServer;
 }
 
-if (require.main === module) {
-  (async () => {
-    try {
-      await initializeDatabase();
-      console.log("Database initialized successfully");
+// Start server if this is the main module
+(async () => {
+  try {
+    await initializeDatabase();
+    console.log("Database initialized successfully");
 
-      const app = createApp();
-      server = createServer(app);
+    const app = createApp();
+    server = createServer(app);
 
-      server.listen(PORT, () => {
-        console.log(
-          `ever-greater-server listening on http://localhost:${PORT}`,
-        );
-      });
+    server.listen(PORT, () => {
+      console.log(`ever-greater-server listening on http://localhost:${PORT}`);
+    });
 
-      autoprinterInterval = setInterval(async () => {
-        try {
-          const result = await processAutoprinters();
-          if (result.totalTickets > 0 && result.newGlobalCount !== null) {
-            broadcastCount(result.newGlobalCount);
-            await broadcastAutoprinterUpdates();
-          }
-        } catch (error) {
-          console.error("Error processing autoprinters:", error);
+    autoprinterInterval = setInterval(async () => {
+      try {
+        const result = await processAutoprinters();
+        if (result.totalTickets > 0 && result.newGlobalCount !== null) {
+          broadcastCount(result.newGlobalCount);
+          await broadcastAutoprinterUpdates();
         }
-      }, 4000);
+      } catch (error) {
+        console.error("Error processing autoprinters:", error);
+      }
+    }, 4000);
 
-      console.log("Autoprinter processor started (4 second interval)");
+    console.log("Autoprinter processor started (4 second interval)");
 
-      creditUpdateInterval = setInterval(async () => {
-        try {
-          await updateAllUsersCreditValues();
-          await broadcastCreditUpdates();
-        } catch (error) {
-          console.error("Error updating user credit values:", error);
+    creditUpdateInterval = setInterval(async () => {
+      try {
+        await updateAllUsersCreditValues();
+        await broadcastCreditUpdates();
+      } catch (error) {
+        console.error("Error updating user credit values:", error);
+      }
+    }, 1000);
+
+    console.log("Credit value updater started (1 second interval)");
+
+    ticketCleanupInterval = setInterval(async () => {
+      try {
+        const deletedCount = await cleanupOldTicketWithdrawals();
+        if (deletedCount > 0) {
+          console.log(
+            `Cleaned up ${deletedCount} old ticket withdrawal records`,
+          );
         }
-      }, 1000);
+      } catch (error) {
+        console.error("Error cleaning up old ticket withdrawals:", error);
+      }
+    }, 3600000); // 1 hour
 
-      console.log("Credit value updater started (1 second interval)");
+    console.log("Ticket cleanup started (1 hour interval)");
+  } catch (error) {
+    console.error("Failed to initialize database:", error);
+    process.exit(1);
+  }
+})();
 
-      ticketCleanupInterval = setInterval(async () => {
-        try {
-          const deletedCount = await cleanupOldTicketWithdrawals();
-          if (deletedCount > 0) {
-            console.log(
-              `Cleaned up ${deletedCount} old ticket withdrawal records`,
-            );
-          }
-        } catch (error) {
-          console.error("Error cleaning up old ticket withdrawals:", error);
-        }
-      }, 3600000); // 1 hour
+const shutdown = async (signal: NodeJS.Signals): Promise<void> => {
+  console.log(`\n${signal} received, shutting down gracefully...`);
 
-      console.log("Ticket cleanup started (1 hour interval)");
-    } catch (error) {
-      console.error("Failed to initialize database:", error);
-      process.exit(1);
-    }
-  })();
+  if (autoprinterInterval) {
+    clearInterval(autoprinterInterval);
+    console.log("Autoprinter processor stopped");
+  }
 
-  const shutdown = async (signal: NodeJS.Signals): Promise<void> => {
-    console.log(`\n${signal} received, shutting down gracefully...`);
+  if (creditUpdateInterval) {
+    clearInterval(creditUpdateInterval);
+    console.log("Credit value updater stopped");
+  }
 
-    if (autoprinterInterval) {
-      clearInterval(autoprinterInterval);
-      console.log("Autoprinter processor stopped");
-    }
+  if (ticketCleanupInterval) {
+    clearInterval(ticketCleanupInterval);
+    console.log("Ticket cleanup stopped");
+  }
 
-    if (creditUpdateInterval) {
-      clearInterval(creditUpdateInterval);
-      console.log("Credit value updater stopped");
-    }
+  if (server) {
+    server.close(() => {
+      console.log("HTTP server closed");
 
-    if (ticketCleanupInterval) {
-      clearInterval(ticketCleanupInterval);
-      console.log("Ticket cleanup stopped");
-    }
+      if (wss) {
+        wss.close(() => {
+          console.log("WebSocket server closed");
 
-    if (server) {
-      server.close(() => {
-        console.log("HTTP server closed");
-
-        if (wss) {
-          wss.close(() => {
-            console.log("WebSocket server closed");
-
-            closePool().then(() => {
-              console.log("Database pool closed");
-              process.exit(0);
-            });
-          });
-        } else {
           closePool().then(() => {
             console.log("Database pool closed");
             process.exit(0);
           });
-        }
-      });
-    } else if (wss) {
-      wss.close(() => {
-        console.log("WebSocket server closed");
+        });
+      } else {
         closePool().then(() => {
           console.log("Database pool closed");
           process.exit(0);
         });
+      }
+    });
+  } else if (wss) {
+    wss.close(() => {
+      console.log("WebSocket server closed");
+      closePool().then(() => {
+        console.log("Database pool closed");
+        process.exit(0);
       });
-    } else {
-      await closePool();
-      console.log("Database pool closed");
-      process.exit(0);
-    }
+    });
+  } else {
+    await closePool();
+    console.log("Database pool closed");
+    process.exit(0);
+  }
 
-    setTimeout(() => {
-      console.error("Forced shutdown after timeout");
-      process.exit(1);
-    }, 10000);
-  };
+  setTimeout(() => {
+    console.error("Forced shutdown after timeout");
+    process.exit(1);
+  }, 10000);
+};
 
-  process.on("SIGTERM", () => {
-    void shutdown("SIGTERM");
-  });
+process.on("SIGTERM", () => {
+  void shutdown("SIGTERM");
+});
 
-  process.on("SIGINT", () => {
-    void shutdown("SIGINT");
-  });
-}
+process.on("SIGINT", () => {
+  void shutdown("SIGINT");
+});
 
 export { createApp, createServer };

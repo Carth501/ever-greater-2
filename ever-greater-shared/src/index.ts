@@ -6,9 +6,9 @@ export {
   getUserResource,
   hasResources,
   setUserResource,
-} from "./resources";
+} from "./resources.js";
 
-export type { ResourceAmount, User } from "./resources";
+export type { ResourceAmount, User } from "./resources.js";
 
 // Export all operations types and utilities
 export {
@@ -20,7 +20,7 @@ export {
   getOperationGain,
   operations,
   validateOperation,
-} from "./operations";
+} from "./operations.js";
 
 export type {
   Operation,
