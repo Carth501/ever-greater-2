@@ -181,10 +181,10 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
   // Credit capacity upgrade calculations
   const creditCapacityCost =
     getOperationCost(increaseCreditCapacityOperation, operationContext)[
-      ResourceType.TICKETS_CONTRIBUTED
+      ResourceType.GLOBAL_TICKETS
     ] ?? 0;
   const canAffordCreditCapacity = canAfford(currentUser, {
-    [ResourceType.TICKETS_CONTRIBUTED]: creditCapacityCost,
+    [ResourceType.GLOBAL_TICKETS]: creditCapacityCost,
   });
 
   return (
