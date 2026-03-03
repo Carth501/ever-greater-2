@@ -169,9 +169,6 @@ export async function initializeDatabase(): Promise<void> {
         INSERT INTO global_state (id, count)
         VALUES (1, 0)
       `);
-      console.log("Database initialized with count = 0");
-    } else {
-      console.log("Database already initialized");
     }
   } finally {
     client.release();

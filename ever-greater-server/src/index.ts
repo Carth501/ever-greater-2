@@ -515,8 +515,6 @@ function createServer(app: Express): Server {
       }
     }, 4000);
 
-    console.log("Autoprinter processor started (4 second interval)");
-
     creditUpdateInterval = setInterval(async () => {
       try {
         await updateAllUsersCreditValues();
@@ -525,8 +523,6 @@ function createServer(app: Express): Server {
         console.error("Error updating user credit values:", error);
       }
     }, 1000);
-
-    console.log("Credit value updater started (1 second interval)");
 
     ticketCleanupInterval = setInterval(async () => {
       try {
@@ -540,8 +536,6 @@ function createServer(app: Express): Server {
         console.error("Error cleaning up old ticket withdrawals:", error);
       }
     }, 3600000); // 1 hour
-
-    console.log("Ticket cleanup started (1 hour interval)");
   } catch (error) {
     console.error("Failed to initialize database:", error);
     process.exit(1);
@@ -553,17 +547,14 @@ const shutdown = async (signal: NodeJS.Signals): Promise<void> => {
 
   if (autoprinterInterval) {
     clearInterval(autoprinterInterval);
-    console.log("Autoprinter processor stopped");
   }
 
   if (creditUpdateInterval) {
     clearInterval(creditUpdateInterval);
-    console.log("Credit value updater stopped");
   }
 
   if (ticketCleanupInterval) {
     clearInterval(ticketCleanupInterval);
-    console.log("Ticket cleanup stopped");
   }
 
   if (server) {
