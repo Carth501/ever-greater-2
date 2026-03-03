@@ -59,6 +59,7 @@ export interface User {
   id: number;
   email: string;
   tickets_contributed: number;
+  tickets_withdrawn: number;
   printer_supplies: number;
   money: number;
   gold: number;

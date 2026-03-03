@@ -46,6 +46,9 @@ function connectWebSocket(dispatch: any, userId?: number) {
         ...(update.tickets_contributed !== undefined
           ? { tickets_contributed: update.tickets_contributed }
           : {}),
+        ...(update.tickets_withdrawn !== undefined
+          ? { tickets_withdrawn: update.tickets_withdrawn }
+          : {}),
         ...(update.gold !== undefined ? { gold: update.gold } : {}),
         ...(update.autoprinters !== undefined
           ? { autoprinters: update.autoprinters }

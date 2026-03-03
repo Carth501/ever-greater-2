@@ -45,6 +45,7 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
     isLoading,
     error,
   } = useAppSelector((state) => state.auth);
+  const globalTicketCount = useAppSelector((state) => state.ticket.count);
 
   const [goldQuantity, setGoldQuantity] = useState<number>(1);
 
@@ -194,7 +195,6 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
       </Typography>
 
       <CreditDisplay user={currentUser} />
-
       <Typography variant="body1" color="text.secondary">
         Money: <strong>${money}</strong>
       </Typography>

@@ -64,6 +64,27 @@ export async function initializeDatabase(): Promise<void> {
       CREATE INDEX IF NOT EXISTS idx_session_expire ON session (expire)
     `);
 
+    // Create ticket_withdrawals table for audit log and 24h limit enforcement
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS ticket_withdrawals (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        amount INTEGER NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Add created_at column to ticket_withdrawals if it doesn't exist
+    await client.query(`
+      ALTER TABLE ticket_withdrawals 
+      ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    `);
+
+    // Create index on user_id and created_at for efficient queries
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_ticket_withdrawals_user_created ON ticket_withdrawals (user_id, created_at)
+    `);
+
     // Add printer_supplies column to users table if it doesn't exist
     await client.query(`
       ALTER TABLE users 
@@ -115,6 +136,12 @@ export async function initializeDatabase(): Promise<void> {
     await client.query(`
       ALTER TABLE users 
       ADD COLUMN IF NOT EXISTS credit_capacity_level INTEGER NOT NULL DEFAULT 0
+    `);
+
+    // Add created_at column to users table if it doesn't exist
+    await client.query(`
+      ALTER TABLE users 
+      ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     `);
 
     // Validate shared resource mapping against users table columns
@@ -176,7 +203,6 @@ export async function incrementGlobalCount(): Promise<number> {
 
 interface DbUser extends User {
   password_hash: string;
-  created_at: Date;
 }
 
 /**
@@ -184,10 +210,64 @@ interface DbUser extends User {
  */
 export async function getUserByEmail(email: string): Promise<DbUser | null> {
   const result = await pool.query(
-    "SELECT id, email, password_hash, tickets_contributed, printer_supplies, money, gold, autoprinters, credit_value, credit_generation_level, credit_capacity_level, created_at FROM users WHERE email = $1",
+    "SELECT id, email, password_hash, tickets_contributed, printer_supplies, money, gold, autoprinters, credit_value, credit_generation_level, credit_capacity_level FROM users WHERE email = $1",
     [email],
   );
-  return result.rows[0] || null;
+  if (!result.rows[0]) return null;
+  const userRow = result.rows[0];
+  const tickets_withdrawn = await getTicketsWithdrawnIn24Hours(userRow.id);
+  return Object.assign(userRow, { tickets_withdrawn }) as DbUser;
+}
+
+/**
+ * Get total tickets withdrawn by user in past 24 hours
+ */
+export async function getTicketsWithdrawnIn24Hours(
+  userId: number,
+  client?: PoolClient,
+): Promise<number> {
+  const dbClient = client || pool;
+  const result = await dbClient.query(
+    "SELECT COALESCE(SUM(amount), 0) as total FROM ticket_withdrawals WHERE user_id = $1 AND created_at > NOW() - INTERVAL '24 hours'",
+    [userId],
+  );
+  return result.rows[0]?.total || 0;
+}
+
+/**
+ * Record a global ticket withdrawal for a user
+ */
+export async function recordTicketWithdrawal(
+  userId: number,
+  amount: number,
+  client?: PoolClient,
+): Promise<void> {
+  const dbClient = client || pool;
+  await dbClient.query(
+    "INSERT INTO ticket_withdrawals (user_id, amount) VALUES ($1, $2)",
+    [userId, amount],
+  );
+}
+
+/**
+ * Clean up ticket withdrawal records older than 24 hours
+ */
+export async function cleanupOldTicketWithdrawals(): Promise<number> {
+  const result = await pool.query(
+    "DELETE FROM ticket_withdrawals WHERE created_at < NOW() - INTERVAL '24 hours'",
+  );
+  return result.rowCount || 0;
+}
+
+/**
+ * Augment a user with their 24-hour ticket withdrawal total
+ */
+export async function enrichUserWithWithdrawals(
+  user: User,
+  client?: PoolClient,
+): Promise<User> {
+  const tickets_withdrawn = await getTicketsWithdrawnIn24Hours(user.id, client);
+  return { ...user, tickets_withdrawn } as User;
 }
 
 /**
@@ -201,7 +281,9 @@ export async function createUser(
     "INSERT INTO users (email, password_hash, printer_supplies, money, gold, autoprinters, credit_value, credit_generation_level, credit_capacity_level) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id, email, tickets_contributed, printer_supplies, money, gold, autoprinters, credit_value, credit_generation_level, credit_capacity_level",
     [email, passwordHash, 100, 0, 0, 0, 0, 0, 0],
   );
-  return result.rows[0];
+  const userRow = result.rows[0];
+  const tickets_withdrawn = await getTicketsWithdrawnIn24Hours(userRow.id);
+  return Object.assign(userRow, { tickets_withdrawn }) as User;
 }
 
 /**
@@ -212,7 +294,10 @@ export async function getUserById(userId: number): Promise<User | null> {
     "SELECT id, email, tickets_contributed, printer_supplies, money, gold, autoprinters, credit_value, credit_generation_level, credit_capacity_level FROM users WHERE id = $1",
     [userId],
   );
-  return result.rows[0] || null;
+  if (!result.rows[0]) return null;
+  const userRow = result.rows[0];
+  const tickets_withdrawn = await getTicketsWithdrawnIn24Hours(userRow.id);
+  return Object.assign(userRow, { tickets_withdrawn }) as User;
 }
 
 /**
@@ -244,6 +329,30 @@ export async function executeResourceTransaction(
     // Check if this operation costs global tickets
     const globalTicketCost = cost[ResourceType.GLOBAL_TICKETS];
     if (globalTicketCost !== undefined && globalTicketCost > 0) {
+      // Fetch user's tickets_contributed to enforce personal limit
+      const userCheck = await dbClient.query(
+        "SELECT tickets_contributed FROM users WHERE id = $1",
+        [userId],
+      );
+      if (userCheck.rows.length === 0) {
+        throw new Error("User not found");
+      }
+      const userContributed = userCheck.rows[0].tickets_contributed;
+      const personalLimit = userContributed * 1.0; // modifier currently hardcoded to 1.0
+
+      // Get 24-hour withdrawal total
+      const withdrawnIn24h = await getTicketsWithdrawnIn24Hours(
+        userId,
+        dbClient,
+      );
+      const projectedWithdrawal = withdrawnIn24h + globalTicketCost;
+
+      if (projectedWithdrawal > personalLimit) {
+        throw new Error(
+          `Personal ticket withdrawal limit exceeded. Current: ${withdrawnIn24h}, Limit: ${personalLimit}, Requested: ${globalTicketCost}`,
+        );
+      }
+
       // Validate and deduct from global_state atomically
       const globalResult = await dbClient.query(
         `UPDATE global_state 
@@ -333,11 +442,19 @@ export async function executeResourceTransaction(
       throw new Error("Insufficient resources or user not found");
     }
 
+    // Record withdrawal if global tickets were spent
+    if (globalTicketCost !== undefined && globalTicketCost > 0) {
+      await recordTicketWithdrawal(userId, globalTicketCost, dbClient);
+    }
+
     if (useTransaction && txClient) {
       await txClient.query("COMMIT");
     }
 
-    return result.rows[0];
+    const userRow = result.rows[0];
+    // Enrich with current withdrawal total for this transaction
+    const tickets_withdrawn = await getTicketsWithdrawnIn24Hours(userId);
+    return Object.assign(userRow, { tickets_withdrawn }) as User;
   } catch (error) {
     if (useTransaction && txClient) {
       await txClient.query("ROLLBACK").catch(() => {

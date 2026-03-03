@@ -14,6 +14,7 @@ const mockUser: User = {
   id: 1,
   email: "test@example.com",
   tickets_contributed: 5,
+  tickets_withdrawn: 0,
   printer_supplies: 100,
   money: 0,
   gold: 0,

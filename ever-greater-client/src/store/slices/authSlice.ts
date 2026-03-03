@@ -9,6 +9,7 @@ type UserUpdatePayload = Partial<
     | "printer_supplies"
     | "money"
     | "tickets_contributed"
+    | "tickets_withdrawn"
     | "gold"
     | "autoprinters"
     | "credit_value"

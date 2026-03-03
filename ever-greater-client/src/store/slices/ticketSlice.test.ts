@@ -85,6 +85,7 @@ describe("ticketSlice", () => {
         id: 1,
         email: "test@example.com",
         tickets_contributed: 1,
+        tickets_withdrawn: 0,
         printer_supplies: 99,
         money: 1,
         gold: 0,

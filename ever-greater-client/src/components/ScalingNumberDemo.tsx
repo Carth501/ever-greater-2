@@ -11,6 +11,7 @@ import { logoutThunk } from "../store/slices/authSlice";
 import { incrementCountThunk } from "../store/slices/ticketSlice";
 import GlobalTicketDisplay from "./GlobalTicketDisplay";
 import Shop from "./Shop";
+import TicketDrawCapacity from "./TicketDrawCapacity";
 
 type ScalingNumberDemoProps = {
   onLogout: () => void;
@@ -101,6 +102,8 @@ function ScalingNumberDemo({ onLogout }: ScalingNumberDemoProps): JSX.Element {
         <Typography variant="body1" color="text.secondary">
           Tickets contributed: {currentUser.tickets_contributed}
         </Typography>
+
+        <TicketDrawCapacity user={currentUser} />
       </TicketCard>
 
       <Paper elevation={2} sx={{ p: 2 }}>

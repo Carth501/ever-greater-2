@@ -9,6 +9,7 @@ type UserUpdate = {
   supplies?: number;
   money?: number;
   tickets_contributed?: number;
+  tickets_withdrawn?: number;
   gold?: number;
   autoprinters?: number;
   credit_value?: number;

@@ -13,6 +13,7 @@ import session from "express-session";
 import http, { type Server } from "http";
 import { WebSocket, WebSocketServer, type RawData } from "ws";
 import {
+  cleanupOldTicketWithdrawals,
   closePool,
   createUser,
   executeResourceTransaction,
@@ -38,6 +39,7 @@ let wss: WebSocketServer | undefined;
 let server: Server | undefined;
 let autoprinterInterval: NodeJS.Timeout | undefined;
 let creditUpdateInterval: NodeJS.Timeout | undefined;
+let ticketCleanupInterval: NodeJS.Timeout | undefined;
 const socketUserMap = new Map<WebSocket, number>();
 
 const PgSession = connectPgSimple(session);
@@ -48,6 +50,7 @@ type UserUpdatePayload = Partial<{
   gold: number;
   autoprinters: number;
   tickets_contributed: number;
+  tickets_withdrawn: number;
   credit_value: number;
 }>;
 
@@ -109,6 +112,7 @@ async function broadcastAutoprinterUpdates(): Promise<void> {
                 supplies: user.printer_supplies,
                 money: user.money,
                 tickets_contributed: user.tickets_contributed,
+                tickets_withdrawn: user.tickets_withdrawn,
               },
             });
             client.send(payload);
@@ -525,6 +529,21 @@ if (require.main === module) {
       }, 1000);
 
       console.log("Credit value updater started (1 second interval)");
+
+      ticketCleanupInterval = setInterval(async () => {
+        try {
+          const deletedCount = await cleanupOldTicketWithdrawals();
+          if (deletedCount > 0) {
+            console.log(
+              `Cleaned up ${deletedCount} old ticket withdrawal records`,
+            );
+          }
+        } catch (error) {
+          console.error("Error cleaning up old ticket withdrawals:", error);
+        }
+      }, 3600000); // 1 hour
+
+      console.log("Ticket cleanup started (1 hour interval)");
     } catch (error) {
       console.error("Failed to initialize database:", error);
       process.exit(1);
@@ -542,6 +561,11 @@ if (require.main === module) {
     if (creditUpdateInterval) {
       clearInterval(creditUpdateInterval);
       console.log("Credit value updater stopped");
+    }
+
+    if (ticketCleanupInterval) {
+      clearInterval(ticketCleanupInterval);
+      console.log("Ticket cleanup stopped");
     }
 
     if (server) {
