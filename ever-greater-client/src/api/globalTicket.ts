@@ -13,6 +13,8 @@ type UserUpdate = {
   gold?: number;
   autoprinters?: number;
   credit_value?: number;
+  credit_generation_level?: number;
+  credit_capacity_level?: number;
 };
 
 type WebSocketPayload = {

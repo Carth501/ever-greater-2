@@ -52,6 +52,8 @@ type UserUpdatePayload = Partial<{
   tickets_contributed: number;
   tickets_withdrawn: number;
   credit_value: number;
+  credit_generation_level: number;
+  credit_capacity_level: number;
 }>;
 
 interface IncomingSocketMessage {
@@ -418,6 +420,8 @@ function createApp(): Express {
         autoprinters: updatedUser.autoprinters,
         tickets_contributed: updatedUser.tickets_contributed,
         credit_value: updatedUser.credit_value,
+        credit_generation_level: updatedUser.credit_generation_level,
+        credit_capacity_level: updatedUser.credit_capacity_level,
       });
 
       return res.json({

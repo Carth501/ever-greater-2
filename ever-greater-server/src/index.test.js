@@ -235,4 +235,51 @@ describe('Express API Endpoints', () => {
       expect(response.body.message).toBe('Logged out successfully');
     });
   });
+
+  describe('POST /api/operations', () => {
+    it('should include credit level updates in operation response', async () => {
+      // Setup mock database state
+      const updatedUser = {
+        id: 1,
+        email: 'test@example.com',
+        printer_supplies: 100,
+        money: 500,
+        gold: 0,
+        autoprinters: 0,
+        tickets_contributed: 0,
+        credit_value: 50,
+        credit_generation_level: 2,
+        credit_capacity_level: 5,
+      };
+
+      db.getResourceCosts.mockResolvedValue({
+        INCREASE_CREDIT_GENERATION: { money: 100 },
+      });
+      db.getUserById.mockResolvedValue({
+        id: 1,
+        email: 'test@example.com',
+        printer_supplies: 100,
+        money: 600,
+        gold: 0,
+        autoprinters: 0,
+        tickets_contributed: 0,
+        credit_value: 50,
+        credit_generation_level: 1,
+        credit_capacity_level: 5,
+      });
+      db.executeResourceTransaction.mockResolvedValue(updatedUser);
+      db.getGlobalCount.mockResolvedValue(100);
+
+      const response = await request(app)
+        .post('/api/operations')
+        .set('Cookie', 'userId=1')
+        .send({ operationId: 'INCREASE_CREDIT_GENERATION' })
+        .expect(200);
+
+      // Verify the response includes credit level updates
+      expect(response.body.user.credit_generation_level).toBe(2);
+      expect(response.body.user.credit_capacity_level).toBe(5);
+      expect(response.body.user.credit_value).toBe(50);
+    });
+  });
 });

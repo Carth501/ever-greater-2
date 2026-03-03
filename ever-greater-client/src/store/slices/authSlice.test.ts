@@ -3,6 +3,7 @@ import type { User } from "../../api/auth";
 import * as authApi from "../../api/auth";
 import authReducer, {
   AuthState,
+  applyUserUpdate,
   checkAuthThunk,
   clearError,
   loginThunk,
@@ -230,6 +231,28 @@ describe("authSlice", () => {
       expect(state.user).toBeNull();
       expect(state.isLoading).toBe(false);
       expect(state.error).toBeNull();
+    });
+
+    it("should apply user update with credit level fields via applyUserUpdate reducer", () => {
+      const stateWithUser: AuthState = {
+        ...initialState,
+        user: mockUser,
+      };
+
+      const updatePayload = {
+        credit_value: 150,
+        credit_generation_level: 3,
+        credit_capacity_level: 10,
+      };
+
+      const state = authReducer(stateWithUser, applyUserUpdate(updatePayload));
+
+      expect(state.user?.credit_value).toBe(150);
+      expect(state.user?.credit_generation_level).toBe(3);
+      expect(state.user?.credit_capacity_level).toBe(10);
+      // Verify other fields remain unchanged
+      expect(state.user?.email).toBe(mockUser.email);
+      expect(state.user?.id).toBe(mockUser.id);
     });
   });
 });

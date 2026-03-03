@@ -255,5 +255,42 @@ describe("websocketMiddleware", () => {
       expect(errorAction).toBeDefined();
       expect(errorAction.payload).toBe("WebSocket connection error");
     });
+
+    it("should dispatch applyUserUpdate with credit level fields when WebSocket receives them", () => {
+      const store = createMockStore();
+      const next = createMockNext();
+      const middleware = websocketMiddleware(store)(next);
+
+      let onUserUpdateCallback: ((update: any) => void) | null = null;
+      mockGlobalTicketApi.connectGlobalCountSocket.mockImplementation(
+        (
+          _onCount: (count: number) => void,
+          onUserUpdate?: (update: any) => void,
+          _onStatus?: (status: "open" | "closed" | "error") => void,
+        ) => {
+          if (onUserUpdate) {
+            onUserUpdateCallback = onUserUpdate;
+          }
+          return mockDisconnect;
+        },
+      );
+
+      middleware(checkAuthThunk.fulfilled(mockUser, ""));
+
+      // Simulate WebSocket message with credit level updates
+      onUserUpdateCallback!({
+        credit_value: 100,
+        credit_generation_level: 2,
+        credit_capacity_level: 5,
+      });
+
+      const updateAction = dispatchedActions.find(
+        (a) => a.type === "auth/applyUserUpdate",
+      );
+      expect(updateAction).toBeDefined();
+      expect(updateAction.payload.credit_value).toBe(100);
+      expect(updateAction.payload.credit_generation_level).toBe(2);
+      expect(updateAction.payload.credit_capacity_level).toBe(5);
+    });
   });
 });

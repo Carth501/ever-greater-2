@@ -56,6 +56,12 @@ function connectWebSocket(dispatch: any, userId?: number) {
         ...(update.credit_value !== undefined
           ? { credit_value: update.credit_value }
           : {}),
+        ...(update.credit_generation_level !== undefined
+          ? { credit_generation_level: update.credit_generation_level }
+          : {}),
+        ...(update.credit_capacity_level !== undefined
+          ? { credit_capacity_level: update.credit_capacity_level }
+          : {}),
       };
 
       if (Object.keys(payload).length > 0) {
