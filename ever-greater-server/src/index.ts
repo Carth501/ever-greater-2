@@ -11,6 +11,7 @@ import {
 import express, { type Express } from "express";
 import session from "express-session";
 import http, { type Server } from "http";
+import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer, type RawData } from "ws";
 import {
   cleanupOldTicketWithdrawals,
@@ -33,6 +34,7 @@ declare module "express-session" {
   }
 }
 
+const __filename = fileURLToPath(import.meta.url);
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
 
 let wss: WebSocketServer | undefined;
@@ -495,7 +497,7 @@ function createServer(app: Express): Server {
 }
 
 // Start server only if this is the main module (not when required by tests)
-if (require.main === module) {
+if (process.argv[1] === __filename) {
   (async () => {
     try {
       await initializeDatabase();
