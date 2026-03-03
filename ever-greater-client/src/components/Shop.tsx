@@ -188,6 +188,12 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
     [ResourceType.GLOBAL_TICKETS]: creditCapacityCost,
   });
 
+  // Calculate remaining draw capacity
+  const ticketsContributed = currentUser.tickets_contributed ?? 0;
+  const ticketsWithdrawn = currentUser.tickets_withdrawn ?? 0;
+  const remainingCapacity = Math.max(0, ticketsContributed - ticketsWithdrawn);
+  const hasDrawCapacity = remainingCapacity > 0;
+
   return (
     <Stack spacing={2}>
       <Typography variant="h6" fontWeight={700}>
@@ -345,9 +351,13 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
         <Button
           onClick={handleIncreaseCreditCapacity}
           variant="contained"
-          disabled={isLoading || !canAffordCreditCapacity}
+          disabled={isLoading || !canAffordCreditCapacity || !hasDrawCapacity}
         >
-          {canAffordCreditCapacity ? "Buy" : "Insufficient Tickets"}
+          {!hasDrawCapacity
+            ? "No Draw Capacity"
+            : canAffordCreditCapacity
+              ? "Buy"
+              : "Insufficient Tickets"}
         </Button>
       </ShopRow>
 
