@@ -63,8 +63,8 @@ The server will automatically create the necessary database tables on first star
 ## Endpoints
 
 - `GET /api/count` - returns the current global ticket pool count
-- `POST /api/increment` - increments the count by 1 and returns the new count
-- WebSocket `ws://localhost:4000/ws` - pushes `{ "count": number }` updates
+- `POST /api/operations/:operationId` - executes a game operation (e.g., `PRINT_TICKET`, `BUY_SUPPLIES`)
+- WebSocket `ws://localhost:4000/ws` - pushes `{ "count": number }` updates and user-specific updates
 
 ## Database
 

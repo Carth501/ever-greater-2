@@ -1,6 +1,12 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import * as ticketApi from "../../api/globalTicket";
-import { updateMoney, updateSupplies } from "./authSlice";
+import * as operationsApi from "../../api/operations";
+import {
+  updateAutoprinters,
+  updateGold,
+  updateMoney,
+  updateSupplies,
+} from "./authSlice";
 
 export interface TicketState {
   count: number;
@@ -33,15 +39,17 @@ export const incrementCountThunk = createAsyncThunk(
   "ticket/incrementCount",
   async (_, { rejectWithValue, dispatch }) => {
     try {
-      const result = await ticketApi.incrementGlobalCount();
-      // Update supplies in auth state
-      dispatch(updateSupplies(result.supplies));
-      // Update money in auth state
-      dispatch(updateMoney(result.money));
-      return result.count;
+      const updatedUser = await operationsApi.printTicket();
+      // Update auth state with new user resources
+      dispatch(updateSupplies(updatedUser.printer_supplies));
+      dispatch(updateMoney(updatedUser.money));
+      dispatch(updateGold(updatedUser.gold));
+      dispatch(updateAutoprinters(updatedUser.autoprinters || 0));
+      // Count updates will come via WebSocket
+      return undefined;
     } catch (error) {
       return rejectWithValue(
-        error instanceof Error ? error.message : "Failed to increment count",
+        error instanceof Error ? error.message : "Failed to print ticket",
       );
     }
   },
@@ -82,10 +90,10 @@ const ticketSlice = createSlice({
         state.isLoading = true;
         state.error = null;
       })
-      .addCase(incrementCountThunk.fulfilled, (state, action) => {
+      .addCase(incrementCountThunk.fulfilled, (state) => {
         state.isLoading = false;
-        state.count = action.payload;
         state.error = null;
+        // Count will be updated via WebSocket updates
       })
       .addCase(incrementCountThunk.rejected, (state, action) => {
         state.isLoading = false;

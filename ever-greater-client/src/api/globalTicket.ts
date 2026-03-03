@@ -5,12 +5,6 @@ type CountPayload = {
   count: number;
 };
 
-type IncrementPayload = {
-  count: number;
-  supplies: number;
-  money: number;
-};
-
 type UserUpdate = {
   supplies?: number;
   money?: number;
@@ -40,26 +34,6 @@ export async function fetchGlobalCount(): Promise<number> {
   }
   const data = (await response.json()) as CountPayload;
   return data.count;
-}
-
-export async function incrementGlobalCount(): Promise<{
-  count: number;
-  supplies: number;
-  money: number;
-}> {
-  const response = await fetch(`${apiBase}/api/increment`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    credentials: "include",
-  });
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to increment ticket count");
-  }
-  const data = (await response.json()) as IncrementPayload;
-  return { count: data.count, supplies: data.supplies, money: data.money };
 }
 
 export function connectGlobalCountSocket(

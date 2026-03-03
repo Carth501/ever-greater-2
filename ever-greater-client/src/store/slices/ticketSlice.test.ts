@@ -1,5 +1,6 @@
 import { configureStore } from "@reduxjs/toolkit";
 import * as ticketApi from "../../api/globalTicket";
+import * as operationsApi from "../../api/operations";
 import ticketReducer, {
   clearError,
   fetchCountThunk,
@@ -9,8 +10,10 @@ import ticketReducer, {
 } from "./ticketSlice";
 
 jest.mock("../../api/globalTicket");
+jest.mock("../../api/operations");
 
 const mockTicketApi = ticketApi as jest.Mocked<typeof ticketApi>;
+const mockOperationsApi = operationsApi as jest.Mocked<typeof operationsApi>;
 
 describe("ticketSlice", () => {
   const initialState: TicketState = {
@@ -71,32 +74,38 @@ describe("ticketSlice", () => {
       expect(state.error).toBe(errorMessage);
     });
 
-    it("should increment count successfully", async () => {
-      const mockNewCount = 101;
-      const mockNewSupplies = 99;
+    it("should print ticket successfully", async () => {
       const stateWithCount: TicketState = { ...initialState, count: 100 };
       store = configureStore({
         reducer: { ticket: ticketReducer },
         preloadedState: { ticket: stateWithCount },
       });
 
-      mockTicketApi.incrementGlobalCount.mockResolvedValueOnce({
-        count: mockNewCount,
-        supplies: mockNewSupplies,
-        money: 0,
-      });
+      const mockUpdatedUser = {
+        id: 1,
+        email: "test@example.com",
+        tickets_contributed: 1,
+        printer_supplies: 99,
+        money: 1,
+        gold: 0,
+        autoprinters: 0,
+        credit_value: 0,
+        credit_generation_level: 0,
+        credit_capacity_level: 0,
+      };
+
+      mockOperationsApi.printTicket.mockResolvedValueOnce(mockUpdatedUser);
 
       await store.dispatch(incrementCountThunk() as any);
 
       const state = (store.getState() as { ticket: TicketState }).ticket;
       expect(state.isLoading).toBe(false);
-      expect(state.count).toBe(mockNewCount);
       expect(state.error).toBeNull();
     });
 
-    it("should handle increment error (not authenticated)", async () => {
+    it("should handle print ticket error (not authenticated)", async () => {
       const errorMessage = "Not authenticated";
-      mockTicketApi.incrementGlobalCount.mockRejectedValueOnce(
+      mockOperationsApi.printTicket.mockRejectedValueOnce(
         new Error(errorMessage),
       );
 
@@ -107,9 +116,9 @@ describe("ticketSlice", () => {
       expect(state.error).toBe(errorMessage);
     });
 
-    it("should handle increment error (out of supplies)", async () => {
-      const errorMessage = "Out of supplies";
-      mockTicketApi.incrementGlobalCount.mockRejectedValueOnce(
+    it("should handle print ticket error (insufficient resources)", async () => {
+      const errorMessage = "Insufficient resources";
+      mockOperationsApi.printTicket.mockRejectedValueOnce(
         new Error(errorMessage),
       );
 
@@ -158,15 +167,14 @@ describe("ticketSlice", () => {
       expect(state.error).toBeNull();
     });
 
-    it("should set new count on incrementCountThunk.fulfilled", () => {
+    it("should not update count on incrementCountThunk.fulfilled", () => {
       const stateWithCount: TicketState = { ...initialState, count: 100 };
-      const newCount = 101;
       const state = ticketReducer(
         stateWithCount,
-        incrementCountThunk.fulfilled(newCount, ""),
+        incrementCountThunk.fulfilled(undefined, ""),
       );
       expect(state.isLoading).toBe(false);
-      expect(state.count).toBe(newCount);
+      expect(state.count).toBe(100);
       expect(state.error).toBeNull();
     });
 

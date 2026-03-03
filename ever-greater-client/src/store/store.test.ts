@@ -2,6 +2,7 @@ import { configureStore } from "@reduxjs/toolkit";
 import type { User } from "../api/auth";
 import * as authApi from "../api/auth";
 import * as ticketApi from "../api/globalTicket";
+import * as operationsApi from "../api/operations";
 import authReducer, {
   AuthState,
   loginThunk,
@@ -21,9 +22,11 @@ import ticketReducer, {
 
 jest.mock("../api/auth");
 jest.mock("../api/globalTicket");
+jest.mock("../api/operations");
 
 const mockAuthApi = authApi as jest.Mocked<typeof authApi>;
 const mockTicketApi = ticketApi as jest.Mocked<typeof ticketApi>;
+const mockOperationsApi = operationsApi as jest.Mocked<typeof operationsApi>;
 
 const mockUser: User = {
   id: 1,
@@ -124,13 +127,15 @@ describe("Redux Store Integration", () => {
       expect(state2.ticket.count).toBe(42);
     });
 
-    it("should handle increment count", async () => {
+    it("should handle print ticket", async () => {
       mockTicketApi.fetchGlobalCount.mockResolvedValueOnce(50);
-      mockTicketApi.incrementGlobalCount.mockResolvedValueOnce({
-        count: 51,
-        supplies: 99,
-        money: 0,
-      });
+      const updatedUser: User = {
+        ...mockUser,
+        printer_supplies: 99,
+        tickets_contributed: 1,
+        money: 1,
+      };
+      mockOperationsApi.printTicket.mockResolvedValueOnce(updatedUser);
 
       await store.dispatch(fetchCountThunk() as any);
       let state = store.getState();
@@ -139,7 +144,11 @@ describe("Redux Store Integration", () => {
       await store.dispatch(incrementCountThunk() as any);
 
       state = store.getState();
-      expect(state.ticket.count).toBe(51);
+      // Count should remain unchanged - it's updated via WebSocket
+      expect(state.ticket.count).toBe(50);
+      // Auth state should be updated with new user data
+      expect(state.auth.user?.printer_supplies).toBe(99);
+      expect(state.auth.user?.money).toBe(1);
     });
 
     it("should update count via updateCount action", () => {
