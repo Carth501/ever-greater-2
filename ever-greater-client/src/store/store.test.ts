@@ -131,6 +131,7 @@ describe("Redux Store Integration", () => {
 
     it("should handle print ticket", async () => {
       mockTicketApi.fetchGlobalCount.mockResolvedValueOnce(50);
+      mockAuthApi.login.mockResolvedValueOnce(mockUser);
       const updatedUser: User = {
         ...mockUser,
         printer_supplies: 99,
@@ -138,6 +139,14 @@ describe("Redux Store Integration", () => {
         money: 1,
       };
       mockOperationsApi.printTicket.mockResolvedValueOnce(updatedUser);
+
+      // First, login to establish user state
+      await store.dispatch(
+        loginThunk({
+          email: "test@example.com",
+          password: "password123",
+        }) as any,
+      );
 
       await store.dispatch(fetchCountThunk() as any);
       let state = store.getState();
