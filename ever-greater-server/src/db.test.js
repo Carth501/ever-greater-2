@@ -1,3 +1,5 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 describe('Database Functions', () => {
   let mockPool;
   let mockClient;
@@ -5,15 +7,15 @@ describe('Database Functions', () => {
 
   beforeEach(() => {
     // Clear all mocks
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     
     // Reset modules to reload db.js fresh
-    jest.resetModules();
+    vi.resetModules();
 
     // Create mock client
     mockClient = {
-      query: jest.fn(),
-      release: jest.fn(),
+      query: vi.fn(),
+      release: vi.fn(),
     };
 
     // Create mock pool

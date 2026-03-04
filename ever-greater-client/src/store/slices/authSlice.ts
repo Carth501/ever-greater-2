@@ -295,7 +295,9 @@ const authSlice = createSlice({
       })
       .addCase(buySuppliesThunk.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.user = action.payload;
+        if (state.user) {
+          state.user = { ...state.user, ...action.payload };
+        }
         state.error = null;
       })
       .addCase(buySuppliesThunk.rejected, (state, action) => {
@@ -311,7 +313,9 @@ const authSlice = createSlice({
       })
       .addCase(buyGoldThunk.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.user = action.payload;
+        if (state.user) {
+          state.user = { ...state.user, ...action.payload };
+        }
         state.error = null;
       })
       .addCase(buyGoldThunk.rejected, (state, action) => {
@@ -327,7 +331,9 @@ const authSlice = createSlice({
       })
       .addCase(buyAutoprinterThunk.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.user = action.payload;
+        if (state.user) {
+          state.user = { ...state.user, ...action.payload };
+        }
         state.error = null;
       })
       .addCase(buyAutoprinterThunk.rejected, (state, action) => {
@@ -343,7 +349,9 @@ const authSlice = createSlice({
       })
       .addCase(increaseCreditGenerationThunk.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.user = action.payload;
+        if (state.user) {
+          state.user = { ...state.user, ...action.payload };
+        }
         state.error = null;
       })
       .addCase(increaseCreditGenerationThunk.rejected, (state, action) => {
@@ -359,7 +367,9 @@ const authSlice = createSlice({
       })
       .addCase(increaseCreditCapacityThunk.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.user = action.payload;
+        if (state.user) {
+          state.user = { ...state.user, ...action.payload };
+        }
         state.error = null;
       })
       .addCase(increaseCreditCapacityThunk.rejected, (state, action) => {

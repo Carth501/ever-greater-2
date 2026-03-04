@@ -1,14 +1,13 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { User } from "../../api/auth";
 import * as globalTicketApi from "../../api/globalTicket";
 import { checkAuthThunk, loginThunk, logoutThunk } from "../slices/authSlice";
 import { updateCount } from "../slices/ticketSlice";
 import { websocketMiddleware } from "./websocketMiddleware";
 
-jest.mock("../../api/globalTicket");
+vi.mock("../../api/globalTicket");
 
-const mockGlobalTicketApi = globalTicketApi as jest.Mocked<
-  typeof globalTicketApi
->;
+const mockGlobalTicketApi = globalTicketApi as any;
 
 const mockUser: User = {
   id: 1,
@@ -25,15 +24,15 @@ const mockUser: User = {
 };
 
 describe("websocketMiddleware", () => {
-  let mockDisconnect: jest.Mock;
+  let mockDisconnect: any;
   let dispatchedActions: any[];
 
   beforeEach(() => {
     dispatchedActions = [];
-    mockDisconnect = jest.fn();
+    mockDisconnect = vi.fn();
 
     mockGlobalTicketApi.connectGlobalCountSocket.mockImplementation(
-      (onCount, onStatus) => {
+      (onCount: any, onStatus: any) => {
         // Simulate WebSocket callbacks for testing
         return mockDisconnect;
       },
@@ -41,12 +40,12 @@ describe("websocketMiddleware", () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   const createMockStore = () => {
     return {
-      getState: jest.fn(() => ({
+      getState: vi.fn(() => ({
         auth: {
           user: mockUser,
           isCheckingAuth: false,
@@ -56,7 +55,7 @@ describe("websocketMiddleware", () => {
         ticket: { count: 0, isLoading: false, error: null },
         error: { message: null, timestamp: null },
       })),
-      dispatch: jest.fn((action) => {
+      dispatch: vi.fn((action) => {
         dispatchedActions.push(action);
         return action;
       }),
@@ -64,7 +63,7 @@ describe("websocketMiddleware", () => {
   };
 
   const createMockNext = () => {
-    return jest.fn((action) => action);
+    return vi.fn((action) => action);
   };
 
   it("should connect WebSocket on checkAuthThunk.fulfilled when user exists", () => {
@@ -129,7 +128,7 @@ describe("websocketMiddleware", () => {
 
   it("should not connect WebSocket if user is null on auth check", () => {
     const storeWithoutUser = {
-      getState: jest.fn(() => ({
+      getState: vi.fn(() => ({
         auth: {
           user: null,
           isCheckingAuth: false,
@@ -139,7 +138,7 @@ describe("websocketMiddleware", () => {
         ticket: { count: 0, isLoading: false, error: null },
         error: { message: null, timestamp: null },
       })),
-      dispatch: jest.fn(),
+      dispatch: vi.fn(),
     };
 
     const next = createMockNext();
@@ -182,11 +181,11 @@ describe("websocketMiddleware", () => {
     const store = createMockStore();
     const callOrder: string[] = [];
 
-    const next = jest.fn(() => {
+    const next = vi.fn(() => {
       callOrder.push("next");
     });
 
-    store.dispatch = jest.fn((action) => {
+    store.dispatch = vi.fn((action) => {
       callOrder.push("dispatch");
       return action;
     });

@@ -1,20 +1,27 @@
-const request = require('supertest');
-const bcrypt = require('bcryptjs');
-const session = require('express-session');
+import bcrypt from 'bcryptjs';
+import request from 'supertest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import * as db from './db.ts';
+import { createApp } from './index.ts';
 
-// Mock database BEFORE requiring the app
-jest.mock('./db');
-const db = require('./db');
-
-// Mock connect-pg-simple to use memory store for tests
-jest.mock('connect-pg-simple', () => {
-  const MemoryStore = require('express-session').MemoryStore;
-  return function() {
-    return MemoryStore;
-  };
-});
-
-const { createApp } = require('./index');
+// Mock database BEFORE importing the app
+vi.mock('./db.ts', () => ({
+  initializeDatabase: vi.fn().mockResolvedValue(undefined),
+  closePool: vi.fn().mockResolvedValue(undefined),
+  createUser: vi.fn(),
+  getUserByEmail: vi.fn(),
+  getUserById: vi.fn(),
+  updateUserPassword: vi.fn(),
+  executeResourceTransaction: vi.fn(),
+  getGlobalCount: vi.fn(),
+  incrementGlobalCount: vi.fn(),
+  cleanupOldTicketWithdrawals: vi.fn().mockResolvedValue(undefined),
+  processAutoprinters: vi.fn().mockResolvedValue(undefined),
+  updateAllUsersCreditValues: vi.fn().mockResolvedValue(undefined),
+  pool: {
+    query: vi.fn(),
+  },
+}));
 
 describe('Express API Endpoints', () => {
   let app;
@@ -22,12 +29,10 @@ describe('Express API Endpoints', () => {
 
   beforeEach(() => {
     // Clear all mocks
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     // Create a new app instance for each test
     app = createApp();
-    
-    // Create a supertest agent to maintain session cookies across requests
     agent = request.agent(app);
   });
 

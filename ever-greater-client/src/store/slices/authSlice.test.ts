@@ -1,9 +1,13 @@
 import { configureStore } from "@reduxjs/toolkit";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { User } from "../../api/auth";
 import * as authApi from "../../api/auth";
+import * as operationsApi from "../../api/operations";
 import authReducer, {
   AuthState,
   applyUserUpdate,
+  buyGoldThunk,
+  buySuppliesThunk,
   checkAuthThunk,
   clearError,
   loginThunk,
@@ -12,9 +16,11 @@ import authReducer, {
   updateSupplies,
 } from "./authSlice";
 
-jest.mock("../../api/auth");
+vi.mock("../../api/auth");
+vi.mock("../../api/operations");
 
-const mockAuthApi = authApi as jest.Mocked<typeof authApi>;
+const mockAuthApi = authApi as any;
+const mockOperationsApi = operationsApi as any;
 
 const mockUser: User = {
   id: 1,
@@ -83,7 +89,7 @@ describe("authSlice", () => {
       store = configureStore({
         reducer: { auth: authReducer },
       });
-      jest.clearAllMocks();
+      vi.clearAllMocks();
     });
 
     it("should handle successful auth check", async () => {
@@ -168,6 +174,76 @@ describe("authSlice", () => {
       expect(state.user).toBeNull();
       expect(state.isLoading).toBe(false);
       expect(state.error).toBeNull();
+    });
+
+    it("should preserve tickets withdrawn and credit fields when buyGold response is partial", async () => {
+      const stateWithUser: AuthState = {
+        user: {
+          ...mockUser,
+          tickets_withdrawn: 12,
+          credit_value: 4,
+          credit_generation_level: 3,
+          credit_capacity_level: 8,
+        },
+        isCheckingAuth: false,
+        isLoading: false,
+        error: null,
+      };
+
+      store = configureStore({
+        reducer: { auth: authReducer },
+        preloadedState: { auth: stateWithUser },
+      });
+
+      mockOperationsApi.buyGold.mockResolvedValueOnce({
+        id: mockUser.id,
+        email: mockUser.email,
+        money: 100,
+        gold: 3,
+      } as unknown as User);
+
+      await store.dispatch(buyGoldThunk(1) as any);
+
+      const state = (store.getState() as { auth: AuthState }).auth;
+      expect(state.user?.tickets_withdrawn).toBe(12);
+      expect(state.user?.credit_value).toBe(4);
+      expect(state.user?.credit_generation_level).toBe(3);
+      expect(state.user?.credit_capacity_level).toBe(8);
+    });
+
+    it("should preserve tickets withdrawn and credit fields when buySupplies response is partial", async () => {
+      const stateWithUser: AuthState = {
+        user: {
+          ...mockUser,
+          tickets_withdrawn: 9,
+          credit_value: 5,
+          credit_generation_level: 2,
+          credit_capacity_level: 7,
+        },
+        isCheckingAuth: false,
+        isLoading: false,
+        error: null,
+      };
+
+      store = configureStore({
+        reducer: { auth: authReducer },
+        preloadedState: { auth: stateWithUser },
+      });
+
+      mockOperationsApi.buySupplies.mockResolvedValueOnce({
+        id: mockUser.id,
+        email: mockUser.email,
+        printer_supplies: 300,
+        gold: 2,
+      } as unknown as User);
+
+      await store.dispatch(buySuppliesThunk() as any);
+
+      const state = (store.getState() as { auth: AuthState }).auth;
+      expect(state.user?.tickets_withdrawn).toBe(9);
+      expect(state.user?.credit_value).toBe(5);
+      expect(state.user?.credit_generation_level).toBe(2);
+      expect(state.user?.credit_capacity_level).toBe(7);
     });
   });
 

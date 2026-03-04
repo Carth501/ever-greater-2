@@ -8,9 +8,9 @@
 		"build": "tsc",
 		"start": "npm run build && node dist/index.js",
 		"dev": "tsc && node dist/index.js",
-		"test": "jest --detectOpenHandles",
-		"test:watch": "jest --watch --detectOpenHandles",
-		"test:coverage": "jest --coverage --detectOpenHandles",
+		"test": "vitest run",
+		"test:watch": "vitest watch",
+		"test:coverage": "vitest run --coverage",
 		"clean": "rimraf dist",
 		"kill": "powershell -Command \"$process = Get-NetTCPConnection -LocalPort 4000 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -First 1; if ($process) { Stop-Process -Id $process -Force; Write-Host 'Killed process on port 4000' } else { Write-Host 'No process found on port 4000' }\""
 	},
@@ -40,7 +40,8 @@
 		"jest": "^30.2.0",
 		"rimraf": "^5.0.0",
 		"supertest": "^7.2.2",
-		"typescript": "^4.9.5"
+		"typescript": "^4.9.5",
+		"vitest": "^4.0.18"
 	},
 	"jest": {
 		"testEnvironment": "node",

@@ -1,4 +1,5 @@
 import { configureStore } from "@reduxjs/toolkit";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as ticketApi from "../../api/globalTicket";
 import * as operationsApi from "../../api/operations";
 import ticketReducer, {
@@ -9,11 +10,11 @@ import ticketReducer, {
   updateCount,
 } from "./ticketSlice";
 
-jest.mock("../../api/globalTicket");
-jest.mock("../../api/operations");
+vi.mock("../../api/globalTicket");
+vi.mock("../../api/operations");
 
-const mockTicketApi = ticketApi as jest.Mocked<typeof ticketApi>;
-const mockOperationsApi = operationsApi as jest.Mocked<typeof operationsApi>;
+const mockTicketApi = ticketApi as any;
+const mockOperationsApi = operationsApi as any;
 
 describe("ticketSlice", () => {
   const initialState: TicketState = {
@@ -46,7 +47,7 @@ describe("ticketSlice", () => {
       store = configureStore({
         reducer: { ticket: ticketReducer },
       });
-      jest.clearAllMocks();
+      vi.clearAllMocks();
     });
 
     it("should fetch the global count successfully", async () => {

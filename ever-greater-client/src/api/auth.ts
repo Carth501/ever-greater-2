@@ -1,7 +1,12 @@
 import { type User } from "ever-greater-shared";
 
 const DEFAULT_API_BASE = "http://localhost:4000";
-const apiBase = import.meta.env.VITE_API_BASE || DEFAULT_API_BASE;
+let apiBase = DEFAULT_API_BASE;
+try {
+  apiBase = (import.meta.env.VITE_API_BASE as string) || DEFAULT_API_BASE;
+} catch {
+  // In test environments, import.meta may not be available
+}
 
 export type { User };
 

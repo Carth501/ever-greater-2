@@ -1,4 +1,5 @@
 import { configureStore } from "@reduxjs/toolkit";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { User } from "../api/auth";
 import * as authApi from "../api/auth";
 import * as ticketApi from "../api/globalTicket";
@@ -20,13 +21,13 @@ import ticketReducer, {
   updateCount,
 } from "./slices/ticketSlice";
 
-jest.mock("../api/auth");
-jest.mock("../api/globalTicket");
-jest.mock("../api/operations");
+vi.mock("../api/auth");
+vi.mock("../api/globalTicket");
+vi.mock("../api/operations");
 
-const mockAuthApi = authApi as jest.Mocked<typeof authApi>;
-const mockTicketApi = ticketApi as jest.Mocked<typeof ticketApi>;
-const mockOperationsApi = operationsApi as jest.Mocked<typeof operationsApi>;
+const mockAuthApi = authApi as any;
+const mockTicketApi = ticketApi as any;
+const mockOperationsApi = operationsApi as any;
 
 const mockUser: User = {
   id: 1,
@@ -52,7 +53,7 @@ describe("Redux Store Integration", () => {
   let store: ReturnType<typeof configureStore<TestRootState>>;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     store = configureStore({
       reducer: {
         auth: authReducer,
