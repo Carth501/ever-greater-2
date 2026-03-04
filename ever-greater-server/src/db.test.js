@@ -272,9 +272,9 @@ describe('Database Functions', () => {
   describe('updateAllUsersCreditValues', () => {
     it('should increment credit values based on generation level and capacity', async () => {
       // Mock the SQL query for credit updates
-      mockClient.query.mockResolvedValue({ rows: [] });
+      mockClient.query.mockResolvedValue({ rows: [], rowCount: 5 });
 
-      await db.updateAllUsersCreditValues();
+      const result = await db.updateAllUsersCreditValues();
 
       // Verify the query was called
       expect(mockClient.query).toHaveBeenCalled();
@@ -288,7 +288,9 @@ describe('Database Functions', () => {
       
       // Verify the formula: LEAST(credit_value + 0.1 * generation_level, credit_capacity_level)
       expect(queryCall).toContain('LEAST');
-      expect(queryCall).toContain('FLOOR');
+      
+      // Verify return value
+      expect(result).toBe(5);
     });
 
     it('should handle errors during credit update', async () => {
@@ -298,7 +300,7 @@ describe('Database Functions', () => {
     });
 
     it('should release client after credit update', async () => {
-      mockClient.query.mockResolvedValue({ rows: [] });
+      mockClient.query.mockResolvedValue({ rows: [], rowCount: 0 });
 
       await db.updateAllUsersCreditValues();
 

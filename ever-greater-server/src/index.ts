@@ -497,7 +497,11 @@ function createServer(app: Express): Server {
 }
 
 // Start server only if this is the main module (not when required by tests)
-if (process.argv[1] === __filename) {
+// Check if the script was invoked directly (contains index.js in argv[1])
+// When required by tests, process.argv[1] will be different (jest)
+const isMainModule = process.argv[1]?.includes("index.js") ?? false;
+
+if (isMainModule) {
   (async () => {
     try {
       await initializeDatabase();
