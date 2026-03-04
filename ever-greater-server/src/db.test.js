@@ -20,15 +20,15 @@ describe('Database Functions', () => {
 
     // Create mock pool
     mockPool = {
-      connect: jest.fn().mockResolvedValue(mockClient),
-      query: jest.fn(),
-      end: jest.fn().mockResolvedValue(undefined),
-      on: jest.fn(),
+      connect: vi.fn().mockResolvedValue(mockClient),
+      query: vi.fn(),
+      end: vi.fn().mockResolvedValue(undefined),
+      on: vi.fn(),
     };
 
     // Mock pg module with doMock (must be before require)
-    jest.doMock('pg', () => ({
-      Pool: jest.fn(() => mockPool),
+    vi.doMock('pg', () => ({
+      Pool: vi.fn(() => mockPool),
     }));
 
     // Now require db.js fresh with the mocked pg
@@ -36,7 +36,7 @@ describe('Database Functions', () => {
   });
 
   afterEach(() => {
-    jest.resetModules();
+    vi.resetModules();
   });
 
   describe('initializeDatabase', () => {
