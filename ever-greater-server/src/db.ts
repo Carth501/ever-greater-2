@@ -123,7 +123,13 @@ export async function initializeDatabase(): Promise<void> {
     // Add credit_value column to users table if it doesn't exist
     await client.query(`
       ALTER TABLE users 
-      ADD COLUMN IF NOT EXISTS credit_value INTEGER NOT NULL DEFAULT 0
+      ADD COLUMN IF NOT EXISTS credit_value NUMERIC(10, 2) NOT NULL DEFAULT 0
+    `);
+
+    // Alter credit_value column type if it's currently INTEGER
+    await client.query(`
+      ALTER TABLE users 
+      ALTER COLUMN credit_value SET DATA TYPE NUMERIC(10, 2) USING credit_value::NUMERIC(10, 2)
     `);
 
     // Add credit_generation_level column to users table if it doesn't exist
