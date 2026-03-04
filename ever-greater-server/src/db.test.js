@@ -109,6 +109,42 @@ describe('Database Functions', () => {
       await expect(db.initializeDatabase()).rejects.toThrow('Database error');
       expect(mockClient.release).toHaveBeenCalled();
     });
+
+    it('should convert credit_value column to NUMERIC to support decimal values', async () => {
+      mockClient.query.mockImplementation(async (query) => {
+        if (query.includes('information_schema.columns')) {
+          return {
+            rows: [
+              { column_name: 'tickets_contributed' },
+              { column_name: 'printer_supplies' },
+              { column_name: 'money' },
+              { column_name: 'gold' },
+              { column_name: 'autoprinters' },
+              { column_name: 'milk' },
+              { column_name: 'credit_value' },
+              { column_name: 'credit_generation_level' },
+              { column_name: 'credit_capacity_level' },
+            ],
+          };
+        }
+
+        if (query.includes('SELECT COUNT(*) FROM global_state')) {
+          return { rows: [{ count: 0 }] };
+        }
+
+        return { rows: [] };
+      });
+
+      await db.initializeDatabase();
+
+      // Verify that ALTER TABLE is called to convert credit_value to NUMERIC
+      const alterTableCalls = mockClient.query.mock.calls.filter((call) =>
+        call[0].includes('ALTER COLUMN credit_value SET DATA TYPE NUMERIC')
+      );
+
+      expect(alterTableCalls.length).toBeGreaterThan(0);
+      expect(alterTableCalls[0][0]).toContain('NUMERIC(10, 2)');
+    });
   });
 
   describe('getGlobalCount', () => {
@@ -291,6 +327,18 @@ describe('Database Functions', () => {
       
       // Verify return value
       expect(result).toBe(5);
+    });
+
+    it('should use floating point division to support fractional credit accumulation', async () => {
+      // Mock the SQL query for credit updates
+      mockClient.query.mockResolvedValue({ rows: [], rowCount: 3 });
+
+      const result = await db.updateAllUsersCreditValues();
+
+      // Check that the SQL query uses floating point division (10.0) not integer division (10)
+      const queryCall = mockClient.query.mock.calls[0][0];
+      expect(queryCall).toContain('credit_generation_level / 10.0');
+      expect(result).toBe(3);
     });
 
     it('should handle errors during credit update', async () => {
