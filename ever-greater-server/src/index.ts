@@ -175,12 +175,19 @@ function createApp(): Express {
   );
   app.use(express.json());
 
-  app.use(
-    session({
-      store: new PgSession({
+  // Use MemoryStore for testing, PgSession for production
+  const isTestEnvironment =
+    process.env.NODE_ENV === "test" || process.env.VITEST === "true";
+  const sessionStore = isTestEnvironment
+    ? undefined // Uses default MemoryStore
+    : new PgSession({
         pool,
         tableName: "session",
-      }),
+      });
+
+  app.use(
+    session({
+      store: sessionStore,
       secret:
         process.env.SESSION_SECRET || "your-secret-key-change-in-production",
       resave: false,

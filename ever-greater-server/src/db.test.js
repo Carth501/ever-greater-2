@@ -5,7 +5,7 @@ describe('Database Functions', () => {
   let mockClient;
   let db;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Clear all mocks
     vi.clearAllMocks();
     
@@ -26,17 +26,20 @@ describe('Database Functions', () => {
       on: vi.fn(),
     };
 
-    // Mock pg module with doMock (must be before require)
+    // Mock pg module with doMock (must be before dynamic import)
     vi.doMock('pg', () => ({
-      Pool: vi.fn(() => mockPool),
+      Pool: vi.fn(function() {
+        return mockPool;
+      }),
     }));
 
-    // Now require db.js fresh with the mocked pg
-    db = require('./db');
+    // Dynamically import db.js fresh with the mocked pg
+    db = await import('./db');
   });
 
   afterEach(() => {
     vi.resetModules();
+    vi.clearAllMocks();
   });
 
   describe('initializeDatabase', () => {
