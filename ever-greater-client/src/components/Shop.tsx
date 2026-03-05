@@ -40,17 +40,12 @@ const ShopRow = styled(Box)(({ theme }) => ({
 
 function Shop({ onPurchaseError }: ShopProps): JSX.Element {
   const dispatch = useAppDispatch();
-  const {
-    user: currentUser,
-    isLoading,
-    error,
-  } = useAppSelector((state) => state.auth);
+  const { user: currentUser, error } = useAppSelector((state) => state.auth);
   const globalTicketCount = useAppSelector((state) => state.ticket.count);
 
   const [goldQuantity, setGoldQuantity] = useState<number>(1);
 
   const handleBuySupplies = () => {
-    if (isLoading) return;
     dispatch(buySuppliesThunk()).then((result) => {
       if (result.type === buySuppliesThunk.rejected.type) {
         onPurchaseError?.(result.payload as string);
@@ -59,8 +54,6 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
   };
 
   const handleBuyGold = (quantity: number) => {
-    if (isLoading) return;
-
     // Validate quantity
     if (!Number.isInteger(quantity) || quantity < 1) {
       onPurchaseError?.("Invalid quantity. Must be a positive integer.");
@@ -75,7 +68,6 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
   };
 
   const handleBuyAutoprinter = () => {
-    if (isLoading) return;
     dispatch(buyAutoprinterThunk()).then((result) => {
       if (result.type === buyAutoprinterThunk.rejected.type) {
         onPurchaseError?.(result.payload as string);
@@ -84,7 +76,6 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
   };
 
   const handleIncreaseCreditGeneration = () => {
-    if (isLoading) return;
     dispatch(increaseCreditGenerationThunk()).then((result) => {
       if (result.type === increaseCreditGenerationThunk.rejected.type) {
         onPurchaseError?.(result.payload as string);
@@ -93,7 +84,6 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
   };
 
   const handleIncreaseCreditCapacity = () => {
-    if (isLoading) return;
     dispatch(increaseCreditCapacityThunk()).then((result) => {
       if (result.type === increaseCreditCapacityThunk.rejected.type) {
         onPurchaseError?.(result.payload as string);
@@ -121,7 +111,7 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
   const suppliesCost = getOperationCost(buySuppliesOperation, operationContext);
   const suppliesCostInGold = suppliesCost[ResourceType.GOLD] ?? 0;
   const canAffordSupplies = canAfford(currentUser, suppliesCost);
-  const isButtonDisabled = isLoading || !canAffordSupplies;
+  const isButtonDisabled = !canAffordSupplies;
 
   // Gold purchase calculations
   const goldCostPerUnit =
@@ -257,12 +247,11 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
               }
             }}
             inputProps={{ min: 1, style: { width: "80px" } }}
-            disabled={isLoading}
           />
           <Button
             onClick={() => handleBuyGold(goldQuantity)}
             variant="contained"
-            disabled={isLoading || !canAffordGold}
+            disabled={!canAffordGold}
             size="small"
           >
             {canAffordGold ? "Buy" : "Insufficient Money"}
@@ -270,7 +259,7 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
           <Button
             onClick={() => handleBuyGold(1)}
             variant="outlined"
-            disabled={isLoading || !canAffordGold1}
+            disabled={!canAffordGold1}
             size="small"
           >
             {canAffordGold1 ? "Buy 1" : "Insufficient"}
@@ -278,7 +267,7 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
           <Button
             onClick={() => handleBuyGold(10)}
             variant="outlined"
-            disabled={isLoading || !canAffordGold10}
+            disabled={!canAffordGold10}
             size="small"
           >
             {canAffordGold10 ? "Buy 10" : "Insufficient"}
@@ -286,7 +275,7 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
           <Button
             onClick={() => handleBuyGold(100)}
             variant="outlined"
-            disabled={isLoading || !canAffordGold100}
+            disabled={!canAffordGold100}
             size="small"
           >
             {canAffordGold100 ? "Buy 100" : "Insufficient"}
@@ -309,7 +298,7 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
         <Button
           onClick={handleBuyAutoprinter}
           variant="contained"
-          disabled={isLoading || !canAffordAutoprinter}
+          disabled={!canAffordAutoprinter}
         >
           {canAffordAutoprinter ? "Buy" : "Insufficient Credit"}
         </Button>
@@ -330,7 +319,7 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
         <Button
           onClick={handleIncreaseCreditGeneration}
           variant="contained"
-          disabled={isLoading || !canAffordCreditGeneration}
+          disabled={!canAffordCreditGeneration}
         >
           {canAffordCreditGeneration ? "Buy" : "Insufficient Gold"}
         </Button>
@@ -351,7 +340,7 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
         <Button
           onClick={handleIncreaseCreditCapacity}
           variant="contained"
-          disabled={isLoading || !canAffordCreditCapacity}
+          disabled={!canAffordCreditCapacity}
         >
           {remainingCapacity < creditCapacityCost
             ? "Insufficient Draw Capacity"

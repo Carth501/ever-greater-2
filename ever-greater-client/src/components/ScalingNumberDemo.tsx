@@ -58,11 +58,9 @@ const SuppliesCard = styled(Paper, {
 function ScalingNumberDemo({ onLogout }: ScalingNumberDemoProps): JSX.Element {
   const dispatch = useAppDispatch();
   const { user: currentUser } = useAppSelector((state) => state.auth);
-  const {
-    count: scalingNumber,
-    error,
-    isLoading,
-  } = useAppSelector((state) => state.ticket);
+  const { count: scalingNumber, error } = useAppSelector(
+    (state) => state.ticket,
+  );
 
   const handleIncrement = () => {
     dispatch(incrementCountThunk());
@@ -79,7 +77,7 @@ function ScalingNumberDemo({ onLogout }: ScalingNumberDemoProps): JSX.Element {
 
   const supplies = currentUser.printer_supplies ?? 0;
   const isOutOfSupplies = supplies === 0;
-  const isButtonDisabled = isLoading || isOutOfSupplies;
+  const isButtonDisabled = isOutOfSupplies;
 
   return (
     <DemoRoot>
