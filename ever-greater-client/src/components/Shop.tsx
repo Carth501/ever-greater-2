@@ -1,6 +1,7 @@
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
@@ -185,173 +186,187 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
     }) && remainingCapacity >= creditCapacityCost;
 
   return (
-    <Stack spacing={2}>
-      <Typography variant="h6" fontWeight={700}>
-        Shop
-      </Typography>
+    <Paper elevation={2} sx={{ p: 2 }}>
+      <Stack spacing={2}>
+        <Typography variant="h6" fontWeight={700}>
+          Shop
+        </Typography>
 
-      <CreditDisplay user={currentUser} />
-      <Typography variant="body1" color="text.secondary">
-        Money: <strong>${money}</strong>
-      </Typography>
-      <Typography variant="body1" color="text.secondary">
-        Gold: <strong>{gold}g</strong>
-      </Typography>
-      <Typography variant="body1" color="text.secondary">
-        Autoprinters: <strong>{autoprinters}</strong>
-      </Typography>
+        <CreditDisplay user={currentUser} />
+        <Typography variant="body1" color="text.secondary">
+          Money: <strong>${money}</strong>
+        </Typography>
+        <Typography variant="body1" color="text.secondary">
+          Gold: <strong>{gold}g</strong>
+        </Typography>
+        <Typography variant="body1" color="text.secondary">
+          Autoprinters: <strong>{autoprinters}</strong>
+        </Typography>
 
-      <ShopRow>
-        <Box>
-          <Typography variant="subtitle1" fontWeight={600}>
-            200 Supplies
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Cost: {suppliesCostInGold}g
-          </Typography>
-        </Box>
-        <Button
-          onClick={handleBuySupplies}
-          variant="contained"
-          disabled={isButtonDisabled}
-        >
-          {canAffordSupplies ? "Buy" : "Insufficient Money"}
-        </Button>
-      </ShopRow>
-
-      <ShopRow>
-        <Box>
-          <Typography variant="subtitle1" fontWeight={600}>
-            Gold
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Cost: ${goldCostPerUnit} each
-          </Typography>
-        </Box>
-        <Box
-          sx={{
-            display: "flex",
-            gap: 1,
-            alignItems: "center",
-            flexWrap: "wrap",
-          }}
-        >
-          <TextField
-            type="number"
-            size="small"
-            value={goldQuantity}
-            onChange={(e) => {
-              const val = parseInt(e.target.value);
-              if (!isNaN(val) && val >= 1) {
-                setGoldQuantity(val);
-              }
-            }}
-            inputProps={{ min: 1, style: { width: "80px" } }}
-          />
+        <ShopRow>
+          <Box>
+            <Typography variant="subtitle1" fontWeight={600}>
+              200 Supplies
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Cost: {suppliesCostInGold}g
+            </Typography>
+          </Box>
           <Button
-            onClick={() => handleBuyGold(goldQuantity)}
+            onClick={handleBuySupplies}
             variant="contained"
-            disabled={!canAffordGold}
-            size="small"
+            disabled={isButtonDisabled}
           >
-            {canAffordGold ? "Buy" : "Insufficient Money"}
+            {canAffordSupplies ? "Buy" : "Insufficient Money"}
           </Button>
+        </ShopRow>
+
+        <ShopRow>
+          <Box>
+            <Typography variant="subtitle1" fontWeight={600}>
+              Gold
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Cost: ${goldCostPerUnit} each
+            </Typography>
+          </Box>
+          <Box
+            sx={{
+              display: "flex",
+              gap: 1,
+              alignItems: "center",
+              flexWrap: "wrap",
+            }}
+          >
+            <TextField
+              type="number"
+              size="small"
+              value={goldQuantity}
+              onChange={(e) => {
+                const val = parseInt(e.target.value);
+                if (!isNaN(val) && val >= 1) {
+                  setGoldQuantity(val);
+                }
+              }}
+              inputProps={{ min: 1, style: { width: "80px" } }}
+            />
+            <Button
+              onClick={() => handleBuyGold(goldQuantity)}
+              variant="contained"
+              disabled={!canAffordGold}
+              size="small"
+            >
+              {canAffordGold ? "Buy" : "Insufficient Money"}
+            </Button>
+            <Button
+              onClick={() => handleBuyGold(1)}
+              variant="outlined"
+              disabled={!canAffordGold1}
+              size="small"
+            >
+              {canAffordGold1 ? "Buy 1" : "Insufficient"}
+            </Button>
+            <Button
+              onClick={() => handleBuyGold(10)}
+              variant="outlined"
+              disabled={!canAffordGold10}
+              size="small"
+            >
+              {canAffordGold10 ? "Buy 10" : "Insufficient"}
+            </Button>
+            <Button
+              onClick={() => handleBuyGold(100)}
+              variant="outlined"
+              disabled={!canAffordGold100}
+              size="small"
+            >
+              {canAffordGold100 ? "Buy 100" : "Insufficient"}
+            </Button>
+          </Box>
+        </ShopRow>
+
+        <ShopRow>
+          <Box>
+            <Typography variant="subtitle1" fontWeight={600}>
+              Autoprinter
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Cost: {autoprinterCost} credit
+            </Typography>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              display="block"
+            >
+              Prints 1 ticket every 4 seconds (uses supplies)
+            </Typography>
+          </Box>
           <Button
-            onClick={() => handleBuyGold(1)}
-            variant="outlined"
-            disabled={!canAffordGold1}
-            size="small"
+            onClick={handleBuyAutoprinter}
+            variant="contained"
+            disabled={!canAffordAutoprinter}
           >
-            {canAffordGold1 ? "Buy 1" : "Insufficient"}
+            {canAffordAutoprinter ? "Buy" : "Insufficient Credit"}
           </Button>
+        </ShopRow>
+
+        <ShopRow>
+          <Box>
+            <Typography variant="subtitle1" fontWeight={600}>
+              Increase Credit Generation
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Cost: {creditGenerationCost}g
+            </Typography>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              display="block"
+            >
+              Permanently increase credit generation by 0.1 per second
+            </Typography>
+          </Box>
           <Button
-            onClick={() => handleBuyGold(10)}
-            variant="outlined"
-            disabled={!canAffordGold10}
-            size="small"
+            onClick={handleIncreaseCreditGeneration}
+            variant="contained"
+            disabled={!canAffordCreditGeneration}
           >
-            {canAffordGold10 ? "Buy 10" : "Insufficient"}
+            {canAffordCreditGeneration ? "Buy" : "Insufficient Gold"}
           </Button>
+        </ShopRow>
+
+        <ShopRow>
+          <Box>
+            <Typography variant="subtitle1" fontWeight={600}>
+              Increase Credit Capacity
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Cost: {creditCapacityCost} tickets
+            </Typography>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              display="block"
+            >
+              Permanently increase maximum credit by 1
+            </Typography>
+          </Box>
           <Button
-            onClick={() => handleBuyGold(100)}
-            variant="outlined"
-            disabled={!canAffordGold100}
-            size="small"
+            onClick={handleIncreaseCreditCapacity}
+            variant="contained"
+            disabled={!canAffordCreditCapacity}
           >
-            {canAffordGold100 ? "Buy 100" : "Insufficient"}
+            {remainingCapacity < creditCapacityCost
+              ? "Insufficient Draw Capacity"
+              : canAffordCreditCapacity
+                ? "Buy"
+                : "Insufficient Tickets"}
           </Button>
-        </Box>
-      </ShopRow>
+        </ShopRow>
 
-      <ShopRow>
-        <Box>
-          <Typography variant="subtitle1" fontWeight={600}>
-            Autoprinter
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Cost: {autoprinterCost} credit
-          </Typography>
-          <Typography variant="caption" color="text.secondary" display="block">
-            Prints 1 ticket every 4 seconds (uses supplies)
-          </Typography>
-        </Box>
-        <Button
-          onClick={handleBuyAutoprinter}
-          variant="contained"
-          disabled={!canAffordAutoprinter}
-        >
-          {canAffordAutoprinter ? "Buy" : "Insufficient Credit"}
-        </Button>
-      </ShopRow>
-
-      <ShopRow>
-        <Box>
-          <Typography variant="subtitle1" fontWeight={600}>
-            Increase Credit Generation
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Cost: {creditGenerationCost}g
-          </Typography>
-          <Typography variant="caption" color="text.secondary" display="block">
-            Permanently increase credit generation by 0.1 per second
-          </Typography>
-        </Box>
-        <Button
-          onClick={handleIncreaseCreditGeneration}
-          variant="contained"
-          disabled={!canAffordCreditGeneration}
-        >
-          {canAffordCreditGeneration ? "Buy" : "Insufficient Gold"}
-        </Button>
-      </ShopRow>
-
-      <ShopRow>
-        <Box>
-          <Typography variant="subtitle1" fontWeight={600}>
-            Increase Credit Capacity
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Cost: {creditCapacityCost} tickets
-          </Typography>
-          <Typography variant="caption" color="text.secondary" display="block">
-            Permanently increase maximum credit by 1
-          </Typography>
-        </Box>
-        <Button
-          onClick={handleIncreaseCreditCapacity}
-          variant="contained"
-          disabled={!canAffordCreditCapacity}
-        >
-          {remainingCapacity < creditCapacityCost
-            ? "Insufficient Draw Capacity"
-            : canAffordCreditCapacity
-              ? "Buy"
-              : "Insufficient Tickets"}
-        </Button>
-      </ShopRow>
-
-      {error && <Alert severity="error">{error}</Alert>}
-    </Stack>
+        {error && <Alert severity="error">{error}</Alert>}
+      </Stack>
+    </Paper>
   );
 }
 
