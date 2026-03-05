@@ -140,6 +140,7 @@ The database uses a single-row table design with atomic UPDATE operations to pre
 - [ ] The client should simulate the changes made, but still treat the server as authoritative on server update.
 - [ ] When an update comes from the server, don't just instantly update the number. Randomly interpolate the value. Buttons should still toggle disabled state immediately.
 - [x] Resolve the deprecated dependency messages
+- [ ] Create a development/debug menu.
 
 ---
 
