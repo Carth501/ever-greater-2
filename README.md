@@ -141,6 +141,7 @@ The database uses a single-row table design with atomic UPDATE operations to pre
 - [ ] When an update comes from the server, don't just instantly update the number. Randomly interpolate the value. Buttons should still toggle disabled state immediately.
 - [x] Resolve the deprecated dependency messages
 - [ ] Create a development/debug menu.
+- [ ] Create a operation batch system for better server performance.
 
 ---
 
