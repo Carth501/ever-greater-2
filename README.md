@@ -136,9 +136,9 @@ The database uses a single-row table design with atomic UPDATE operations to pre
 
 - [x] Ticket contribution limiting withdrawls
 - [ ] Create a threshold system to not show the player everything up-front
-- [ ] Don't disable the buttons when updating or waiting for an update. Queue changes, and send them in batches. If a change is processed and fails, do the rest.
+- [x] Don't disable the buttons when updating or waiting for an update. Queue changes, and send them in batches. If a change is processed and fails, do the rest.
 - [ ] The client should simulate the changes made, but still treat the server as authoritative on server update.
-- [ ] When an update comes from the server, don't just instantly update the number. Randomly interpolate the value. Buttons should still toggle disabled state immediately.
+- [x] When an update comes from the server, don't just instantly update the number. Randomly interpolate the value. Buttons should still toggle disabled state immediately.
 - [x] Resolve the deprecated dependency messages
 - [ ] Create a development/debug menu.
 - [ ] Create a operation batch system for better server performance.
