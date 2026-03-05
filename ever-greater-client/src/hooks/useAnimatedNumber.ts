@@ -11,8 +11,11 @@ import { useEffect, useRef, useState } from "react";
  * const displayValue = useAnimatedNumber(ticketCount);
  * return <div>{displayValue.toLocaleString()}</div>;
  */
-export function useAnimatedNumber(targetValue: number): number {
-  const [displayValue, setDisplayValue] = useState(targetValue);
+export function useAnimatedNumber(
+  targetValue: number,
+  decimalPlaces = 0,
+): string {
+  const [displayValue, setDisplayValue] = useState<number>(targetValue);
   const animationFrameRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number | null>(null);
   const currentValueRef = useRef(targetValue);
@@ -67,7 +70,9 @@ export function useAnimatedNumber(targetValue: number): number {
 
       // Round up the absolute movement to ensure progress on small values
       const roundedMove =
-        Math.sign(moveAmount) * Math.ceil(Math.abs(moveAmount));
+        (Math.sign(moveAmount) *
+          Math.ceil(Math.abs(moveAmount) * Math.pow(10, decimalPlaces))) /
+        Math.pow(10, decimalPlaces);
 
       const newValue = current + roundedMove;
       setDisplayValue(newValue);
@@ -104,5 +109,5 @@ export function useAnimatedNumber(targetValue: number): number {
     };
   }, [targetValue]); // Re-run effect when target changes
 
-  return Math.round(displayValue);
+  return displayValue.toFixed(decimalPlaces);
 }
