@@ -22,6 +22,7 @@ export interface AuthState {
   user: User | null;
   isCheckingAuth: boolean;
   isLoading: boolean;
+  pendingRequestCount: number;
   error: string | null;
 }
 
@@ -29,6 +30,7 @@ const initialState: AuthState = {
   user: null,
   isCheckingAuth: true,
   isLoading: false,
+  pendingRequestCount: 0,
   error: null,
 };
 
@@ -171,6 +173,16 @@ export const increaseCreditCapacityThunk = createAsyncThunk(
   },
 );
 
+const startLoading = (state: AuthState): void => {
+  state.pendingRequestCount += 1;
+  state.isLoading = state.pendingRequestCount > 0;
+};
+
+const finishLoading = (state: AuthState): void => {
+  state.pendingRequestCount = Math.max(0, state.pendingRequestCount - 1);
+  state.isLoading = state.pendingRequestCount > 0;
+};
+
 const authSlice = createSlice({
   name: "auth",
   initialState,
@@ -242,138 +254,138 @@ const authSlice = createSlice({
     // loginThunk
     builder
       .addCase(loginThunk.pending, (state) => {
-        state.isLoading = true;
+        startLoading(state);
         state.error = null;
       })
       .addCase(loginThunk.fulfilled, (state, action) => {
-        state.isLoading = false;
+        finishLoading(state);
         state.user = action.payload;
         state.error = null;
       })
       .addCase(loginThunk.rejected, (state, action) => {
-        state.isLoading = false;
+        finishLoading(state);
         state.error = action.payload as string;
       });
 
     // signupThunk
     builder
       .addCase(signupThunk.pending, (state) => {
-        state.isLoading = true;
+        startLoading(state);
         state.error = null;
       })
       .addCase(signupThunk.fulfilled, (state, action) => {
-        state.isLoading = false;
+        finishLoading(state);
         state.user = action.payload;
         state.error = null;
       })
       .addCase(signupThunk.rejected, (state, action) => {
-        state.isLoading = false;
+        finishLoading(state);
         state.error = action.payload as string;
       });
 
     // logoutThunk
     builder
       .addCase(logoutThunk.pending, (state) => {
-        state.isLoading = true;
+        startLoading(state);
         state.error = null;
       })
       .addCase(logoutThunk.fulfilled, (state) => {
-        state.isLoading = false;
+        finishLoading(state);
         state.user = null;
         state.error = null;
       })
       .addCase(logoutThunk.rejected, (state, action) => {
-        state.isLoading = false;
+        finishLoading(state);
         state.error = action.payload as string;
       });
 
     // buySuppliesThunk
     builder
       .addCase(buySuppliesThunk.pending, (state) => {
-        state.isLoading = true;
+        startLoading(state);
         state.error = null;
       })
       .addCase(buySuppliesThunk.fulfilled, (state, action) => {
-        state.isLoading = false;
+        finishLoading(state);
         if (state.user) {
           state.user = { ...state.user, ...action.payload };
         }
         state.error = null;
       })
       .addCase(buySuppliesThunk.rejected, (state, action) => {
-        state.isLoading = false;
+        finishLoading(state);
         state.error = action.payload as string;
       });
 
     // buyGoldThunk
     builder
       .addCase(buyGoldThunk.pending, (state) => {
-        state.isLoading = true;
+        startLoading(state);
         state.error = null;
       })
       .addCase(buyGoldThunk.fulfilled, (state, action) => {
-        state.isLoading = false;
+        finishLoading(state);
         if (state.user) {
           state.user = { ...state.user, ...action.payload };
         }
         state.error = null;
       })
       .addCase(buyGoldThunk.rejected, (state, action) => {
-        state.isLoading = false;
+        finishLoading(state);
         state.error = action.payload as string;
       });
 
     // buyAutoprinterThunk
     builder
       .addCase(buyAutoprinterThunk.pending, (state) => {
-        state.isLoading = true;
+        startLoading(state);
         state.error = null;
       })
       .addCase(buyAutoprinterThunk.fulfilled, (state, action) => {
-        state.isLoading = false;
+        finishLoading(state);
         if (state.user) {
           state.user = { ...state.user, ...action.payload };
         }
         state.error = null;
       })
       .addCase(buyAutoprinterThunk.rejected, (state, action) => {
-        state.isLoading = false;
+        finishLoading(state);
         state.error = action.payload as string;
       });
 
     // increaseCreditGenerationThunk
     builder
       .addCase(increaseCreditGenerationThunk.pending, (state) => {
-        state.isLoading = true;
+        startLoading(state);
         state.error = null;
       })
       .addCase(increaseCreditGenerationThunk.fulfilled, (state, action) => {
-        state.isLoading = false;
+        finishLoading(state);
         if (state.user) {
           state.user = { ...state.user, ...action.payload };
         }
         state.error = null;
       })
       .addCase(increaseCreditGenerationThunk.rejected, (state, action) => {
-        state.isLoading = false;
+        finishLoading(state);
         state.error = action.payload as string;
       });
 
     // increaseCreditCapacityThunk
     builder
       .addCase(increaseCreditCapacityThunk.pending, (state) => {
-        state.isLoading = true;
+        startLoading(state);
         state.error = null;
       })
       .addCase(increaseCreditCapacityThunk.fulfilled, (state, action) => {
-        state.isLoading = false;
+        finishLoading(state);
         if (state.user) {
           state.user = { ...state.user, ...action.payload };
         }
         state.error = null;
       })
       .addCase(increaseCreditCapacityThunk.rejected, (state, action) => {
-        state.isLoading = false;
+        finishLoading(state);
         state.error = action.payload as string;
       });
   },

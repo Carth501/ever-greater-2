@@ -11,12 +11,14 @@ import {
 export interface TicketState {
   count: number;
   isLoading: boolean;
+  pendingRequestCount: number;
   error: string | null;
 }
 
 const initialState: TicketState = {
   count: 0,
   isLoading: false,
+  pendingRequestCount: 0,
   error: null,
 };
 
@@ -55,6 +57,16 @@ export const incrementCountThunk = createAsyncThunk(
   },
 );
 
+const startLoading = (state: TicketState): void => {
+  state.pendingRequestCount += 1;
+  state.isLoading = state.pendingRequestCount > 0;
+};
+
+const finishLoading = (state: TicketState): void => {
+  state.pendingRequestCount = Math.max(0, state.pendingRequestCount - 1);
+  state.isLoading = state.pendingRequestCount > 0;
+};
+
 const ticketSlice = createSlice({
   name: "ticket",
   initialState,
@@ -71,32 +83,32 @@ const ticketSlice = createSlice({
     // fetchCountThunk
     builder
       .addCase(fetchCountThunk.pending, (state) => {
-        state.isLoading = true;
+        startLoading(state);
         state.error = null;
       })
       .addCase(fetchCountThunk.fulfilled, (state, action) => {
-        state.isLoading = false;
+        finishLoading(state);
         state.count = action.payload;
         state.error = null;
       })
       .addCase(fetchCountThunk.rejected, (state, action) => {
-        state.isLoading = false;
+        finishLoading(state);
         state.error = action.payload as string;
       });
 
     // incrementCountThunk
     builder
       .addCase(incrementCountThunk.pending, (state) => {
-        state.isLoading = true;
+        startLoading(state);
         state.error = null;
       })
       .addCase(incrementCountThunk.fulfilled, (state) => {
-        state.isLoading = false;
+        finishLoading(state);
         state.error = null;
         // Count will be updated via WebSocket updates
       })
       .addCase(incrementCountThunk.rejected, (state, action) => {
-        state.isLoading = false;
+        finishLoading(state);
         state.error = action.payload as string;
       });
   },

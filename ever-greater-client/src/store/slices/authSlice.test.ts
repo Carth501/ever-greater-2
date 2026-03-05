@@ -41,6 +41,7 @@ describe("authSlice", () => {
     user: null,
     isCheckingAuth: true,
     isLoading: false,
+    pendingRequestCount: 0,
     error: null,
   };
 
@@ -50,6 +51,7 @@ describe("authSlice", () => {
         user: null,
         isCheckingAuth: false,
         isLoading: false,
+        pendingRequestCount: 0,
         error: "Some error",
       };
 
@@ -62,6 +64,7 @@ describe("authSlice", () => {
         user: mockUser,
         isCheckingAuth: false,
         isLoading: false,
+        pendingRequestCount: 0,
         error: null,
       };
 
@@ -74,6 +77,7 @@ describe("authSlice", () => {
         user: null,
         isCheckingAuth: false,
         isLoading: false,
+        pendingRequestCount: 0,
         error: null,
       };
 
@@ -161,6 +165,7 @@ describe("authSlice", () => {
         user: mockUser,
         isCheckingAuth: false,
         isLoading: false,
+        pendingRequestCount: 0,
         error: null,
       };
       store = configureStore({
@@ -187,6 +192,7 @@ describe("authSlice", () => {
         },
         isCheckingAuth: false,
         isLoading: false,
+        pendingRequestCount: 0,
         error: null,
       };
 
@@ -222,6 +228,7 @@ describe("authSlice", () => {
         },
         isCheckingAuth: false,
         isLoading: false,
+        pendingRequestCount: 0,
         error: null,
       };
 

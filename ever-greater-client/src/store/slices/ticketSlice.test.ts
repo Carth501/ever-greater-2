@@ -20,6 +20,7 @@ describe("ticketSlice", () => {
   const initialState: TicketState = {
     count: 0,
     isLoading: false,
+    pendingRequestCount: 0,
     error: null,
   };
 
@@ -216,6 +217,7 @@ describe("ticketSlice", () => {
       const stateWithError: TicketState = {
         count: 0,
         isLoading: false,
+        pendingRequestCount: 0,
         error: "Previous error",
       };
       const state = ticketReducer(stateWithError, updateCount(42));
