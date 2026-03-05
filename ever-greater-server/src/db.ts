@@ -352,9 +352,23 @@ export async function executeResourceTransaction(
         Number(withdrawnIn24h) + Number(globalTicketCost);
 
       if (projectedWithdrawal > personalLimit) {
-        throw new Error(
-          `Personal ticket withdrawal limit exceeded. Current: ${withdrawnIn24h}, Limit: ${personalLimit}, Requested: ${globalTicketCost}`,
+        // Silently ignore the request if limit is exceeded
+        // Return current user state without executing transaction
+        if (useTransaction && txClient) {
+          await txClient.query("ROLLBACK");
+          txClient.release();
+          txClient = null;
+        }
+        const currentUser = await (dbClient || pool).query(
+          "SELECT id, email, tickets_contributed, printer_supplies, money, gold, autoprinters, credit_value, credit_generation_level, credit_capacity_level FROM users WHERE id = $1",
+          [userId],
         );
+        if (currentUser.rows.length === 0) {
+          throw new Error("User not found");
+        }
+        const userRow = currentUser.rows[0];
+        const tickets_withdrawn = await getTicketsWithdrawnIn24Hours(userId);
+        return Object.assign(userRow, { tickets_withdrawn }) as User;
       }
 
       // Validate and deduct from global_state atomically
