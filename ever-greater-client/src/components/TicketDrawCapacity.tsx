@@ -30,8 +30,8 @@ function TicketDrawCapacity({ user }: TicketDrawCapacityProps): JSX.Element {
     <Stack spacing={1}>
       <Box>
         <Typography variant="body1" color="text.secondary">
-          Draw Capacity: <strong>{ticketsWithdrawn}</strong> / {personalLimit} (
-          {progressValue.toFixed(1)}%)
+          Personal Ticket Capacity: <strong>{ticketsWithdrawn}</strong> /{" "}
+          {personalLimit} ({progressValue.toFixed(1)}%)
         </Typography>
         {personalLimit > 0 && (
           <LinearProgress
