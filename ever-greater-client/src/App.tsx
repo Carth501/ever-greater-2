@@ -21,6 +21,8 @@ const AppRoot = styled(Box)(({ theme }) => ({
 const AppFooter = styled(Box, {
   shouldForwardProp: (prop) => prop !== "component",
 })(({ theme }) => ({
+  position: "fixed",
+  bottom: 0,
   width: "100%",
   height: 56,
   backgroundColor: theme.palette.primary.main,
