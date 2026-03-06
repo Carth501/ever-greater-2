@@ -3,7 +3,6 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
-import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { styled } from "@mui/material/styles";
 import {
@@ -217,7 +216,7 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
             variant="contained"
             disabled={isButtonDisabled}
           >
-            {canAffordSupplies ? "Buy" : "Insufficient Money"}
+            Buy
           </Button>
         </ShopRow>
 
@@ -238,49 +237,29 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
               flexWrap: "wrap",
             }}
           >
-            <TextField
-              type="number"
-              size="small"
-              value={goldQuantity}
-              onChange={(e) => {
-                const val = parseInt(e.target.value);
-                if (!isNaN(val) && val >= 1) {
-                  setGoldQuantity(val);
-                }
-              }}
-              inputProps={{ min: 1, style: { width: "80px" } }}
-            />
-            <Button
-              onClick={() => handleBuyGold(goldQuantity)}
-              variant="contained"
-              disabled={!canAffordGold}
-              size="small"
-            >
-              {canAffordGold ? "Buy" : "Insufficient Money"}
-            </Button>
             <Button
               onClick={() => handleBuyGold(1)}
-              variant="outlined"
+              variant="contained"
               disabled={!canAffordGold1}
               size="small"
             >
-              {canAffordGold1 ? "Buy 1" : "Insufficient"}
+              Buy 1
             </Button>
             <Button
               onClick={() => handleBuyGold(10)}
-              variant="outlined"
+              variant="contained"
               disabled={!canAffordGold10}
               size="small"
             >
-              {canAffordGold10 ? "Buy 10" : "Insufficient"}
+              Buy 10
             </Button>
             <Button
               onClick={() => handleBuyGold(100)}
-              variant="outlined"
+              variant="contained"
               disabled={!canAffordGold100}
               size="small"
             >
-              {canAffordGold100 ? "Buy 100" : "Insufficient"}
+              Buy 100
             </Button>
           </Box>
         </ShopRow>
@@ -306,7 +285,7 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
             variant="contained"
             disabled={!canAffordAutoprinter}
           >
-            {canAffordAutoprinter ? "Buy" : "Insufficient Credit"}
+            Buy
           </Button>
         </ShopRow>
 
@@ -331,7 +310,7 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
             variant="contained"
             disabled={!canAffordCreditGeneration}
           >
-            {canAffordCreditGeneration ? "Buy" : "Insufficient Gold"}
+            Buy
           </Button>
         </ShopRow>
 
@@ -356,11 +335,7 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
             variant="contained"
             disabled={!canAffordCreditCapacity}
           >
-            {remainingCapacity < creditCapacityCost
-              ? "Insufficient Draw Capacity"
-              : canAffordCreditCapacity
-                ? "Buy"
-                : "Insufficient Tickets"}
+            Buy
           </Button>
         </ShopRow>
 
