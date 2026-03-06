@@ -3,8 +3,8 @@ import CircularProgress from "@mui/material/CircularProgress";
 import Container from "@mui/material/Container";
 import { styled } from "@mui/material/styles";
 import { useEffect, useState } from "react";
+import EverGreaterMainPage from "./components/EverGreaterMainPage";
 import LoginPage from "./components/LoginPage";
-import ScalingNumberDemo from "./components/ScalingNumberDemo";
 import SignupPage from "./components/SignupPage";
 import cLogo from "./images/cLogo.png";
 import { useAppDispatch, useAppSelector } from "./store/hooks";
@@ -88,10 +88,10 @@ function App() {
   return (
     <AppRoot>
       <Container
-        maxWidth="md"
+        maxWidth="xl"
         sx={{ flex: 1, py: 4, overflowY: "scroll", maxHeight: contentHeight }}
       >
-        <ScalingNumberDemo onLogout={handleLogout} />
+        <EverGreaterMainPage onLogout={handleLogout} />
       </Container>
 
       <AppFooter as="footer">

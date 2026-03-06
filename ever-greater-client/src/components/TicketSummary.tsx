@@ -26,8 +26,7 @@ function TicketSummary({
       <Typography variant="body1" color="text.secondary">
         Tickets contributed: {user.tickets_contributed}
       </Typography>
-
-      <TicketDrawCapacity user={user} />
+      {user.tickets_contributed > 200 && <TicketDrawCapacity user={user} />}
     </TicketCard>
   );
 }

@@ -1,7 +1,4 @@
-import Alert from "@mui/material/Alert";
-import Stack from "@mui/material/Stack";
-import Typography from "@mui/material/Typography";
-import { styled } from "@mui/material/styles";
+import { Alert, Stack, styled, Typography } from "@mui/material";
 import { JSX } from "react";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { logoutThunk } from "../store/slices/authSlice";
@@ -11,15 +8,15 @@ import PrintControls from "./PrintControls";
 import Shop from "./Shop";
 import TicketSummary from "./TicketSummary";
 
-type ScalingNumberDemoProps = {
+type MainPageProps = {
   onLogout: () => void;
 };
 
-const DemoRoot = styled(Stack)(({ theme }) => ({
+const GameRoot = styled(Stack)(({ theme }) => ({
   gap: theme.spacing(3),
 }));
 
-function ScalingNumberDemo({ onLogout }: ScalingNumberDemoProps): JSX.Element {
+function EverGreaterMainPage({ onLogout }: MainPageProps): JSX.Element {
   const dispatch = useAppDispatch();
   const { user: currentUser } = useAppSelector((state) => state.auth);
   const { count: scalingNumber, error } = useAppSelector(
@@ -43,7 +40,7 @@ function ScalingNumberDemo({ onLogout }: ScalingNumberDemoProps): JSX.Element {
   const isButtonDisabled = supplies === 0;
 
   return (
-    <DemoRoot>
+    <GameRoot>
       <AuthHeader user={currentUser} onLogout={handleLogout} />
 
       <TicketSummary user={currentUser} scalingNumber={scalingNumber} />
@@ -54,13 +51,15 @@ function ScalingNumberDemo({ onLogout }: ScalingNumberDemoProps): JSX.Element {
         onPrintClick={handleIncrement}
       />
 
-      <Shop
-        onPurchaseError={(message) => alert(`Purchase error: ${message}`)}
-      />
+      {currentUser.tickets_contributed > 50 && (
+        <Shop
+          onPurchaseError={(message) => alert(`Purchase error: ${message}`)}
+        />
+      )}
 
       {error && <Alert severity="error">{error}</Alert>}
-    </DemoRoot>
+    </GameRoot>
   );
 }
 
-export default ScalingNumberDemo;
+export default EverGreaterMainPage;
