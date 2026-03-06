@@ -1,57 +1,39 @@
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { styled } from "@mui/material/styles";
 import {
-  OperationId,
-  ResourceType,
-  canAfford,
-  getOperationCost,
-  operations,
+	OperationId,
+	ResourceType,
+	canAfford,
+	getOperationCost,
+	operations,
 } from "ever-greater-shared";
 import { JSX } from "react";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import {
-  buyAutoprinterThunk,
-  buyGoldThunk,
-  buySuppliesThunk,
-  increaseCreditCapacityThunk,
-  increaseCreditGenerationThunk,
+	buyAutoprinterThunk,
+	buyGoldThunk,
+	buySuppliesThunk,
+	increaseCreditCapacityThunk,
+	increaseCreditGenerationThunk,
 } from "../store/slices/authSlice";
-import CreditDisplay from "./CreditDisplay";
+import ShopCreditGroup from "./shop-groups/ShopCreditGroup";
+import ShopGlobalTicketsGroup from "./shop-groups/ShopGlobalTicketsGroup";
+import ShopGoldGroup from "./shop-groups/ShopGoldGroup";
+import ShopMoneyGroup from "./shop-groups/ShopMoneyGroup";
 
 type ShopProps = {
   onPurchaseError?: (error: string) => void;
 };
-
-const ShopRow = styled(Box)(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: theme.spacing(2),
-  padding: theme.spacing(1.5, 2),
-  borderRadius: theme.shape.borderRadius,
-  border: `1px solid ${theme.palette.divider}`,
-  flexWrap: "wrap",
-}));
 
 const ShopGroups = styled(Box)(({ theme }) => ({
   display: "flex",
   flexWrap: "wrap",
   gap: theme.spacing(2),
   alignItems: "stretch",
-}));
-
-const ShopGroup = styled(Paper)(({ theme }) => ({
-  flex: "1 1 320px",
-  minWidth: 0,
-  padding: theme.spacing(2),
-  display: "flex",
-  flexDirection: "column",
-  gap: theme.spacing(1.5),
 }));
 
 function Shop({ onPurchaseError }: ShopProps): JSX.Element {
@@ -196,170 +178,40 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
         </Typography>
 
         <ShopGroups>
-          <ShopGroup>
-            <Typography variant="body2" color="text.secondary">
-              Money Available: <strong>${money}</strong>
-            </Typography>
+          <ShopMoneyGroup
+            money={money}
+            goldCostPerUnit={goldCostPerUnit}
+            canAffordGold1={canAffordGold1}
+            canAffordGold10={canAffordGold10}
+            canAffordGold100={canAffordGold100}
+            onBuyGold={handleBuyGold}
+          />
 
-            <ShopRow>
-              <Box>
-                <Typography variant="subtitle1" fontWeight={600}>
-                  Gold
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Cost: ${goldCostPerUnit} each
-                </Typography>
-              </Box>
-              <Box
-                sx={{
-                  display: "flex",
-                  gap: 1,
-                  alignItems: "center",
-                  flexWrap: "wrap",
-                }}
-              >
-                <Button
-                  onClick={() => handleBuyGold(1)}
-                  variant="contained"
-                  disabled={!canAffordGold1}
-                  size="small"
-                >
-                  Buy 1
-                </Button>
-                <Button
-                  onClick={() => handleBuyGold(10)}
-                  variant="contained"
-                  disabled={!canAffordGold10}
-                  size="small"
-                >
-                  Buy 10
-                </Button>
-                <Button
-                  onClick={() => handleBuyGold(100)}
-                  variant="contained"
-                  disabled={!canAffordGold100}
-                  size="small"
-                >
-                  Buy 100
-                </Button>
-              </Box>
-            </ShopRow>
-          </ShopGroup>
+          <ShopGoldGroup
+            gold={gold}
+            suppliesCostInGold={suppliesCostInGold}
+            isSuppliesButtonDisabled={isButtonDisabled}
+            creditGenerationCost={creditGenerationCost}
+            canAffordCreditGeneration={canAffordCreditGeneration}
+            onBuySupplies={handleBuySupplies}
+            onIncreaseCreditGeneration={handleIncreaseCreditGeneration}
+          />
 
-          <ShopGroup>
-            <Typography variant="body2" color="text.secondary">
-              Gold Available: <strong>{gold}g</strong>
-            </Typography>
+          <ShopCreditGroup
+            user={currentUser}
+            autoprinters={autoprinters}
+            autoprinterCost={autoprinterCost}
+            canAffordAutoprinter={canAffordAutoprinter}
+            onBuyAutoprinter={handleBuyAutoprinter}
+          />
 
-            <ShopRow>
-              <Box>
-                <Typography variant="subtitle1" fontWeight={600}>
-                  200 Supplies
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Cost: {suppliesCostInGold}g
-                </Typography>
-              </Box>
-              <Button
-                onClick={handleBuySupplies}
-                variant="contained"
-                disabled={isButtonDisabled}
-              >
-                Buy
-              </Button>
-            </ShopRow>
-
-            <ShopRow>
-              <Box>
-                <Typography variant="subtitle1" fontWeight={600}>
-                  Increase Credit Generation
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Cost: {creditGenerationCost}g
-                </Typography>
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  display="block"
-                >
-                  Permanently increase credit generation by 0.1 per second
-                </Typography>
-              </Box>
-              <Button
-                onClick={handleIncreaseCreditGeneration}
-                variant="contained"
-                disabled={!canAffordCreditGeneration}
-              >
-                Buy
-              </Button>
-            </ShopRow>
-          </ShopGroup>
-
-          <ShopGroup>
-            <CreditDisplay user={currentUser} />
-            <Typography variant="body2" color="text.secondary">
-              Autoprinters: <strong>{autoprinters}</strong>
-            </Typography>
-
-            <ShopRow>
-              <Box>
-                <Typography variant="subtitle1" fontWeight={600}>
-                  Autoprinter
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Cost: {autoprinterCost} credit
-                </Typography>
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  display="block"
-                >
-                  Prints 1 ticket every 4 seconds (uses supplies)
-                </Typography>
-              </Box>
-              <Button
-                onClick={handleBuyAutoprinter}
-                variant="contained"
-                disabled={!canAffordAutoprinter}
-              >
-                Buy
-              </Button>
-            </ShopRow>
-          </ShopGroup>
-
-          <ShopGroup>
-            <Typography variant="body2" color="text.secondary">
-              Global Tickets Available: <strong>{globalTicketCount}</strong>
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Remaining Draw Capacity: <strong>{remainingCapacity}</strong>
-            </Typography>
-
-            <ShopRow>
-              <Box>
-                <Typography variant="subtitle1" fontWeight={600}>
-                  Increase Credit Capacity
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Cost: {creditCapacityCost} tickets
-                </Typography>
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  display="block"
-                >
-                  Permanently increase maximum credit by 1
-                </Typography>
-              </Box>
-              <Button
-                onClick={handleIncreaseCreditCapacity}
-                variant="contained"
-                disabled={!canAffordCreditCapacity}
-              >
-                Buy
-              </Button>
-            </ShopRow>
-          </ShopGroup>
+          <ShopGlobalTicketsGroup
+            globalTicketCount={globalTicketCount}
+            remainingCapacity={remainingCapacity}
+            creditCapacityCost={creditCapacityCost}
+            canAffordCreditCapacity={canAffordCreditCapacity}
+            onIncreaseCreditCapacity={handleIncreaseCreditCapacity}
+          />
         </ShopGroups>
 
         {error && <Alert severity="error">{error}</Alert>}
