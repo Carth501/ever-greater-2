@@ -83,6 +83,7 @@ Instead, it will copy all the configuration files and transitive dependencies (w
 
    ```
    DATABASE_URL=postgresql://postgres:your_password@localhost:5432/ever_greater_db
+   STARTING_PRINTER_SUPPLIES=1000
    ```
 
    **Important:** Never commit the `.env` file to version control. It's already included in `.gitignore`.
@@ -97,12 +98,13 @@ Instead, it will copy all the configuration files and transitive dependencies (w
 
 ### Environment Variables
 
-| Variable               | Description                  | Default | Required |
-| ---------------------- | ---------------------------- | ------- | -------- |
-| `DATABASE_URL`         | PostgreSQL connection string | -       | Yes      |
-| `PORT`                 | Server port                  | `4000`  | No       |
-| `DB_POOL_MAX`          | Maximum database connections | `10`    | No       |
-| `DB_POOL_IDLE_TIMEOUT` | Connection idle timeout (ms) | `30000` | No       |
+| Variable                    | Description                  | Default | Required |
+| --------------------------- | ---------------------------- | ------- | -------- |
+| `DATABASE_URL`              | PostgreSQL connection string | -       | Yes      |
+| `PORT`                      | Server port                  | `4000`  | No       |
+| `DB_POOL_MAX`               | Maximum database connections | `10`    | No       |
+| `DB_POOL_IDLE_TIMEOUT`      | Connection idle timeout (ms) | `30000` | No       |
+| `STARTING_PRINTER_SUPPLIES` | Starting supplies for users  | `1000`  | No       |
 
 ### Server Scripts
 
