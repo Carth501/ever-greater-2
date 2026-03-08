@@ -14,7 +14,7 @@ import { useEffect, useRef, useState } from "react";
 export function useAnimatedNumber(
   targetValue: number,
   decimalPlaces = 0,
-): string {
+): number {
   const [displayValue, setDisplayValue] = useState<number>(targetValue);
   const animationFrameRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number | null>(null);
@@ -109,5 +109,5 @@ export function useAnimatedNumber(
     };
   }, [targetValue]); // Re-run effect when target changes
 
-  return displayValue.toFixed(decimalPlaces);
+  return displayValue;
 }

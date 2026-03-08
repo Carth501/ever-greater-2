@@ -19,7 +19,7 @@ describe("TicketSummary", () => {
   const mockUser = {
     id: 1,
     email: "test@example.com",
-    tickets_contributed: 5,
+    tickets_contributed: 250,
     tickets_withdrawn: 0,
     printer_supplies: 10,
     money: 100,
@@ -45,7 +45,7 @@ describe("TicketSummary", () => {
   it("should display tickets contributed", () => {
     render(<TicketSummary user={mockUser} scalingNumber={1000} />);
 
-    expect(screen.getByText("Tickets contributed: 5")).toBeTruthy();
+    expect(screen.getByText("Tickets contributed: 250")).toBeTruthy();
   });
 
   it("should pass correct scalingNumber to GlobalTicketDisplay", () => {

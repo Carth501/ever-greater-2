@@ -30,7 +30,8 @@ function CreditDisplay({ user }: CreditDisplayProps): JSX.Element {
     <Stack spacing={1}>
       <Box>
         <Typography variant="body1" color="text.secondary">
-          Credit: <strong>{creditValueDisplay}</strong> / {creditCapacity}
+          Credit: <strong>{creditValueDisplay.toFixed(1)}</strong> /{" "}
+          {creditCapacity}
         </Typography>
         {creditCapacity > 0 && (
           <LinearProgress
