@@ -5,20 +5,20 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { styled } from "@mui/material/styles";
 import {
-	OperationId,
-	ResourceType,
-	canAfford,
-	getOperationCost,
-	operations,
+  OperationId,
+  ResourceType,
+  canAfford,
+  getOperationCost,
+  operations,
 } from "ever-greater-shared";
 import { JSX } from "react";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import {
-	buyAutoprinterThunk,
-	buyGoldThunk,
-	buySuppliesThunk,
-	increaseCreditCapacityThunk,
-	increaseCreditGenerationThunk,
+  buyAutoprinterThunk,
+  buyGoldThunk,
+  buySuppliesThunk,
+  increaseCreditCapacityThunk,
+  increaseCreditGenerationThunk,
 } from "../store/slices/authSlice";
 import ShopCreditGroup from "./shop-groups/ShopCreditGroup";
 import ShopGlobalTicketsGroup from "./shop-groups/ShopGlobalTicketsGroup";
@@ -178,14 +178,16 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
         </Typography>
 
         <ShopGroups>
-          <ShopMoneyGroup
-            money={money}
-            goldCostPerUnit={goldCostPerUnit}
-            canAffordGold1={canAffordGold1}
-            canAffordGold10={canAffordGold10}
-            canAffordGold100={canAffordGold100}
-            onBuyGold={handleBuyGold}
-          />
+          {currentUser.tickets_contributed > 200 && (
+            <ShopMoneyGroup
+              money={money}
+              goldCostPerUnit={goldCostPerUnit}
+              canAffordGold1={canAffordGold1}
+              canAffordGold10={canAffordGold10}
+              canAffordGold100={canAffordGold100}
+              onBuyGold={handleBuyGold}
+            />
+          )}
 
           <ShopGoldGroup
             gold={gold}
@@ -197,13 +199,15 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
             onIncreaseCreditGeneration={handleIncreaseCreditGeneration}
           />
 
-          <ShopCreditGroup
-            user={currentUser}
-            autoprinters={autoprinters}
-            autoprinterCost={autoprinterCost}
-            canAffordAutoprinter={canAffordAutoprinter}
-            onBuyAutoprinter={handleBuyAutoprinter}
-          />
+          {currentUser.tickets_contributed > 500 && (
+            <ShopCreditGroup
+              user={currentUser}
+              autoprinters={autoprinters}
+              autoprinterCost={autoprinterCost}
+              canAffordAutoprinter={canAffordAutoprinter}
+              onBuyAutoprinter={handleBuyAutoprinter}
+            />
+          )}
 
           <ShopGlobalTicketsGroup
             globalTicketCount={globalTicketCount}
