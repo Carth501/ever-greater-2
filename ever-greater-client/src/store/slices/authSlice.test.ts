@@ -6,6 +6,7 @@ import * as operationsApi from "../../api/operations";
 import authReducer, {
   AuthState,
   applyUserUpdate,
+  buyAutoBuySuppliesThunk,
   buyGoldThunk,
   buySuppliesThunk,
   checkAuthThunk,
@@ -13,6 +14,7 @@ import authReducer, {
   loginThunk,
   logoutThunk,
   signupThunk,
+  toggleAutoBuySuppliesThunk,
   updateSupplies,
 } from "./authSlice";
 
@@ -34,6 +36,8 @@ const mockUser: User = {
   credit_value: 0,
   credit_generation_level: 0,
   credit_capacity_level: 0,
+  auto_buy_supplies_purchased: false,
+  auto_buy_supplies_active: false,
 };
 
 describe("authSlice", () => {
@@ -251,6 +255,70 @@ describe("authSlice", () => {
       expect(state.user?.credit_value).toBe(5);
       expect(state.user?.credit_generation_level).toBe(2);
       expect(state.user?.credit_capacity_level).toBe(7);
+    });
+
+    it("should unlock auto-buy supplies via buyAutoBuySuppliesThunk", async () => {
+      const stateWithUser: AuthState = {
+        user: {
+          ...mockUser,
+          gold: 2,
+          auto_buy_supplies_purchased: false,
+          auto_buy_supplies_active: false,
+        },
+        isCheckingAuth: false,
+        isLoading: false,
+        pendingRequestCount: 0,
+        error: null,
+      };
+
+      store = configureStore({
+        reducer: { auth: authReducer },
+        preloadedState: { auth: stateWithUser },
+      });
+
+      mockOperationsApi.buyAutoBuySupplies.mockResolvedValueOnce({
+        ...mockUser,
+        gold: 1,
+        auto_buy_supplies_purchased: true,
+        auto_buy_supplies_active: true,
+      } as User);
+
+      await store.dispatch(buyAutoBuySuppliesThunk() as any);
+
+      const state = (store.getState() as { auth: AuthState }).auth;
+      expect(state.user?.auto_buy_supplies_purchased).toBe(true);
+      expect(state.user?.auto_buy_supplies_active).toBe(true);
+    });
+
+    it("should update active state via toggleAutoBuySuppliesThunk", async () => {
+      const stateWithUser: AuthState = {
+        user: {
+          ...mockUser,
+          auto_buy_supplies_purchased: true,
+          auto_buy_supplies_active: true,
+        },
+        isCheckingAuth: false,
+        isLoading: false,
+        pendingRequestCount: 0,
+        error: null,
+      };
+
+      store = configureStore({
+        reducer: { auth: authReducer },
+        preloadedState: { auth: stateWithUser },
+      });
+
+      mockAuthApi.setAutoBuySuppliesActive.mockResolvedValueOnce({
+        ...mockUser,
+        auto_buy_supplies_purchased: true,
+        auto_buy_supplies_active: false,
+      } as User);
+
+      await store.dispatch(toggleAutoBuySuppliesThunk(false) as any);
+
+      const state = (store.getState() as { auth: AuthState }).auth;
+      expect(state.user?.auto_buy_supplies_purchased).toBe(true);
+      expect(state.user?.auto_buy_supplies_active).toBe(false);
     });
   });
 

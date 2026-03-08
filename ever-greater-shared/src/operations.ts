@@ -36,6 +36,7 @@ export interface Operation {
  */
 export enum OperationId {
   BUY_SUPPLIES = "BUY_SUPPLIES",
+  AUTO_BUY_SUPPLIES = "AUTO_BUY_SUPPLIES",
   BUY_GOLD = "BUY_GOLD",
   BUY_AUTOPRINTER = "BUY_AUTOPRINTER",
   PRINT_TICKET = "PRINT_TICKET",
@@ -58,6 +59,16 @@ export const operations: Record<OperationId, Operation> = {
     gain: {
       [ResourceType.PRINTER_SUPPLIES]: 200,
     },
+  },
+
+  [OperationId.AUTO_BUY_SUPPLIES]: {
+    id: OperationId.AUTO_BUY_SUPPLIES,
+    name: "Buy Auto-Buy Supplies",
+    description: "Unlock auto-buy supplies permanently",
+    cost: {
+      [ResourceType.GOLD]: 10,
+    },
+    gain: {},
   },
 
   [OperationId.BUY_GOLD]: {
@@ -258,6 +269,18 @@ export function validateOperation(
         gain,
       };
     }
+  }
+
+  if (
+    operation.id === OperationId.AUTO_BUY_SUPPLIES &&
+    user.auto_buy_supplies_purchased
+  ) {
+    return {
+      valid: false,
+      error: "Auto-buy supplies already unlocked",
+      cost,
+      gain,
+    };
   }
 
   // Check affordability

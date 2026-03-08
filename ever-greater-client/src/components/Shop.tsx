@@ -14,11 +14,13 @@ import {
 import { JSX } from "react";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import {
+  buyAutoBuySuppliesThunk,
   buyAutoprinterThunk,
   buyGoldThunk,
   buySuppliesThunk,
   increaseCreditCapacityThunk,
   increaseCreditGenerationThunk,
+  toggleAutoBuySuppliesThunk,
 } from "../store/slices/authSlice";
 import ShopCreditGroup from "./shop-groups/ShopCreditGroup";
 import ShopGlobalTicketsGroup from "./shop-groups/ShopGlobalTicketsGroup";
@@ -71,6 +73,22 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
     });
   };
 
+  const handleBuyAutoBuySupplies = () => {
+    dispatch(buyAutoBuySuppliesThunk()).then((result) => {
+      if (result.type === buyAutoBuySuppliesThunk.rejected.type) {
+        onPurchaseError?.(result.payload as string);
+      }
+    });
+  };
+
+  const handleToggleAutoBuySupplies = (active: boolean) => {
+    dispatch(toggleAutoBuySuppliesThunk(active)).then((result) => {
+      if (result.type === toggleAutoBuySuppliesThunk.rejected.type) {
+        onPurchaseError?.(result.payload as string);
+      }
+    });
+  };
+
   const handleIncreaseCreditGeneration = () => {
     dispatch(increaseCreditGenerationThunk()).then((result) => {
       if (result.type === increaseCreditGenerationThunk.rejected.type) {
@@ -98,6 +116,7 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
 
   const buySuppliesOperation = operations[OperationId.BUY_SUPPLIES];
   const buyGoldOperation = operations[OperationId.BUY_GOLD];
+  const autoBuySuppliesOperation = operations[OperationId.AUTO_BUY_SUPPLIES];
   const buyAutoprinterOperation = operations[OperationId.BUY_AUTOPRINTER];
   const increaseCreditGenerationOperation =
     operations[OperationId.INCREASE_CREDIT_GENERATION];
@@ -155,6 +174,14 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
     [ResourceType.GOLD]: creditGenerationCost,
   });
 
+  const autoBuySuppliesCost =
+    getOperationCost(autoBuySuppliesOperation, operationContext)[
+      ResourceType.GOLD
+    ] ?? 0;
+  const canAffordAutoBuySupplies = canAfford(currentUser, {
+    [ResourceType.GOLD]: autoBuySuppliesCost,
+  });
+
   // Calculate remaining draw capacity
   const ticketsContributed = currentUser.tickets_contributed ?? 0;
   const ticketsWithdrawn = currentUser.tickets_withdrawn ?? 0;
@@ -193,9 +220,15 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
             gold={gold}
             suppliesCostInGold={suppliesCostInGold}
             isSuppliesButtonDisabled={isButtonDisabled}
+            autoBuyCost={autoBuySuppliesCost}
+            autoBuyPurchased={currentUser.auto_buy_supplies_purchased}
+            autoBuyActive={currentUser.auto_buy_supplies_active}
+            canAffordAutoBuyUnlock={canAffordAutoBuySupplies}
             creditGenerationCost={creditGenerationCost}
             canAffordCreditGeneration={canAffordCreditGeneration}
             onBuySupplies={handleBuySupplies}
+            onBuyAutoBuySupplies={handleBuyAutoBuySupplies}
+            onToggleAutoBuySupplies={handleToggleAutoBuySupplies}
             onIncreaseCreditGeneration={handleIncreaseCreditGeneration}
           />
 

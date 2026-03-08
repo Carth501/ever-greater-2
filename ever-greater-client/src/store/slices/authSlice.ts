@@ -15,6 +15,8 @@ type UserUpdatePayload = Partial<
     | "credit_value"
     | "credit_generation_level"
     | "credit_capacity_level"
+    | "auto_buy_supplies_purchased"
+    | "auto_buy_supplies_active"
   >
 >;
 
@@ -127,6 +129,22 @@ export const buyGoldThunk = createAsyncThunk(
   },
 );
 
+export const buyAutoBuySuppliesThunk = createAsyncThunk(
+  "auth/buyAutoBuySupplies",
+  async (_, { rejectWithValue }) => {
+    try {
+      const user = await operationsApi.buyAutoBuySupplies();
+      return user;
+    } catch (error) {
+      return rejectWithValue(
+        error instanceof Error
+          ? error.message
+          : "Failed to unlock auto-buy supplies",
+      );
+    }
+  },
+);
+
 export const buyAutoprinterThunk = createAsyncThunk(
   "auth/buyAutoprinter",
   async (_, { rejectWithValue }) => {
@@ -168,6 +186,22 @@ export const increaseCreditCapacityThunk = createAsyncThunk(
         error instanceof Error
           ? error.message
           : "Failed to increase credit capacity",
+      );
+    }
+  },
+);
+
+export const toggleAutoBuySuppliesThunk = createAsyncThunk(
+  "auth/toggleAutoBuySupplies",
+  async (active: boolean, { rejectWithValue }) => {
+    try {
+      const user = await authApi.setAutoBuySuppliesActive(active);
+      return user;
+    } catch (error) {
+      return rejectWithValue(
+        error instanceof Error
+          ? error.message
+          : "Failed to toggle auto-buy supplies",
       );
     }
   },
@@ -335,6 +369,24 @@ const authSlice = createSlice({
         state.error = action.payload as string;
       });
 
+    // buyAutoBuySuppliesThunk
+    builder
+      .addCase(buyAutoBuySuppliesThunk.pending, (state) => {
+        startLoading(state);
+        state.error = null;
+      })
+      .addCase(buyAutoBuySuppliesThunk.fulfilled, (state, action) => {
+        finishLoading(state);
+        if (state.user) {
+          state.user = { ...state.user, ...action.payload };
+        }
+        state.error = null;
+      })
+      .addCase(buyAutoBuySuppliesThunk.rejected, (state, action) => {
+        finishLoading(state);
+        state.error = action.payload as string;
+      });
+
     // buyAutoprinterThunk
     builder
       .addCase(buyAutoprinterThunk.pending, (state) => {
@@ -385,6 +437,24 @@ const authSlice = createSlice({
         state.error = null;
       })
       .addCase(increaseCreditCapacityThunk.rejected, (state, action) => {
+        finishLoading(state);
+        state.error = action.payload as string;
+      });
+
+    // toggleAutoBuySuppliesThunk
+    builder
+      .addCase(toggleAutoBuySuppliesThunk.pending, (state) => {
+        startLoading(state);
+        state.error = null;
+      })
+      .addCase(toggleAutoBuySuppliesThunk.fulfilled, (state, action) => {
+        finishLoading(state);
+        if (state.user) {
+          state.user = { ...state.user, ...action.payload };
+        }
+        state.error = null;
+      })
+      .addCase(toggleAutoBuySuppliesThunk.rejected, (state, action) => {
         finishLoading(state);
         state.error = action.payload as string;
       });

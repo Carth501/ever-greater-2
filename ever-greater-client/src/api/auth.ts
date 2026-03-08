@@ -22,6 +22,10 @@ type MeResponse = {
   user: User;
 };
 
+type ToggleAutoBuySuppliesResponse = {
+  user: User;
+};
+
 /**
  * Register a new user
  * @param email User email
@@ -107,6 +111,28 @@ export async function logout(): Promise<void> {
   if (!response.ok) {
     throw new Error("Failed to logout");
   }
+}
+
+/**
+ * Toggle auto-buy supplies active state after unlock.
+ */
+export async function setAutoBuySuppliesActive(active: boolean): Promise<User> {
+  const response = await fetch(`${apiBase}/api/auth/auto-buy-supplies/toggle`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "include",
+    body: JSON.stringify({ active }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to toggle auto-buy supplies");
+  }
+
+  const data = (await response.json()) as ToggleAutoBuySuppliesResponse;
+  return data.user;
 }
 
 /**

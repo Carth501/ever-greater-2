@@ -62,6 +62,14 @@ function connectWebSocket(dispatch: any, userId?: number) {
         ...(update.credit_capacity_level !== undefined
           ? { credit_capacity_level: update.credit_capacity_level }
           : {}),
+        ...(update.auto_buy_supplies_purchased !== undefined
+          ? {
+              auto_buy_supplies_purchased: update.auto_buy_supplies_purchased,
+            }
+          : {}),
+        ...(update.auto_buy_supplies_active !== undefined
+          ? { auto_buy_supplies_active: update.auto_buy_supplies_active }
+          : {}),
       };
 
       if (Object.keys(payload).length > 0) {

@@ -20,6 +20,8 @@ type UserUpdate = {
   credit_value?: number;
   credit_generation_level?: number;
   credit_capacity_level?: number;
+  auto_buy_supplies_purchased?: boolean;
+  auto_buy_supplies_active?: boolean;
 };
 
 type WebSocketPayload = {

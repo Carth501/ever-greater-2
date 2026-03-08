@@ -13,6 +13,8 @@ vi.mock('./db.ts', () => ({
   getUserById: vi.fn(),
   updateUserPassword: vi.fn(),
   executeResourceTransaction: vi.fn(),
+  purchaseAutoBuySupplies: vi.fn(),
+  setAutoBuySuppliesActive: vi.fn(),
   getGlobalCount: vi.fn(),
   incrementGlobalCount: vi.fn(),
   cleanupOldTicketWithdrawals: vi.fn().mockResolvedValue(undefined),
@@ -278,6 +280,51 @@ describe('Express API Endpoints', () => {
   });
 
   describe('POST /api/operations', () => {
+    it('should unlock auto-buy supplies via one-time operation', async () => {
+      const testUser = {
+        id: 1,
+        email: 'test@example.com',
+        password_hash: await bcrypt.hash('password123', 10),
+        printer_supplies: 100,
+        money: 0,
+        gold: 2,
+        autoprinters: 0,
+        tickets_contributed: 0,
+        tickets_withdrawn: 0,
+        credit_value: 0,
+        credit_generation_level: 0,
+        credit_capacity_level: 0,
+        auto_buy_supplies_purchased: false,
+        auto_buy_supplies_active: false,
+      };
+
+      const updatedUser = {
+        ...testUser,
+        gold: 1,
+        auto_buy_supplies_purchased: true,
+        auto_buy_supplies_active: true,
+      };
+
+      db.getUserByEmail.mockResolvedValue(testUser);
+      db.getUserById.mockResolvedValue(testUser);
+      db.purchaseAutoBuySupplies.mockResolvedValue(updatedUser);
+      db.getGlobalCount.mockResolvedValue(100);
+
+      await agent
+        .post('/api/auth/login')
+        .send({ email: 'test@example.com', password: 'password123' })
+        .expect(200);
+
+      const response = await agent
+        .post('/api/operations/AUTO_BUY_SUPPLIES')
+        .send({})
+        .expect(200);
+
+      expect(response.body.user.auto_buy_supplies_purchased).toBe(true);
+      expect(response.body.user.auto_buy_supplies_active).toBe(true);
+      expect(db.purchaseAutoBuySupplies).toHaveBeenCalledWith(1, 10);
+    });
+
     it('should include credit level updates in operation response', async () => {
       // Setup mock database state
       const testUser = {
@@ -376,6 +423,82 @@ describe('Express API Endpoints', () => {
       expect(response.body.user.credit_generation_level).toBeDefined();
       expect(response.body.user.credit_capacity_level).toBeDefined();
       expect(response.body.user.credit_value).toBeDefined();
+    });
+  });
+
+  describe('POST /api/auth/auto-buy-supplies/toggle', () => {
+    it('should toggle active state when unlocked', async () => {
+      const testUser = {
+        id: 1,
+        email: 'test@example.com',
+        password_hash: await bcrypt.hash('password123', 10),
+        printer_supplies: 100,
+        money: 0,
+        gold: 2,
+        autoprinters: 0,
+        tickets_contributed: 0,
+        tickets_withdrawn: 0,
+        credit_value: 0,
+        credit_generation_level: 0,
+        credit_capacity_level: 0,
+        auto_buy_supplies_purchased: true,
+        auto_buy_supplies_active: true,
+      };
+
+      db.getUserByEmail.mockResolvedValue(testUser);
+      db.getUserById.mockResolvedValue(testUser);
+      db.setAutoBuySuppliesActive.mockResolvedValue({
+        ...testUser,
+        auto_buy_supplies_active: false,
+      });
+
+      await agent
+        .post('/api/auth/login')
+        .send({ email: 'test@example.com', password: 'password123' })
+        .expect(200);
+
+      const response = await agent
+        .post('/api/auth/auto-buy-supplies/toggle')
+        .send({ active: false })
+        .expect(200);
+
+      expect(db.setAutoBuySuppliesActive).toHaveBeenCalledWith(1, false);
+      expect(response.body.user.auto_buy_supplies_purchased).toBe(true);
+      expect(response.body.user.auto_buy_supplies_active).toBe(false);
+    });
+
+    it('should reject toggling before unlock', async () => {
+      const testUser = {
+        id: 1,
+        email: 'test@example.com',
+        password_hash: await bcrypt.hash('password123', 10),
+        printer_supplies: 100,
+        money: 0,
+        gold: 2,
+        autoprinters: 0,
+        tickets_contributed: 0,
+        tickets_withdrawn: 0,
+        credit_value: 0,
+        credit_generation_level: 0,
+        credit_capacity_level: 0,
+        auto_buy_supplies_purchased: false,
+        auto_buy_supplies_active: false,
+      };
+
+      db.getUserByEmail.mockResolvedValue(testUser);
+      db.getUserById.mockResolvedValue(testUser);
+
+      await agent
+        .post('/api/auth/login')
+        .send({ email: 'test@example.com', password: 'password123' })
+        .expect(200);
+
+      const response = await agent
+        .post('/api/auth/auto-buy-supplies/toggle')
+        .send({ active: true })
+        .expect(403);
+
+      expect(response.body.error).toBe('Auto-buy supplies not unlocked');
     });
   });
 });

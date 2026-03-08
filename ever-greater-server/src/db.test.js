@@ -252,6 +252,8 @@ describe('Database Functions', () => {
         credit_value: 0,
         credit_generation_level: 0,
         credit_capacity_level: 0,
+        auto_buy_supplies_purchased: false,
+        auto_buy_supplies_active: false,
       };
 
       mockPool.query.mockResolvedValue({ rows: [mockUser] });
@@ -271,6 +273,8 @@ describe('Database Functions', () => {
           0,
           0,
           0,
+          false,
+          false,
         ]
       );
     });

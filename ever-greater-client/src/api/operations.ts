@@ -61,6 +61,13 @@ export async function buySupplies(): Promise<User> {
 }
 
 /**
+ * Unlock auto-buy supplies permanently (one-time purchase).
+ */
+export async function buyAutoBuySupplies(): Promise<User> {
+  return executeOperation(OperationId.AUTO_BUY_SUPPLIES);
+}
+
+/**
  * Buy gold with money (uses generic operation endpoint)
  * @param quantity Amount of gold to purchase
  */

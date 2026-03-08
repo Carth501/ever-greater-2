@@ -25,6 +25,8 @@ import {
   initializeDatabase,
   pool,
   processAutoprinters,
+  purchaseAutoBuySupplies,
+  setAutoBuySuppliesActive,
   updateAllUsersCreditValues,
 } from "./db.js";
 
@@ -56,7 +58,31 @@ type UserUpdatePayload = Partial<{
   credit_value: number;
   credit_generation_level: number;
   credit_capacity_level: number;
+  auto_buy_supplies_purchased: boolean;
+  auto_buy_supplies_active: boolean;
 }>;
+
+function toClientUser(user: Awaited<ReturnType<typeof getUserById>>) {
+  if (!user) {
+    return null;
+  }
+
+  return {
+    id: user.id,
+    email: user.email,
+    tickets_contributed: user.tickets_contributed,
+    tickets_withdrawn: user.tickets_withdrawn || 0,
+    printer_supplies: user.printer_supplies,
+    money: user.money,
+    gold: user.gold,
+    autoprinters: user.autoprinters || 0,
+    credit_value: user.credit_value || 0,
+    credit_generation_level: user.credit_generation_level || 0,
+    credit_capacity_level: user.credit_capacity_level || 0,
+    auto_buy_supplies_purchased: user.auto_buy_supplies_purchased || false,
+    auto_buy_supplies_active: user.auto_buy_supplies_active || false,
+  };
+}
 
 interface IncomingSocketMessage {
   type?: string;
@@ -224,21 +250,7 @@ function createApp(): Express {
 
       req.session.userId = user.id;
 
-      return res.status(201).json({
-        user: {
-          id: user.id,
-          email: user.email,
-          tickets_contributed: user.tickets_contributed,
-          tickets_withdrawn: user.tickets_withdrawn || 0,
-          printer_supplies: user.printer_supplies,
-          money: user.money,
-          gold: user.gold,
-          autoprinters: user.autoprinters || 0,
-          credit_value: user.credit_value || 0,
-          credit_generation_level: user.credit_generation_level || 0,
-          credit_capacity_level: user.credit_capacity_level || 0,
-        },
-      });
+      return res.status(201).json({ user: toClientUser(user) });
     } catch (error) {
       console.error("Error registering user:", error);
       return res.status(500).json({ error: "Failed to register user" });
@@ -273,21 +285,7 @@ function createApp(): Express {
 
       req.session.userId = user.id;
 
-      return res.json({
-        user: {
-          id: user.id,
-          email: user.email,
-          tickets_contributed: user.tickets_contributed,
-          tickets_withdrawn: user.tickets_withdrawn || 0,
-          printer_supplies: user.printer_supplies,
-          money: user.money,
-          gold: user.gold,
-          autoprinters: user.autoprinters || 0,
-          credit_value: user.credit_value || 0,
-          credit_generation_level: user.credit_generation_level || 0,
-          credit_capacity_level: user.credit_capacity_level || 0,
-        },
-      });
+      return res.json({ user: toClientUser(user) });
     } catch (error) {
       console.error("Error logging in user:", error);
       return res.status(500).json({ error: "Failed to login" });
@@ -305,21 +303,7 @@ function createApp(): Express {
         return res.status(404).json({ error: "User not found" });
       }
 
-      return res.json({
-        user: {
-          id: user.id,
-          email: user.email,
-          tickets_contributed: user.tickets_contributed,
-          tickets_withdrawn: user.tickets_withdrawn || 0,
-          printer_supplies: user.printer_supplies,
-          money: user.money,
-          gold: user.gold,
-          autoprinters: user.autoprinters || 0,
-          credit_value: user.credit_value || 0,
-          credit_generation_level: user.credit_generation_level || 0,
-          credit_capacity_level: user.credit_capacity_level || 0,
-        },
-      });
+      return res.json({ user: toClientUser(user) });
     } catch (error) {
       console.error("Error fetching current user:", error);
       return res.status(500).json({ error: "Failed to fetch user" });
@@ -343,6 +327,47 @@ function createApp(): Express {
     } catch (error) {
       console.error("Error getting count:", error);
       return res.status(500).json({ error: "Failed to retrieve count" });
+    }
+  });
+
+  app.post("/api/auth/auto-buy-supplies/toggle", async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const { active } = req.body as { active?: boolean };
+      if (typeof active !== "boolean") {
+        return res.status(400).json({ error: "'active' boolean is required" });
+      }
+
+      const existingUser = await getUserById(req.session.userId);
+      if (!existingUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      if (!existingUser.auto_buy_supplies_purchased) {
+        return res
+          .status(403)
+          .json({ error: "Auto-buy supplies not unlocked" });
+      }
+
+      const updatedUser = await setAutoBuySuppliesActive(
+        req.session.userId,
+        active,
+      );
+
+      await sendUserUpdate(req.session.userId, {
+        auto_buy_supplies_purchased: updatedUser.auto_buy_supplies_purchased,
+        auto_buy_supplies_active: updatedUser.auto_buy_supplies_active,
+      });
+
+      return res.json({ user: toClientUser(updatedUser) });
+    } catch (error) {
+      console.error("Error toggling auto-buy supplies:", error);
+      return res
+        .status(500)
+        .json({ error: "Failed to toggle auto-buy supplies" });
     }
   });
 
@@ -393,12 +418,18 @@ function createApp(): Express {
         });
       }
 
-      // Execute the transaction
-      const updatedUser = await executeResourceTransaction(
-        req.session.userId,
-        validation.cost,
-        validation.gain,
-      );
+      // Execute the transaction.
+      const updatedUser =
+        operationId === OperationId.AUTO_BUY_SUPPLIES
+          ? await purchaseAutoBuySupplies(
+              req.session.userId,
+              validation.cost[ResourceType.GOLD] ?? 0,
+            )
+          : await executeResourceTransaction(
+              req.session.userId,
+              validation.cost,
+              validation.gain,
+            );
 
       // Handle ticket printing if applicable
       const gainedTickets =
@@ -435,6 +466,8 @@ function createApp(): Express {
         credit_value: updatedUser.credit_value,
         credit_generation_level: updatedUser.credit_generation_level,
         credit_capacity_level: updatedUser.credit_capacity_level,
+        auto_buy_supplies_purchased: updatedUser.auto_buy_supplies_purchased,
+        auto_buy_supplies_active: updatedUser.auto_buy_supplies_active,
       });
 
       return res.json({
@@ -442,19 +475,7 @@ function createApp(): Express {
         cost: validation.cost,
         gain: validation.gain,
         count: newCount,
-        user: {
-          id: updatedUser.id,
-          email: updatedUser.email,
-          tickets_contributed: updatedUser.tickets_contributed,
-          tickets_withdrawn: updatedUser.tickets_withdrawn || 0,
-          printer_supplies: updatedUser.printer_supplies,
-          money: updatedUser.money,
-          gold: updatedUser.gold,
-          autoprinters: updatedUser.autoprinters || 0,
-          credit_value: updatedUser.credit_value || 0,
-          credit_generation_level: updatedUser.credit_generation_level || 0,
-          credit_capacity_level: updatedUser.credit_capacity_level || 0,
-        },
+        user: toClientUser(updatedUser),
       });
     } catch (error) {
       console.error("Error executing operation:", error);

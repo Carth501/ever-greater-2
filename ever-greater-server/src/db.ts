@@ -156,6 +156,17 @@ export async function initializeDatabase(): Promise<void> {
       ADD COLUMN IF NOT EXISTS credit_capacity_level INTEGER NOT NULL DEFAULT 0
     `);
 
+    // Add auto-buy unlock state columns
+    await client.query(`
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS auto_buy_supplies_purchased BOOLEAN NOT NULL DEFAULT FALSE
+    `);
+
+    await client.query(`
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS auto_buy_supplies_active BOOLEAN NOT NULL DEFAULT FALSE
+    `);
+
     // Add created_at column to users table if it doesn't exist
     await client.query(`
       ALTER TABLE users 
@@ -225,7 +236,7 @@ interface DbUser extends User {
  */
 export async function getUserByEmail(email: string): Promise<DbUser | null> {
   const result = await pool.query(
-    "SELECT id, email, password_hash, tickets_contributed, printer_supplies, money, gold, autoprinters, credit_value, credit_generation_level, credit_capacity_level FROM users WHERE email = $1",
+    "SELECT id, email, password_hash, tickets_contributed, printer_supplies, money, gold, autoprinters, credit_value, credit_generation_level, credit_capacity_level, auto_buy_supplies_purchased, auto_buy_supplies_active FROM users WHERE email = $1",
     [email],
   );
   if (!result.rows[0]) return null;
@@ -293,8 +304,20 @@ export async function createUser(
   passwordHash: string,
 ): Promise<User> {
   const result = await pool.query(
-    "INSERT INTO users (email, password_hash, printer_supplies, money, gold, autoprinters, credit_value, credit_generation_level, credit_capacity_level) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id, email, tickets_contributed, printer_supplies, money, gold, autoprinters, credit_value, credit_generation_level, credit_capacity_level",
-    [email, passwordHash, STARTING_PRINTER_SUPPLIES, 0, 0, 0, 0, 0, 0],
+    "INSERT INTO users (email, password_hash, printer_supplies, money, gold, autoprinters, credit_value, credit_generation_level, credit_capacity_level, auto_buy_supplies_purchased, auto_buy_supplies_active) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id, email, tickets_contributed, printer_supplies, money, gold, autoprinters, credit_value, credit_generation_level, credit_capacity_level, auto_buy_supplies_purchased, auto_buy_supplies_active",
+    [
+      email,
+      passwordHash,
+      STARTING_PRINTER_SUPPLIES,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      false,
+      false,
+    ],
   );
   const userRow = result.rows[0];
   const tickets_withdrawn = await getTicketsWithdrawnIn24Hours(userRow.id);
@@ -306,7 +329,7 @@ export async function createUser(
  */
 export async function getUserById(userId: number): Promise<User | null> {
   const result = await pool.query(
-    "SELECT id, email, tickets_contributed, printer_supplies, money, gold, autoprinters, credit_value, credit_generation_level, credit_capacity_level FROM users WHERE id = $1",
+    "SELECT id, email, tickets_contributed, printer_supplies, money, gold, autoprinters, credit_value, credit_generation_level, credit_capacity_level, auto_buy_supplies_purchased, auto_buy_supplies_active FROM users WHERE id = $1",
     [userId],
   );
   if (!result.rows[0]) return null;
@@ -372,7 +395,7 @@ export async function executeResourceTransaction(
           txClient = null;
         }
         const currentUser = await (dbClient || pool).query(
-          "SELECT id, email, tickets_contributed, printer_supplies, money, gold, autoprinters, credit_value, credit_generation_level, credit_capacity_level FROM users WHERE id = $1",
+          "SELECT id, email, tickets_contributed, printer_supplies, money, gold, autoprinters, credit_value, credit_generation_level, credit_capacity_level, auto_buy_supplies_purchased, auto_buy_supplies_active FROM users WHERE id = $1",
           [userId],
         );
         if (currentUser.rows.length === 0) {
@@ -463,7 +486,7 @@ export async function executeResourceTransaction(
       UPDATE users 
       SET ${setClauses.join(", ")}
       WHERE ${whereClauses.join(" AND ")}
-      RETURNING id, email, tickets_contributed, printer_supplies, money, gold, autoprinters, credit_value, credit_generation_level, credit_capacity_level
+      RETURNING id, email, tickets_contributed, printer_supplies, money, gold, autoprinters, credit_value, credit_generation_level, credit_capacity_level, auto_buy_supplies_purchased, auto_buy_supplies_active
     `;
 
     const result = await dbClient.query(query, values);
@@ -497,6 +520,64 @@ export async function executeResourceTransaction(
       txClient.release();
     }
   }
+}
+
+/**
+ * Unlock auto-buy supplies in the same statement that charges gold.
+ * This ensures the feature is only unlocked once and never revoked.
+ */
+export async function purchaseAutoBuySupplies(
+  userId: number,
+  goldCost: number,
+): Promise<User> {
+  const result = await pool.query(
+    `
+      UPDATE users
+      SET
+        gold = gold - $1,
+        auto_buy_supplies_purchased = TRUE,
+        auto_buy_supplies_active = TRUE
+      WHERE id = $2
+        AND gold >= $1
+        AND auto_buy_supplies_purchased = FALSE
+      RETURNING id, email, tickets_contributed, printer_supplies, money, gold, autoprinters, credit_value, credit_generation_level, credit_capacity_level, auto_buy_supplies_purchased, auto_buy_supplies_active
+    `,
+    [goldCost, userId],
+  );
+
+  if (!result.rows[0]) {
+    throw new Error("Auto-buy supplies already unlocked or insufficient gold");
+  }
+
+  const userRow = result.rows[0];
+  const tickets_withdrawn = await getTicketsWithdrawnIn24Hours(userId);
+  return Object.assign(userRow, { tickets_withdrawn }) as User;
+}
+
+/**
+ * Toggle auto-buy supplies active state after unlock.
+ */
+export async function setAutoBuySuppliesActive(
+  userId: number,
+  active: boolean,
+): Promise<User> {
+  const result = await pool.query(
+    `
+      UPDATE users
+      SET auto_buy_supplies_active = $1
+      WHERE id = $2 AND auto_buy_supplies_purchased = TRUE
+      RETURNING id, email, tickets_contributed, printer_supplies, money, gold, autoprinters, credit_value, credit_generation_level, credit_capacity_level, auto_buy_supplies_purchased, auto_buy_supplies_active
+    `,
+    [active, userId],
+  );
+
+  if (!result.rows[0]) {
+    throw new Error("Auto-buy supplies not unlocked");
+  }
+
+  const userRow = result.rows[0];
+  const tickets_withdrawn = await getTicketsWithdrawnIn24Hours(userId);
+  return Object.assign(userRow, { tickets_withdrawn }) as User;
 }
 
 /**
