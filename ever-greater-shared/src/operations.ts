@@ -84,7 +84,7 @@ export const operations: Record<OperationId, Operation> = {
     description: "Purchase an autoprinter with credit",
     cost: (ctx: OperationContext) => {
       const currentAutoprinters = ctx.user.autoprinters;
-      const creditCost = 2 * Math.floor(Math.pow(currentAutoprinters + 1, 1.2));
+      const creditCost = 2 * Math.floor(Math.pow(currentAutoprinters + 1, 1.5));
       return {
         [ResourceType.CREDIT]: creditCost,
       };
