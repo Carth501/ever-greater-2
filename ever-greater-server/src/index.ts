@@ -394,9 +394,56 @@ function createApp(): Express {
       // Get global ticket count for validation
       const globalTicketCount = await getGlobalCount();
 
+      let userForValidation = user;
+
+      // Auto-buy fallback: if print is requested with insufficient supplies and
+      // auto-buy is active, try to purchase supplies before validating print again.
+      if (
+        operationId === OperationId.PRINT_TICKET &&
+        user.auto_buy_supplies_active
+      ) {
+        const initialPrintValidation = validateOperation(
+          user,
+          operation,
+          req.body,
+          globalTicketCount,
+        );
+
+        const missingPrinterSupplies =
+          !initialPrintValidation.valid &&
+          initialPrintValidation.error === "Insufficient resources" &&
+          initialPrintValidation.insufficientResources?.includes(
+            ResourceType.PRINTER_SUPPLIES,
+          );
+
+        if (missingPrinterSupplies) {
+          const buySuppliesOperation = operations[OperationId.BUY_SUPPLIES];
+          const buySuppliesValidation = validateOperation(
+            user,
+            buySuppliesOperation,
+            undefined,
+            globalTicketCount,
+          );
+
+          if (buySuppliesValidation.valid) {
+            try {
+              userForValidation = await executeResourceTransaction(
+                req.session.userId,
+                buySuppliesValidation.cost,
+                buySuppliesValidation.gain,
+              );
+            } catch {
+              // Preserve existing error semantics for print: if fallback buy cannot
+              // complete due races or resources, print validation below reports
+              // insufficient printer supplies.
+            }
+          }
+        }
+      }
+
       // Validate operation
       const validation = validateOperation(
-        user,
+        userForValidation,
         operation,
         req.body,
         globalTicketCount,

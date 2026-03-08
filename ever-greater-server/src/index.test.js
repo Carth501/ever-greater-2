@@ -1,4 +1,5 @@
 import bcrypt from 'bcryptjs';
+import { ResourceType } from 'ever-greater-shared';
 import request from 'supertest';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as db from './db.ts';
@@ -287,7 +288,7 @@ describe('Express API Endpoints', () => {
         password_hash: await bcrypt.hash('password123', 10),
         printer_supplies: 100,
         money: 0,
-        gold: 2,
+        gold: 12,
         autoprinters: 0,
         tickets_contributed: 0,
         tickets_withdrawn: 0,
@@ -300,7 +301,7 @@ describe('Express API Endpoints', () => {
 
       const updatedUser = {
         ...testUser,
-        gold: 1,
+        gold: 2,
         auto_buy_supplies_purchased: true,
         auto_buy_supplies_active: true,
       };
@@ -374,6 +375,155 @@ describe('Express API Endpoints', () => {
       expect(response.body.user.credit_generation_level).toBe(2);
       expect(response.body.user.credit_capacity_level).toBe(5);
       expect(response.body.user.credit_value).toBe(50);
+    });
+
+    it('should auto-buy supplies before PRINT_TICKET when active and supplies are empty', async () => {
+      const testUser = {
+        id: 1,
+        email: 'test@example.com',
+        password_hash: await bcrypt.hash('password123', 10),
+        printer_supplies: 0,
+        money: 10,
+        gold: 3,
+        autoprinters: 0,
+        tickets_contributed: 5,
+        tickets_withdrawn: 0,
+        credit_value: 0,
+        credit_generation_level: 0,
+        credit_capacity_level: 0,
+        auto_buy_supplies_purchased: true,
+        auto_buy_supplies_active: true,
+      };
+
+      const userAfterAutoBuy = {
+        ...testUser,
+        printer_supplies: 200,
+        gold: 2,
+      };
+
+      const userAfterPrint = {
+        ...userAfterAutoBuy,
+        printer_supplies: 199,
+        money: 11,
+        tickets_contributed: 6,
+      };
+
+      db.getUserByEmail.mockResolvedValue(testUser);
+      db.getUserById.mockResolvedValue(testUser);
+      db.getGlobalCount.mockResolvedValue(100);
+      db.incrementGlobalCount.mockResolvedValue(101);
+      db.executeResourceTransaction
+        .mockResolvedValueOnce(userAfterAutoBuy)
+        .mockResolvedValueOnce(userAfterPrint);
+
+      await agent
+        .post('/api/auth/login')
+        .send({ email: 'test@example.com', password: 'password123' })
+        .expect(200);
+
+      const response = await agent
+        .post('/api/operations/PRINT_TICKET')
+        .send({})
+        .expect(200);
+
+      expect(db.executeResourceTransaction).toHaveBeenCalledTimes(2);
+      expect(db.executeResourceTransaction).toHaveBeenNthCalledWith(
+        1,
+        1,
+        { [ResourceType.GOLD]: 1 },
+        { [ResourceType.PRINTER_SUPPLIES]: 200 },
+      );
+      expect(db.executeResourceTransaction).toHaveBeenNthCalledWith(
+        2,
+        1,
+        { [ResourceType.PRINTER_SUPPLIES]: 1 },
+        {
+          [ResourceType.MONEY]: 1,
+          [ResourceType.TICKETS_CONTRIBUTED]: 1,
+        },
+      );
+      expect(response.body.user.printer_supplies).toBe(199);
+      expect(response.body.user.gold).toBe(2);
+      expect(response.body.user.money).toBe(11);
+      expect(response.body.user.tickets_contributed).toBe(6);
+    });
+
+    it('should return insufficient PRINTER_SUPPLIES when auto-buy is active but user cannot afford BUY_SUPPLIES', async () => {
+      const testUser = {
+        id: 1,
+        email: 'test@example.com',
+        password_hash: await bcrypt.hash('password123', 10),
+        printer_supplies: 0,
+        money: 10,
+        gold: 0,
+        autoprinters: 0,
+        tickets_contributed: 5,
+        tickets_withdrawn: 0,
+        credit_value: 0,
+        credit_generation_level: 0,
+        credit_capacity_level: 0,
+        auto_buy_supplies_purchased: true,
+        auto_buy_supplies_active: true,
+      };
+
+      db.getUserByEmail.mockResolvedValue(testUser);
+      db.getUserById.mockResolvedValue(testUser);
+      db.getGlobalCount.mockResolvedValue(100);
+
+      await agent
+        .post('/api/auth/login')
+        .send({ email: 'test@example.com', password: 'password123' })
+        .expect(200);
+
+      const response = await agent
+        .post('/api/operations/PRINT_TICKET')
+        .send({})
+        .expect(403);
+
+      expect(db.executeResourceTransaction).not.toHaveBeenCalled();
+      expect(response.body.error).toBe('Insufficient resources');
+      expect(response.body.insufficientResources).toEqual([
+        ResourceType.PRINTER_SUPPLIES,
+      ]);
+    });
+
+    it('should not auto-buy supplies for PRINT_TICKET when auto-buy is inactive', async () => {
+      const testUser = {
+        id: 1,
+        email: 'test@example.com',
+        password_hash: await bcrypt.hash('password123', 10),
+        printer_supplies: 0,
+        money: 10,
+        gold: 3,
+        autoprinters: 0,
+        tickets_contributed: 5,
+        tickets_withdrawn: 0,
+        credit_value: 0,
+        credit_generation_level: 0,
+        credit_capacity_level: 0,
+        auto_buy_supplies_purchased: true,
+        auto_buy_supplies_active: false,
+      };
+
+      db.getUserByEmail.mockResolvedValue(testUser);
+      db.getUserById.mockResolvedValue(testUser);
+      db.getGlobalCount.mockResolvedValue(100);
+
+      await agent
+        .post('/api/auth/login')
+        .send({ email: 'test@example.com', password: 'password123' })
+        .expect(200);
+
+      const response = await agent
+        .post('/api/operations/PRINT_TICKET')
+        .send({})
+        .expect(403);
+
+      expect(db.executeResourceTransaction).not.toHaveBeenCalled();
+      expect(response.body.error).toBe('Insufficient resources');
+      expect(response.body.insufficientResources).toEqual([
+        ResourceType.PRINTER_SUPPLIES,
+      ]);
     });
 
     it('should verify credit generation increments correctly over multiple updates', async () => {
