@@ -37,7 +37,10 @@ function EverGreaterMainPage({ onLogout }: MainPageProps): JSX.Element {
   }
 
   const supplies = currentUser.printer_supplies ?? 0;
-  const isButtonDisabled = supplies === 0;
+  const autoBuyCanPrint =
+    currentUser.auto_buy_supplies_purchased &&
+    currentUser.auto_buy_supplies_active;
+  const isButtonDisabled = supplies === 0 && !autoBuyCanPrint;
 
   return (
     <GameRoot>

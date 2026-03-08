@@ -581,9 +581,13 @@ export async function setAutoBuySuppliesActive(
 }
 
 /**
- * Process all autoprinters for all users atomically
- * Each user prints min(autoprinters, printer_supplies) tickets
- * Updates supplies, money, tickets_contributed for users and global_state count
+ * Process all autoprinters for all users atomically.
+ * 1. Auto-buy supplies for users with auto-buy active who have no supplies
+ * 2. Print tickets for all users with supplies
+ * 3. Update global count
+ *
+ * This ensures the auto-buy system is respected while maintaining atomicity
+ * for potentially thousands of users.
  */
 export async function processAutoprinters(): Promise<{
   totalTickets: number;
@@ -593,7 +597,24 @@ export async function processAutoprinters(): Promise<{
   try {
     await client.query("BEGIN");
 
-    // Process all users with autoprinters and supplies in a single UPDATE
+    // Step 1: Auto-buy supplies for users with active auto-buy who have no supplies but have autoprinters
+    // Matches BUY_SUPPLIES operation: costs 1 gold, gains 200 supplies
+    await client.query(`
+      UPDATE users
+      SET 
+        gold = gold - 1,
+        printer_supplies = printer_supplies + 200
+      WHERE 
+        auto_buy_supplies_active = TRUE
+        AND auto_buy_supplies_purchased = TRUE
+        AND printer_supplies = 0
+        AND autoprinters > 0
+        AND gold >= 1
+    `);
+
+    // Step 2: Process all users with autoprinters and supplies
+    // Each user prints min(autoprinters, printer_supplies) tickets
+    // Matches PRINT_TICKET operation scaled: costs supplies, gains money + tickets_contributed
     const usersResult = await client.query(`
       UPDATE users 
       SET 
@@ -611,7 +632,7 @@ export async function processAutoprinters(): Promise<{
       0,
     );
 
-    // Update global count if any tickets were printed
+    // Step 3: Update global count if any tickets were printed
     let newGlobalCount: number | null = null;
     if (totalTickets > 0) {
       const globalResult = await client.query(
