@@ -28,6 +28,8 @@ describe("TicketSummary", () => {
     credit_value: 100,
     credit_capacity_level: 200,
     credit_generation_level: 1,
+    auto_buy_supplies_purchased: false,
+    auto_buy_supplies_active: false,
   };
 
   it("should render the global ticket display component", () => {
