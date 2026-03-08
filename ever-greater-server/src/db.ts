@@ -6,6 +6,18 @@ import {
 } from "ever-greater-shared";
 import { Pool, PoolClient } from "pg";
 
+const DEFAULT_STARTING_PRINTER_SUPPLIES = 1000;
+const parsedStartingPrinterSupplies = Number.parseInt(
+  process.env.STARTING_PRINTER_SUPPLIES ??
+    `${DEFAULT_STARTING_PRINTER_SUPPLIES}`,
+  10,
+);
+export const STARTING_PRINTER_SUPPLIES =
+  Number.isFinite(parsedStartingPrinterSupplies) &&
+  parsedStartingPrinterSupplies >= 0
+    ? parsedStartingPrinterSupplies
+    : DEFAULT_STARTING_PRINTER_SUPPLIES;
+
 // Create PostgreSQL connection pool
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -88,17 +100,17 @@ export async function initializeDatabase(): Promise<void> {
     // Add printer_supplies column to users table if it doesn't exist
     await client.query(`
       ALTER TABLE users 
-      ADD COLUMN IF NOT EXISTS printer_supplies INTEGER NOT NULL DEFAULT 100
+      ADD COLUMN IF NOT EXISTS printer_supplies INTEGER NOT NULL DEFAULT ${STARTING_PRINTER_SUPPLIES}
     `);
 
     await client.query(`
       ALTER TABLE users
-      ALTER COLUMN printer_supplies SET DEFAULT 100
+      ALTER COLUMN printer_supplies SET DEFAULT ${STARTING_PRINTER_SUPPLIES}
     `);
 
     await client.query(`
       UPDATE users
-      SET printer_supplies = 100
+      SET printer_supplies = ${STARTING_PRINTER_SUPPLIES}
       WHERE printer_supplies IS NULL OR printer_supplies = 0
     `);
 
@@ -282,7 +294,7 @@ export async function createUser(
 ): Promise<User> {
   const result = await pool.query(
     "INSERT INTO users (email, password_hash, printer_supplies, money, gold, autoprinters, credit_value, credit_generation_level, credit_capacity_level) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id, email, tickets_contributed, printer_supplies, money, gold, autoprinters, credit_value, credit_generation_level, credit_capacity_level",
-    [email, passwordHash, 100, 0, 0, 0, 0, 0, 0],
+    [email, passwordHash, STARTING_PRINTER_SUPPLIES, 0, 0, 0, 0, 0, 0],
   );
   const userRow = result.rows[0];
   const tickets_withdrawn = await getTicketsWithdrawnIn24Hours(userRow.id);

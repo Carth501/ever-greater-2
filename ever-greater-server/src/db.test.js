@@ -239,11 +239,12 @@ describe('Database Functions', () => {
 
   describe('createUser', () => {
     it('should create a new user and return user object', async () => {
+      const expectedStartingSupplies = db.STARTING_PRINTER_SUPPLIES;
       const mockUser = {
         id: 1,
         email: 'newuser@example.com',
         tickets_contributed: 0,
-        printer_supplies: 100,
+        printer_supplies: expectedStartingSupplies,
         money: 0,
         gold: 0,
         autoprinters: 0,
@@ -260,7 +261,17 @@ describe('Database Functions', () => {
       expect(user).toEqual(mockUser);
       expect(mockPool.query).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO users'),
-        ['newuser@example.com', 'hashed_password', 100, 0, 0, 0, 0, 0, 0]
+        [
+          'newuser@example.com',
+          'hashed_password',
+          expectedStartingSupplies,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+        ]
       );
     });
 
