@@ -597,7 +597,7 @@ export async function processAutoprinters(): Promise<{
   try {
     await client.query("BEGIN");
 
-    // Step 1: Auto-buy supplies for users with active auto-buy who have no supplies but have autoprinters
+    // Step 1: Auto-buy supplies for users with active auto-buy who have less supplies than autoprinters
     // Matches BUY_SUPPLIES operation: costs 1 gold, gains 200 supplies
     await client.query(`
       UPDATE users
@@ -607,7 +607,7 @@ export async function processAutoprinters(): Promise<{
       WHERE 
         auto_buy_supplies_active = TRUE
         AND auto_buy_supplies_purchased = TRUE
-        AND printer_supplies = 0
+        AND printer_supplies < autoprinters
         AND autoprinters > 0
         AND gold >= 1
     `);
