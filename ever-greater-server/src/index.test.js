@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { ResourceType } from 'ever-greater-shared';
 import request from 'supertest';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as db from './db.ts';
 import { createApp } from './index.ts';
 
@@ -29,14 +29,20 @@ vi.mock('./db.ts', () => ({
 describe('Express API Endpoints', () => {
   let app;
   let agent;
+  let consoleErrorSpy;
 
   beforeEach(() => {
     // Clear all mocks
     vi.clearAllMocks();
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     // Create a new app instance for each test
     app = createApp();
     agent = request.agent(app);
+  });
+
+  afterEach(() => {
+    consoleErrorSpy?.mockRestore();
   });
 
   describe('POST /api/auth/register', () => {
