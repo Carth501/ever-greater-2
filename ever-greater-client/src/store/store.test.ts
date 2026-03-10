@@ -6,10 +6,6 @@ import * as ticketApi from "../api/globalTicket";
 import * as operationsApi from "../api/operations";
 import authReducer, {
   AuthState,
-  buyAutoBuySuppliesThunk,
-  buyAutoprinterThunk,
-  buyGoldThunk,
-  buySuppliesThunk,
   checkAuthThunk,
   loginThunk,
   logoutThunk,
@@ -24,6 +20,12 @@ import errorReducer, {
   ErrorState,
   setError,
 } from "./slices/errorSlice";
+import {
+  buyAutoBuySuppliesThunk,
+  buyAutoprinterThunk,
+  buyGoldThunk,
+  buySuppliesThunk,
+} from "./slices/operationsSlice";
 import ticketReducer, {
   clearError as clearTicketError,
   fetchCountThunk,

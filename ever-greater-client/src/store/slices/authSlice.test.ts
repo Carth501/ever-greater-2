@@ -6,17 +6,19 @@ import * as operationsApi from "../../api/operations";
 import authReducer, {
   AuthState,
   applyUserUpdate,
-  buyAutoBuySuppliesThunk,
-  buyGoldThunk,
-  buySuppliesThunk,
   checkAuthThunk,
   clearError,
   loginThunk,
   logoutThunk,
   signupThunk,
-  toggleAutoBuySuppliesThunk,
   updateSupplies,
 } from "./authSlice";
+import {
+  buyAutoBuySuppliesThunk,
+  buyGoldThunk,
+  buySuppliesThunk,
+  toggleAutoBuySuppliesThunk,
+} from "./operationsSlice";
 
 vi.mock("../../api/auth");
 vi.mock("../../api/operations");

@@ -1,7 +1,15 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import type { User } from "../../api/auth";
 import * as authApi from "../../api/auth";
-import * as operationsApi from "../../api/operations";
+import {
+  buyAutoBuySuppliesThunk,
+  buyAutoprinterThunk,
+  buyGoldThunk,
+  buySuppliesThunk,
+  increaseCreditCapacityThunk,
+  increaseCreditGenerationThunk,
+  toggleAutoBuySuppliesThunk,
+} from "./operationsSlice";
 
 type UserUpdatePayload = Partial<
   Pick<
@@ -96,112 +104,6 @@ export const logoutThunk = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(
         error instanceof Error ? error.message : "Failed to logout",
-      );
-    }
-  },
-);
-
-export const buySuppliesThunk = createAsyncThunk(
-  "auth/buySupplies",
-  async (_, { rejectWithValue }) => {
-    try {
-      const user = await operationsApi.buySupplies();
-      return user;
-    } catch (error) {
-      return rejectWithValue(
-        error instanceof Error ? error.message : "Failed to buy supplies",
-      );
-    }
-  },
-);
-
-export const buyGoldThunk = createAsyncThunk(
-  "auth/buyGold",
-  async (quantity: number, { rejectWithValue }) => {
-    try {
-      const user = await operationsApi.buyGold(quantity);
-      return user;
-    } catch (error) {
-      return rejectWithValue(
-        error instanceof Error ? error.message : "Failed to buy gold",
-      );
-    }
-  },
-);
-
-export const buyAutoBuySuppliesThunk = createAsyncThunk(
-  "auth/buyAutoBuySupplies",
-  async (_, { rejectWithValue }) => {
-    try {
-      const user = await operationsApi.buyAutoBuySupplies();
-      return user;
-    } catch (error) {
-      return rejectWithValue(
-        error instanceof Error
-          ? error.message
-          : "Failed to unlock auto-buy supplies",
-      );
-    }
-  },
-);
-
-export const buyAutoprinterThunk = createAsyncThunk(
-  "auth/buyAutoprinter",
-  async (_, { rejectWithValue }) => {
-    try {
-      const user = await operationsApi.buyAutoprinter();
-      return user;
-    } catch (error) {
-      return rejectWithValue(
-        error instanceof Error ? error.message : "Failed to buy autoprinter",
-      );
-    }
-  },
-);
-
-export const increaseCreditGenerationThunk = createAsyncThunk(
-  "auth/increaseCreditGeneration",
-  async (_, { rejectWithValue }) => {
-    try {
-      const user = await operationsApi.increaseCreditGeneration();
-      return user;
-    } catch (error) {
-      return rejectWithValue(
-        error instanceof Error
-          ? error.message
-          : "Failed to increase credit generation",
-      );
-    }
-  },
-);
-
-export const increaseCreditCapacityThunk = createAsyncThunk(
-  "auth/increaseCreditCapacity",
-  async (_, { rejectWithValue }) => {
-    try {
-      const user = await operationsApi.increaseCreditCapacity();
-      return user;
-    } catch (error) {
-      return rejectWithValue(
-        error instanceof Error
-          ? error.message
-          : "Failed to increase credit capacity",
-      );
-    }
-  },
-);
-
-export const toggleAutoBuySuppliesThunk = createAsyncThunk(
-  "auth/toggleAutoBuySupplies",
-  async (active: boolean, { rejectWithValue }) => {
-    try {
-      const user = await authApi.setAutoBuySuppliesActive(active);
-      return user;
-    } catch (error) {
-      return rejectWithValue(
-        error instanceof Error
-          ? error.message
-          : "Failed to toggle auto-buy supplies",
       );
     }
   },

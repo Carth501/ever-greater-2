@@ -2,6 +2,7 @@ import { configureStore } from "@reduxjs/toolkit";
 import { websocketMiddleware } from "./middleware/websocketMiddleware";
 import authReducer from "./slices/authSlice";
 import errorReducer from "./slices/errorSlice";
+import operationsReducer from "./slices/operationsSlice";
 import ticketReducer from "./slices/ticketSlice";
 
 export const store = configureStore({
@@ -9,6 +10,7 @@ export const store = configureStore({
     auth: authReducer,
     ticket: ticketReducer,
     error: errorReducer,
+    operations: operationsReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(websocketMiddleware),

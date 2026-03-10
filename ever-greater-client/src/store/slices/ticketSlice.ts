@@ -1,12 +1,7 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import * as ticketApi from "../../api/globalTicket";
 import * as operationsApi from "../../api/operations";
-import {
-  updateAutoprinters,
-  updateGold,
-  updateMoney,
-  updateSupplies,
-} from "./authSlice";
+import { applyUserUpdate } from "./authSlice";
 
 export interface TicketState {
   count: number;
@@ -43,10 +38,14 @@ export const incrementCountThunk = createAsyncThunk(
     try {
       const updatedUser = await operationsApi.printTicket();
       // Update auth state with new user resources
-      dispatch(updateSupplies(updatedUser.printer_supplies));
-      dispatch(updateMoney(updatedUser.money));
-      dispatch(updateGold(updatedUser.gold));
-      dispatch(updateAutoprinters(updatedUser.autoprinters || 0));
+      dispatch(
+        applyUserUpdate({
+          printer_supplies: updatedUser.printer_supplies,
+          money: updatedUser.money,
+          gold: updatedUser.gold,
+          autoprinters: updatedUser.autoprinters || 0,
+        }),
+      );
       // Count updates will come via WebSocket
       return undefined;
     } catch (error) {

@@ -21,7 +21,7 @@ import {
   increaseCreditCapacityThunk,
   increaseCreditGenerationThunk,
   toggleAutoBuySuppliesThunk,
-} from "../store/slices/authSlice";
+} from "../store/slices/operationsSlice";
 import ShopCreditGroup from "./shop-groups/ShopCreditGroup";
 import ShopGlobalTicketsGroup from "./shop-groups/ShopGlobalTicketsGroup";
 import ShopGoldGroup from "./shop-groups/ShopGoldGroup";
