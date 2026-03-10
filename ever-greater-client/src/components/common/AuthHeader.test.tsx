@@ -27,7 +27,7 @@ describe("AuthHeader", () => {
     expect(screen.getByText("Signed in as")).toBeTruthy();
   });
 
-  it("should call onLogout when logout button is clicked", async () => {
+  it("should call onLogout when logout button is clicked", () => {
     const mockOnLogout = vi.fn();
     render(<AuthHeader user={user} onLogout={mockOnLogout} />);
 

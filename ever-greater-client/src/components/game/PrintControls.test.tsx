@@ -31,7 +31,7 @@ describe("PrintControls", () => {
     expect(screen.getByText("15")).toBeTruthy();
   });
 
-  it("should call onPrintClick when print button is clicked", async () => {
+  it("should call onPrintClick when print button is clicked", () => {
     const mockOnPrintClick = vi.fn();
     render(
       <PrintControls
