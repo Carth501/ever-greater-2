@@ -1,6 +1,7 @@
 import { connectGlobalCountSocket } from "../api/globalTicket";
 import { applyUserUpdate } from "../store/slices/authSlice";
 import { setError } from "../store/slices/errorSlice";
+import { setConnected } from "../store/slices/realtimeSlice";
 import {
   clearError as clearTicketError,
   updateCount,
@@ -16,6 +17,7 @@ export function connect(
       | typeof updateCount
       | typeof clearTicketError
       | typeof setError
+      | typeof setConnected
     >,
   ) => void,
 ): void {
@@ -34,9 +36,13 @@ export function connect(
       }
     },
     (status: "open" | "closed" | "error") => {
-      if (status === "error") {
+      if (status === "open") {
+        dispatch(setConnected(true));
+      } else if (status === "error") {
+        dispatch(setConnected(false));
         dispatch(setError("WebSocket connection error"));
       } else if (status === "closed") {
+        dispatch(setConnected(false));
         console.log("WebSocket disconnected");
       }
     },

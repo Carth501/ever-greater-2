@@ -7,10 +7,10 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { styled } from "@mui/material/styles";
 import { useState } from "react";
-import { useAuth } from "../hooks/useAuth";
+import { useAuth } from "../../hooks/useAuth";
 
-type SignupPageProps = {
-  onSwitchToLogin: () => void;
+type LoginPageProps = {
+  onSwitchToSignup: () => void;
 };
 
 const AuthBackground = styled(Box)(({ theme }) => ({
@@ -29,28 +29,22 @@ const AuthCard = styled(Paper)(({ theme }) => ({
   borderRadius: theme.shape.borderRadius * 2,
 }));
 
-export default function SignupPage({ onSwitchToLogin }: SignupPageProps) {
-  const { isLoading, error: authError, signup } = useAuth();
+export default function LoginPage({ onSwitchToSignup }: LoginPageProps) {
+  const { isLoading, error: authError, login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [localError, setLocalError] = useState("");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLocalError("");
 
-    if (password !== confirmPassword) {
-      setLocalError("Passwords do not match");
+    if (!email || !password) {
+      setLocalError("Email and password are required");
       return;
     }
 
-    if (password.length < 6) {
-      setLocalError("Password must be at least 6 characters long");
-      return;
-    }
-
-    signup(email, password);
+    login(email, password);
   }
 
   const displayError = authError || localError;
@@ -60,7 +54,7 @@ export default function SignupPage({ onSwitchToLogin }: SignupPageProps) {
       <AuthCard elevation={8}>
         <Stack spacing={2.5}>
           <Typography variant="h5" align="center" fontWeight={700}>
-            Create Account
+            Login
           </Typography>
 
           {displayError && <Alert severity="error">{displayError}</Alert>}
@@ -85,15 +79,6 @@ export default function SignupPage({ onSwitchToLogin }: SignupPageProps) {
                 disabled={isLoading}
                 fullWidth
               />
-              <TextField
-                label="Confirm Password"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                disabled={isLoading}
-                fullWidth
-              />
 
               <Button
                 type="submit"
@@ -102,15 +87,15 @@ export default function SignupPage({ onSwitchToLogin }: SignupPageProps) {
                 fullWidth
                 disabled={isLoading}
               >
-                {isLoading ? "Creating account..." : "Create Account"}
+                {isLoading ? "Logging in..." : "Login"}
               </Button>
             </Stack>
           </Box>
 
           <Typography variant="body2" align="center">
-            Already have an account?{" "}
-            <Button variant="text" onClick={onSwitchToLogin}>
-              Login
+            Don't have an account?{" "}
+            <Button variant="text" onClick={onSwitchToSignup}>
+              Create one
             </Button>
           </Typography>
         </Stack>

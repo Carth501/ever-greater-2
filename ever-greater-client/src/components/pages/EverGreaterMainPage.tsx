@@ -1,11 +1,12 @@
 import { Alert, Stack, styled, Typography } from "@mui/material";
 import { JSX } from "react";
-import { useAuth } from "../hooks/useAuth";
-import { useGame } from "../hooks/useGame";
-import AuthHeader from "./AuthHeader";
-import PrintControls from "./PrintControls";
-import Shop from "./Shop";
-import TicketSummary from "./TicketSummary";
+import { useAuth } from "../../hooks/useAuth";
+import { useGame } from "../../hooks/useGame";
+import { useRealtime } from "../../hooks/useRealtime";
+import AuthHeader from "../common/AuthHeader";
+import PrintControls from "../game/PrintControls";
+import TicketSummary from "../game/TicketSummary";
+import Shop from "../shop/Shop";
 
 type MainPageProps = {
   onLogout: () => void;
@@ -17,6 +18,7 @@ const GameRoot = styled(Stack)(({ theme }) => ({
 
 function EverGreaterMainPage({ onLogout }: MainPageProps): JSX.Element {
   const { user: currentUser, logout } = useAuth();
+  const { isConnected } = useRealtime();
   const {
     count: scalingNumber,
     error,
@@ -50,6 +52,10 @@ function EverGreaterMainPage({ onLogout }: MainPageProps): JSX.Element {
         <Shop
           onPurchaseError={(message) => alert(`Purchase error: ${message}`)}
         />
+      )}
+
+      {!isConnected && (
+        <Alert severity="warning">Realtime connection unavailable</Alert>
       )}
 
       {error && <Alert severity="error">{error}</Alert>}

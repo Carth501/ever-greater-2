@@ -7,8 +7,7 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { styled } from "@mui/material/styles";
 import { useState } from "react";
-import { useAppDispatch, useAppSelector } from "../store/hooks";
-import { loginThunk } from "../store/slices/authSlice";
+import { useAuth } from "../hooks/useAuth";
 
 type LoginPageProps = {
   onSwitchToSignup: () => void;
@@ -31,8 +30,7 @@ const AuthCard = styled(Paper)(({ theme }) => ({
 }));
 
 export default function LoginPage({ onSwitchToSignup }: LoginPageProps) {
-  const dispatch = useAppDispatch();
-  const { isLoading, error: authError } = useAppSelector((state) => state.auth);
+  const { isLoading, error: authError, login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [localError, setLocalError] = useState("");
@@ -46,12 +44,7 @@ export default function LoginPage({ onSwitchToSignup }: LoginPageProps) {
       return;
     }
 
-    dispatch(
-      loginThunk({
-        email,
-        password,
-      }),
-    );
+    login(email, password);
   }
 
   const displayError = authError || localError;

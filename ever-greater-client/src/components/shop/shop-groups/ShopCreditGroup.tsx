@@ -3,7 +3,7 @@ import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
 import { User } from "ever-greater-shared";
 import { JSX } from "react";
-import CreditDisplay from "../CreditDisplay";
+import CreditDisplay from "../../common/CreditDisplay";
 import { ShopGroup, ShopRow } from "./ShopGroupLayout";
 
 type ShopCreditGroupProps = {

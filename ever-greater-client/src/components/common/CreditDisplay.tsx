@@ -3,8 +3,8 @@ import LinearProgress from "@mui/material/LinearProgress";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { JSX } from "react";
-import type { User } from "../api/auth";
-import { useAnimatedNumber } from "../hooks/useAnimatedNumber";
+import type { User } from "../../api/auth";
+import { useAnimatedNumber } from "../../hooks/useAnimatedNumber";
 
 type CreditDisplayProps = {
   user: User;

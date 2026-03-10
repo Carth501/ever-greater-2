@@ -3,6 +3,7 @@ import { websocketMiddleware } from "./middleware/websocketMiddleware";
 import authReducer from "./slices/authSlice";
 import errorReducer from "./slices/errorSlice";
 import operationsReducer from "./slices/operationsSlice";
+import realtimeReducer from "./slices/realtimeSlice";
 import ticketReducer from "./slices/ticketSlice";
 
 export const store = configureStore({
@@ -11,6 +12,7 @@ export const store = configureStore({
     ticket: ticketReducer,
     error: errorReducer,
     operations: operationsReducer,
+    realtime: realtimeReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(websocketMiddleware),

@@ -2,7 +2,7 @@ import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
 import { styled } from "@mui/material/styles";
 import { JSX } from "react";
-import { useAnimatedNumber } from "../hooks/useAnimatedNumber";
+import { useAnimatedNumber } from "../../hooks/useAnimatedNumber";
 
 interface Props {
   scalingNumber: number;
