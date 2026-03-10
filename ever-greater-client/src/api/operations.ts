@@ -1,4 +1,5 @@
 import { OperationId, type User } from "ever-greater-shared";
+import { apiFetch } from "./client";
 
 const DEFAULT_API_BASE = "http://localhost:4000";
 let apiBase = DEFAULT_API_BASE;
@@ -16,14 +17,6 @@ interface OperationResponse {
   user: User;
 }
 
-interface OperationError {
-  error: string;
-  insufficientResources?: string[];
-  cost?: Record<string, number>;
-  gain?: Record<string, number>;
-  details?: string;
-}
-
 /**
  * Execute an operation on the server
  * @param operationId The operation to execute
@@ -35,21 +28,15 @@ export async function executeOperation(
   operationId: OperationId,
   params?: Record<string, unknown>,
 ): Promise<User> {
-  const response = await fetch(`${apiBase}/api/operations/${operationId}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
+  const data = await apiFetch<OperationResponse>(
+    `${apiBase}/api/operations/${operationId}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(params || {}),
     },
-    credentials: "include",
-    body: JSON.stringify(params || {}),
-  });
-
-  if (!response.ok) {
-    const error: OperationError = await response.json();
-    throw new Error(error.error || "Operation failed");
-  }
-
-  const data: OperationResponse = await response.json();
+  );
   return data.user;
 }
 

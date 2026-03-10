@@ -1,4 +1,5 @@
 import { type User } from "ever-greater-shared";
+import { apiFetch, NetworkError } from "./client";
 
 const DEFAULT_API_BASE = "http://localhost:4000";
 let apiBase = DEFAULT_API_BASE;
@@ -33,21 +34,15 @@ type ToggleAutoBuySuppliesResponse = {
  * @returns User object
  */
 export async function register(email: string, password: string): Promise<User> {
-  const response = await fetch(`${apiBase}/api/auth/register`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
+  const data = await apiFetch<RegisterResponse>(
+    `${apiBase}/api/auth/register`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ email, password }),
     },
-    credentials: "include",
-    body: JSON.stringify({ email, password }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to register");
-  }
-
-  const data = (await response.json()) as RegisterResponse;
+  );
   return data.user;
 }
 
@@ -58,21 +53,12 @@ export async function register(email: string, password: string): Promise<User> {
  * @returns User object
  */
 export async function login(email: string, password: string): Promise<User> {
-  const response = await fetch(`${apiBase}/api/auth/login`, {
+  const data = await apiFetch<LoginResponse>(`${apiBase}/api/auth/login`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     credentials: "include",
     body: JSON.stringify({ email, password }),
   });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to login");
-  }
-
-  const data = (await response.json()) as LoginResponse;
   return data.user;
 }
 
@@ -82,19 +68,15 @@ export async function login(email: string, password: string): Promise<User> {
  */
 export async function getCurrentUser(): Promise<User | null> {
   try {
-    const response = await fetch(`${apiBase}/api/auth/me`, {
+    const data = await apiFetch<MeResponse>(`${apiBase}/api/auth/me`, {
       method: "GET",
       credentials: "include",
     });
-
-    if (!response.ok) {
-      return null;
-    }
-
-    const data = (await response.json()) as MeResponse;
     return data.user;
   } catch (error) {
-    console.error("Error fetching current user:", error);
+    if (error instanceof NetworkError) {
+      console.error("Error fetching current user:", error);
+    }
     return null;
   }
 }
@@ -103,35 +85,25 @@ export async function getCurrentUser(): Promise<User | null> {
  * Logout user
  */
 export async function logout(): Promise<void> {
-  const response = await fetch(`${apiBase}/api/auth/logout`, {
+  await apiFetch<unknown>(`${apiBase}/api/auth/logout`, {
     method: "POST",
     credentials: "include",
   });
-
-  if (!response.ok) {
-    throw new Error("Failed to logout");
-  }
 }
 
 /**
  * Toggle auto-buy supplies active state after unlock.
  */
 export async function setAutoBuySuppliesActive(active: boolean): Promise<User> {
-  const response = await fetch(`${apiBase}/api/auth/auto-buy-supplies/toggle`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
+  const data = await apiFetch<ToggleAutoBuySuppliesResponse>(
+    `${apiBase}/api/auth/auto-buy-supplies/toggle`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ active }),
     },
-    credentials: "include",
-    body: JSON.stringify({ active }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to toggle auto-buy supplies");
-  }
-
-  const data = (await response.json()) as ToggleAutoBuySuppliesResponse;
+  );
   return data.user;
 }
 

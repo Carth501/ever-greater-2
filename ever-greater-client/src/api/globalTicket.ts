@@ -1,3 +1,5 @@
+import { apiFetch } from "./client";
+
 const DEFAULT_API_BASE = "http://localhost:4000";
 let apiBase = DEFAULT_API_BASE;
 try {
@@ -38,11 +40,7 @@ function getWsUrl(): string {
 }
 
 export async function fetchGlobalCount(): Promise<number> {
-  const response = await fetch(`${apiBase}/api/count`);
-  if (!response.ok) {
-    throw new Error("Failed to fetch ticket count");
-  }
-  const data = (await response.json()) as CountPayload;
+  const data = await apiFetch<CountPayload>(`${apiBase}/api/count`);
   return data.count;
 }
 
@@ -50,23 +48,19 @@ export function connectGlobalCountSocket(
   onCount: (count: number) => void,
   onUserUpdate?: (update: UserUpdate) => void,
   onStatus?: (status: "open" | "closed" | "error") => void,
+  userId?: number,
 ): () => void {
   const socket = new WebSocket(getWsUrl());
 
   socket.addEventListener("open", () => {
     onStatus?.("open");
 
-    // Send authentication message with userId from localStorage or session
-    try {
-      const userIdStr = localStorage.getItem("userId");
-      if (userIdStr) {
-        const userId = parseInt(userIdStr, 10);
-        if (!isNaN(userId)) {
-          socket.send(JSON.stringify({ type: "authenticate", userId }));
-        }
+    if (userId !== undefined) {
+      try {
+        socket.send(JSON.stringify({ type: "authenticate", userId }));
+      } catch (err) {
+        console.error("Error sending authentication message:", err);
       }
-    } catch (err) {
-      console.error("Error sending authentication message:", err);
     }
   });
 

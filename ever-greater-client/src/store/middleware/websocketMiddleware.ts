@@ -1,119 +1,29 @@
-import { Middleware, isAction } from "@reduxjs/toolkit";
-import { connectGlobalCountSocket } from "../../api/globalTicket";
+import { Middleware } from "@reduxjs/toolkit";
+import { connect, disconnect } from "../../services/websocketService";
 import {
-  applyUserUpdate,
   checkAuthThunk,
+  loginThunk,
   logoutThunk,
+  signupThunk,
 } from "../slices/authSlice";
-import { setError } from "../slices/errorSlice";
-import {
-  clearError as clearTicketError,
-  updateCount,
-} from "../slices/ticketSlice";
-
-interface WebSocketState {
-  socket: WebSocket | null;
-  disconnectFn: (() => void) | null;
-}
-
-const wsState: WebSocketState = {
-  socket: null,
-  disconnectFn: null,
-};
-
-function connectWebSocket(dispatch: any, userId?: number) {
-  // Disconnect existing connection if any
-  if (wsState.disconnectFn) {
-    wsState.disconnectFn();
-  }
-
-  // Store userId in localStorage for WebSocket authentication
-  if (userId) {
-    localStorage.setItem("userId", userId.toString());
-  }
-
-  wsState.disconnectFn = connectGlobalCountSocket(
-    (count: number) => {
-      dispatch(updateCount(count));
-      dispatch(clearTicketError());
-    },
-    (update) => {
-      const payload = {
-        ...(update.supplies !== undefined
-          ? { printer_supplies: update.supplies }
-          : {}),
-        ...(update.money !== undefined ? { money: update.money } : {}),
-        ...(update.tickets_contributed !== undefined
-          ? { tickets_contributed: update.tickets_contributed }
-          : {}),
-        ...(update.tickets_withdrawn !== undefined
-          ? { tickets_withdrawn: update.tickets_withdrawn }
-          : {}),
-        ...(update.gold !== undefined ? { gold: update.gold } : {}),
-        ...(update.autoprinters !== undefined
-          ? { autoprinters: update.autoprinters }
-          : {}),
-        ...(update.credit_value !== undefined
-          ? { credit_value: update.credit_value }
-          : {}),
-        ...(update.credit_generation_level !== undefined
-          ? { credit_generation_level: update.credit_generation_level }
-          : {}),
-        ...(update.credit_capacity_level !== undefined
-          ? { credit_capacity_level: update.credit_capacity_level }
-          : {}),
-        ...(update.auto_buy_supplies_purchased !== undefined
-          ? {
-              auto_buy_supplies_purchased: update.auto_buy_supplies_purchased,
-            }
-          : {}),
-        ...(update.auto_buy_supplies_active !== undefined
-          ? { auto_buy_supplies_active: update.auto_buy_supplies_active }
-          : {}),
-      };
-
-      if (Object.keys(payload).length > 0) {
-        dispatch(applyUserUpdate(payload));
-      }
-    },
-    (status: "open" | "closed" | "error") => {
-      if (status === "error") {
-        dispatch(setError("WebSocket connection error"));
-      } else if (status === "closed") {
-        console.log("WebSocket disconnected");
-      }
-    },
-  );
-}
-
-function disconnectWebSocket() {
-  if (wsState.disconnectFn) {
-    wsState.disconnectFn();
-    wsState.disconnectFn = null;
-  }
-  // Clear userId from localStorage
-  localStorage.removeItem("userId");
-}
 
 export const websocketMiddleware: Middleware =
   (store) => (next) => (action) => {
     const result = next(action);
     const state = store.getState();
 
-    // Connect WebSocket when user logs in or auth is verified
     if (
       checkAuthThunk.fulfilled.match(action) ||
-      (isAction(action) && action.type === "auth/login/fulfilled") ||
-      (isAction(action) && action.type === "auth/signup/fulfilled")
+      loginThunk.fulfilled.match(action) ||
+      signupThunk.fulfilled.match(action)
     ) {
       if (state.auth.user) {
-        connectWebSocket(store.dispatch, state.auth.user.id);
+        connect(state.auth.user.id, store.dispatch);
       }
     }
 
-    // Disconnect WebSocket when user logs out
     if (logoutThunk.fulfilled.match(action)) {
-      disconnectWebSocket();
+      disconnect();
     }
 
     return result;
@@ -121,5 +31,5 @@ export const websocketMiddleware: Middleware =
 
 // Export cleanup function for app shutdown
 export function cleanupWebSocket() {
-  disconnectWebSocket();
+  disconnect();
 }
