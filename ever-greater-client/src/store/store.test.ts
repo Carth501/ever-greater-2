@@ -1,10 +1,11 @@
-import { configureStore } from "@reduxjs/toolkit";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { User } from "../api/auth";
 import * as authApi from "../api/auth";
 import * as ticketApi from "../api/globalTicket";
 import * as operationsApi from "../api/operations";
-import authReducer, {
+import { mockUser as buildMockUser } from "../tests/fixtures";
+import { createTestStore } from "../tests/utils/testStore";
+import {
   AuthState,
   checkAuthThunk,
   loginThunk,
@@ -15,18 +16,14 @@ import authReducer, {
   updateMoney,
   updateSupplies,
 } from "./slices/authSlice";
-import errorReducer, {
-  clearError,
-  ErrorState,
-  setError,
-} from "./slices/errorSlice";
+import { clearError, ErrorState, setError } from "./slices/errorSlice";
 import {
   buyAutoBuySuppliesThunk,
   buyAutoprinterThunk,
   buyGoldThunk,
   buySuppliesThunk,
 } from "./slices/operationsSlice";
-import ticketReducer, {
+import {
   clearError as clearTicketError,
   fetchCountThunk,
   incrementCountThunk,
@@ -42,21 +39,7 @@ const mockAuthApi = authApi as any;
 const mockTicketApi = ticketApi as any;
 const mockOperationsApi = operationsApi as any;
 
-const mockUser: User = {
-  id: 1,
-  email: "test@example.com",
-  tickets_contributed: 5,
-  tickets_withdrawn: 0,
-  printer_supplies: 100,
-  money: 0,
-  gold: 0,
-  autoprinters: 0,
-  credit_value: 0,
-  credit_generation_level: 0,
-  credit_capacity_level: 0,
-  auto_buy_supplies_active: false,
-  auto_buy_supplies_purchased: false,
-};
+const mockUser: User = buildMockUser();
 
 type TestRootState = {
   auth: AuthState;
@@ -65,17 +48,11 @@ type TestRootState = {
 };
 
 describe("Redux Store Integration", () => {
-  let store: ReturnType<typeof configureStore<TestRootState>>;
+  let store: ReturnType<typeof createTestStore>;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    store = configureStore({
-      reducer: {
-        auth: authReducer,
-        ticket: ticketReducer,
-        error: errorReducer,
-      },
-    });
+    store = createTestStore();
   });
 
   describe("auth flow", () => {

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { User } from "../../api/auth";
 import * as globalTicketApi from "../../api/globalTicket";
+import { mockUser } from "../../tests/fixtures";
 import { checkAuthThunk, loginThunk, logoutThunk } from "../slices/authSlice";
 import { updateCount } from "../slices/ticketSlice";
 import { websocketMiddleware } from "./websocketMiddleware";
@@ -9,21 +10,7 @@ vi.mock("../../api/globalTicket");
 
 const mockGlobalTicketApi = globalTicketApi as any;
 
-const mockUser: User = {
-  id: 1,
-  email: "test@example.com",
-  tickets_contributed: 5,
-  tickets_withdrawn: 0,
-  printer_supplies: 100,
-  money: 0,
-  gold: 0,
-  autoprinters: 0,
-  credit_value: 0,
-  credit_generation_level: 0,
-  credit_capacity_level: 0,
-  auto_buy_supplies_purchased: false,
-  auto_buy_supplies_active: false,
-};
+const defaultUser: User = mockUser();
 
 describe("websocketMiddleware", () => {
   let mockDisconnect: any;
@@ -49,7 +36,7 @@ describe("websocketMiddleware", () => {
     return {
       getState: vi.fn(() => ({
         auth: {
-          user: mockUser,
+          user: defaultUser,
           isCheckingAuth: false,
           isLoading: false,
           error: null,
@@ -73,7 +60,7 @@ describe("websocketMiddleware", () => {
     const next = createMockNext();
     const middleware = websocketMiddleware(store)(next);
 
-    const action = checkAuthThunk.fulfilled(mockUser, "");
+    const action = checkAuthThunk.fulfilled(defaultUser, "");
     middleware(action);
 
     expect(mockGlobalTicketApi.connectGlobalCountSocket).toHaveBeenCalled();
@@ -85,7 +72,7 @@ describe("websocketMiddleware", () => {
     const next = createMockNext();
     const middleware = websocketMiddleware(store)(next);
 
-    const action = loginThunk.fulfilled(mockUser, "", {
+    const action = loginThunk.fulfilled(defaultUser, "", {
       email: "",
       password: "",
     });
@@ -100,7 +87,7 @@ describe("websocketMiddleware", () => {
     const next = createMockNext();
     const middleware = websocketMiddleware(store)(next);
 
-    const action = loginThunk.fulfilled(mockUser, "", {
+    const action = loginThunk.fulfilled(defaultUser, "", {
       email: "",
       password: "",
     });
@@ -115,7 +102,7 @@ describe("websocketMiddleware", () => {
     const middleware = websocketMiddleware(store)(next);
 
     // First connect
-    const connectAction = checkAuthThunk.fulfilled(mockUser, "");
+    const connectAction = checkAuthThunk.fulfilled(defaultUser, "");
     middleware(connectAction);
     expect(mockGlobalTicketApi.connectGlobalCountSocket).toHaveBeenCalledTimes(
       1,
@@ -193,7 +180,7 @@ describe("websocketMiddleware", () => {
     });
 
     const middleware = websocketMiddleware(store)(next);
-    middleware(checkAuthThunk.fulfilled(mockUser, ""));
+    middleware(checkAuthThunk.fulfilled(defaultUser, ""));
 
     expect(callOrder[0]).toBe("next");
   });
@@ -212,7 +199,7 @@ describe("websocketMiddleware", () => {
         return mockDisconnect;
       }) as any);
 
-      middleware(checkAuthThunk.fulfilled(mockUser, ""));
+      middleware(checkAuthThunk.fulfilled(defaultUser, ""));
 
       // Simulate WebSocket message
       onCountCallback!(99);
@@ -245,7 +232,7 @@ describe("websocketMiddleware", () => {
         },
       );
 
-      middleware(checkAuthThunk.fulfilled(mockUser, ""));
+      middleware(checkAuthThunk.fulfilled(defaultUser, ""));
 
       // Simulate WebSocket error
       onStatusCallback!("error");
@@ -276,7 +263,7 @@ describe("websocketMiddleware", () => {
         },
       );
 
-      middleware(checkAuthThunk.fulfilled(mockUser, ""));
+      middleware(checkAuthThunk.fulfilled(defaultUser, ""));
 
       // Simulate WebSocket message with credit level updates
       onUserUpdateCallback!({
@@ -315,7 +302,7 @@ describe("websocketMiddleware", () => {
 
       // Start with user having credit generation level 1, capacity 1, value 0
       const userWithCreditSetup: User = {
-        ...mockUser,
+        ...defaultUser,
         credit_generation_level: 1,
         credit_capacity_level: 1,
         credit_value: 0,
