@@ -574,6 +574,114 @@ describe('Express API Endpoints', () => {
       expect(response.body.user.credit_capacity_level).toBeDefined();
       expect(response.body.user.credit_value).toBeDefined();
     });
+
+    it('should return 400 INVALID_REQUEST for unknown operationId', async () => {
+      const testUser = {
+        id: 1,
+        email: 'test@example.com',
+        password_hash: await bcrypt.hash('password123', 10),
+        printer_supplies: 100,
+        money: 0,
+        gold: 0,
+        autoprinters: 0,
+        tickets_contributed: 0,
+        tickets_withdrawn: 0,
+        credit_value: 0,
+        credit_generation_level: 0,
+        credit_capacity_level: 0,
+        auto_buy_supplies_purchased: false,
+        auto_buy_supplies_active: false,
+      };
+
+      db.getUserByEmail.mockResolvedValue(testUser);
+
+      await agent
+        .post('/api/auth/login')
+        .send({ email: 'test@example.com', password: 'password123' })
+        .expect(200);
+
+      const response = await agent
+        .post('/api/operations/NOT_AN_OPERATION')
+        .send({})
+        .expect(400);
+
+      expect(response.body.error).toBe('INVALID_REQUEST');
+      expect(response.body.detail).toContain('NOT_AN_OPERATION');
+    });
+
+    it('should return 400 INVALID_REQUEST for non-positive quantity', async () => {
+      const testUser = {
+        id: 1,
+        email: 'test@example.com',
+        password_hash: await bcrypt.hash('password123', 10),
+        printer_supplies: 100,
+        money: 500,
+        gold: 0,
+        autoprinters: 0,
+        tickets_contributed: 0,
+        tickets_withdrawn: 0,
+        credit_value: 0,
+        credit_generation_level: 0,
+        credit_capacity_level: 0,
+        auto_buy_supplies_purchased: false,
+        auto_buy_supplies_active: false,
+      };
+
+      db.getUserByEmail.mockResolvedValue(testUser);
+
+      await agent
+        .post('/api/auth/login')
+        .send({ email: 'test@example.com', password: 'password123' })
+        .expect(200);
+
+      const response = await agent
+        .post('/api/operations/BUY_GOLD')
+        .send({ quantity: -5 })
+        .expect(400);
+
+      expect(response.body.error).toBe('INVALID_REQUEST');
+      expect(response.body.detail).toBe('quantity must be a positive integer');
+    });
+
+    it('should return 403 GLOBAL_TICKET_LIMIT when user exceeds withdrawal limit', async () => {
+      const testUser = {
+        id: 1,
+        email: 'test@example.com',
+        password_hash: await bcrypt.hash('password123', 10),
+        printer_supplies: 100,
+        money: 0,
+        gold: 0,
+        autoprinters: 0,
+        tickets_contributed: 5,
+        tickets_withdrawn: 5,
+        credit_value: 0,
+        credit_generation_level: 0,
+        credit_capacity_level: 0,
+        auto_buy_supplies_purchased: false,
+        auto_buy_supplies_active: false,
+      };
+
+      db.getUserByEmail.mockResolvedValue(testUser);
+      db.getUserById.mockResolvedValue(testUser);
+      db.getGlobalCount.mockResolvedValue(100);
+
+      const limitError = new Error('Personal ticket withdrawal limit exceeded');
+      limitError.name = 'GlobalTicketLimitExceeded';
+      db.executeResourceTransaction.mockRejectedValueOnce(limitError);
+
+      await agent
+        .post('/api/auth/login')
+        .send({ email: 'test@example.com', password: 'password123' })
+        .expect(200);
+
+      const response = await agent
+        .post('/api/operations/PRINT_TICKET')
+        .send({})
+        .expect(403);
+
+      expect(response.body.error).toBe('GLOBAL_TICKET_LIMIT');
+      expect(response.body.detail).toBe('Personal ticket withdrawal limit exceeded');
+    });
   });
 
   describe('POST /api/auth/auto-buy-supplies/toggle', () => {

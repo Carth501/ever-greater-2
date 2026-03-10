@@ -7,12 +7,15 @@ import {
   operations,
   ResourceType,
   validateOperation,
+  type GlobalCountUpdate,
+  type UserResourceUpdate,
 } from "ever-greater-shared";
 import express, { type Express } from "express";
 import session from "express-session";
 import http, { type Server } from "http";
 import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer, type RawData } from "ws";
+import { z } from "zod";
 import {
   cleanupOldTicketWithdrawals,
   closePool,
@@ -49,7 +52,7 @@ const socketUserMap = new Map<WebSocket, number>();
 const PgSession = connectPgSimple(session);
 
 type UserUpdatePayload = Partial<{
-  supplies: number;
+  printer_supplies: number;
   money: number;
   gold: number;
   autoprinters: number;
@@ -95,7 +98,10 @@ function getErrorMessage(error: unknown): string {
 
 function broadcastCount(count: number): void {
   if (!wss) return;
-  const payload = JSON.stringify({ count });
+  const payload = JSON.stringify({
+    type: "GLOBAL_COUNT_UPDATE",
+    count,
+  } satisfies GlobalCountUpdate);
   wss.clients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {
       client.send(payload);
@@ -109,13 +115,16 @@ async function sendUserUpdate(
 ): Promise<void> {
   if (!wss) return;
 
+  const message: UserResourceUpdate = {
+    type: "USER_RESOURCE_UPDATE",
+    user_update: updates,
+  };
   wss.clients.forEach((client) => {
     if (
       client.readyState === WebSocket.OPEN &&
       socketUserMap.get(client) === userId
     ) {
-      const payload = JSON.stringify({ user_update: updates });
-      client.send(payload);
+      client.send(JSON.stringify(message));
     }
   });
 }
@@ -138,13 +147,14 @@ async function broadcastAutoprinterUpdates(): Promise<void> {
             socketUserMap.get(client) === userId
           ) {
             const payload = JSON.stringify({
+              type: "USER_RESOURCE_UPDATE",
               user_update: {
-                supplies: user.printer_supplies,
+                printer_supplies: user.printer_supplies,
                 money: user.money,
                 tickets_contributed: user.tickets_contributed,
                 tickets_withdrawn: user.tickets_withdrawn,
               },
-            });
+            } satisfies UserResourceUpdate);
             client.send(payload);
           }
         });
@@ -378,12 +388,31 @@ function createApp(): Express {
         return res.status(401).json({ error: "Not authenticated" });
       }
 
-      const operationIdParam = req.params.operationId;
-      if (!Object.prototype.hasOwnProperty.call(operations, operationIdParam)) {
-        return res.status(404).json({ error: "Unknown operation" });
+      const operationIdResult = z
+        .nativeEnum(OperationId)
+        .safeParse(req.params.operationId);
+      if (!operationIdResult.success) {
+        return res.status(400).json({
+          error: "INVALID_REQUEST",
+          detail: `Unknown operationId: ${req.params.operationId}`,
+        });
       }
 
-      const operationId = operationIdParam as OperationId;
+      if (req.body.quantity !== undefined) {
+        const quantityResult = z
+          .number()
+          .int()
+          .positive()
+          .safeParse(req.body.quantity);
+        if (!quantityResult.success) {
+          return res.status(400).json({
+            error: "INVALID_REQUEST",
+            detail: "quantity must be a positive integer",
+          });
+        }
+      }
+
+      const operationId = operationIdResult.data;
       const operation = operations[operationId];
 
       const user = await getUserById(req.session.userId);
@@ -504,7 +533,7 @@ function createApp(): Express {
 
       // Broadcast user updates
       await sendUserUpdate(req.session.userId, {
-        supplies: updatedUser.printer_supplies,
+        printer_supplies: updatedUser.printer_supplies,
         money: updatedUser.money,
         gold: updatedUser.gold,
         autoprinters: updatedUser.autoprinters,
@@ -525,6 +554,15 @@ function createApp(): Express {
         user: toClientUser(updatedUser),
       });
     } catch (error) {
+      if (
+        error instanceof Error &&
+        error.name === "GlobalTicketLimitExceeded"
+      ) {
+        return res.status(403).json({
+          error: "GLOBAL_TICKET_LIMIT",
+          detail: error.message,
+        });
+      }
       console.error("Error executing operation:", error);
       return res.status(500).json({
         error: "Failed to execute operation",

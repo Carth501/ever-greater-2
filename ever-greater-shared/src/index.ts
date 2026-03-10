@@ -28,3 +28,11 @@ export type {
   ResourceCalculator,
   ValidationResult,
 } from "./operations";
+
+// Export typed WebSocket message shapes
+export type {
+  GlobalCountUpdate,
+  UserResourceFields,
+  UserResourceUpdate,
+  WebSocketMessage,
+} from "./messages.js";

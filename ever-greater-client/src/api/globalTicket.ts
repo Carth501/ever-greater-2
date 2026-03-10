@@ -1,3 +1,4 @@
+import { type WebSocketMessage } from "ever-greater-shared";
 import { apiFetch } from "./client";
 
 const DEFAULT_API_BASE = "http://localhost:4000";
@@ -13,7 +14,7 @@ type CountPayload = {
 };
 
 type UserUpdate = {
-  supplies?: number;
+  printer_supplies?: number;
   money?: number;
   tickets_contributed?: number;
   tickets_withdrawn?: number;
@@ -24,12 +25,6 @@ type UserUpdate = {
   credit_capacity_level?: number;
   auto_buy_supplies_purchased?: boolean;
   auto_buy_supplies_active?: boolean;
-};
-
-type WebSocketPayload = {
-  count?: number;
-  user_update?: UserUpdate;
-  authenticated?: boolean;
 };
 
 function getWsUrl(): string {
@@ -68,16 +63,14 @@ export function connectGlobalCountSocket(
   socket.addEventListener("error", () => onStatus?.("error"));
   socket.addEventListener("message", (event) => {
     try {
-      const payload = JSON.parse(event.data as string) as WebSocketPayload;
+      const message = JSON.parse(event.data as string) as WebSocketMessage;
 
-      // Handle global count update
-      if (typeof payload.count === "number") {
-        onCount(payload.count);
-      }
-
-      // Handle user-specific updates
-      if (payload.user_update && onUserUpdate) {
-        onUserUpdate(payload.user_update);
+      if (message.type === "GLOBAL_COUNT_UPDATE") {
+        onCount(message.count);
+      } else if (message.type === "USER_RESOURCE_UPDATE") {
+        if (onUserUpdate) {
+          onUserUpdate(message.user_update);
+        }
       }
     } catch (err) {
       // Ignore malformed payloads.

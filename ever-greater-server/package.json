@@ -23,7 +23,8 @@
 		"express": "^4.19.2",
 		"express-session": "^1.19.0",
 		"pg": "^8.18.0",
-		"ws": "^8.18.0"
+		"ws": "^8.18.0",
+		"zod": "^4.3.6"
 	},
 	"devDependencies": {
 		"@babel/preset-env": "^7.29.0",

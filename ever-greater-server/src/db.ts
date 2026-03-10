@@ -6,6 +6,17 @@ import {
 } from "ever-greater-shared";
 import { Pool, PoolClient } from "pg";
 
+/**
+ * Thrown when a user attempts to withdraw global tickets beyond their personal
+ * contribution-based limit within the 24-hour rolling window.
+ */
+export class GlobalTicketLimitExceeded extends Error {
+  constructor() {
+    super("Personal ticket withdrawal limit exceeded");
+    this.name = "GlobalTicketLimitExceeded";
+  }
+}
+
 const DEFAULT_STARTING_PRINTER_SUPPLIES = 1000;
 const parsedStartingPrinterSupplies = Number.parseInt(
   process.env.STARTING_PRINTER_SUPPLIES ??
@@ -387,23 +398,12 @@ export async function executeResourceTransaction(
         Number(withdrawnIn24h) + Number(globalTicketCost);
 
       if (projectedWithdrawal > personalLimit) {
-        // Silently ignore the request if limit is exceeded
-        // Return current user state without executing transaction
         if (useTransaction && txClient) {
           await txClient.query("ROLLBACK");
           txClient.release();
           txClient = null;
         }
-        const currentUser = await (dbClient || pool).query(
-          "SELECT id, email, tickets_contributed, printer_supplies, money, gold, autoprinters, credit_value, credit_generation_level, credit_capacity_level, auto_buy_supplies_purchased, auto_buy_supplies_active FROM users WHERE id = $1",
-          [userId],
-        );
-        if (currentUser.rows.length === 0) {
-          throw new Error("User not found");
-        }
-        const userRow = currentUser.rows[0];
-        const tickets_withdrawn = await getTicketsWithdrawnIn24Hours(userId);
-        return Object.assign(userRow, { tickets_withdrawn }) as User;
+        throw new GlobalTicketLimitExceeded();
       }
 
       // Validate and deduct from global_state atomically
