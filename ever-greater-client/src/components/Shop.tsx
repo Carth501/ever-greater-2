@@ -15,10 +15,10 @@ import { JSX } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { useGame } from "../hooks/useGame";
 import { useOperations } from "../hooks/useOperations";
-import ShopCreditGroup from "./shop-groups/ShopCreditGroup";
-import ShopGlobalTicketsGroup from "./shop-groups/ShopGlobalTicketsGroup";
-import ShopGoldGroup from "./shop-groups/ShopGoldGroup";
-import ShopMoneyGroup from "./shop-groups/ShopMoneyGroup";
+import ShopCreditGroup from "./shop/shop-groups/ShopCreditGroup";
+import ShopGlobalTicketsGroup from "./shop/shop-groups/ShopGlobalTicketsGroup";
+import ShopGoldGroup from "./shop/shop-groups/ShopGoldGroup";
+import ShopMoneyGroup from "./shop/shop-groups/ShopMoneyGroup";
 
 type ShopProps = {
   onPurchaseError?: (error: string) => void;
