@@ -21,6 +21,8 @@ const mockUser: User = {
   credit_value: 0,
   credit_generation_level: 0,
   credit_capacity_level: 0,
+  auto_buy_supplies_purchased: false,
+  auto_buy_supplies_active: false,
 };
 
 describe("websocketMiddleware", () => {
