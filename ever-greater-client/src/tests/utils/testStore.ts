@@ -34,6 +34,8 @@ function buildDefaultState(): RootState {
     operations: {},
     realtime: {
       isConnected: false,
+      isReconnecting: false,
+      lastUpdateAt: null,
     },
   };
 }

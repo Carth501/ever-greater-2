@@ -12,7 +12,6 @@ import authReducer, {
   loginThunk,
   logoutThunk,
   signupThunk,
-  updateSupplies,
 } from "./authSlice";
 import {
   buyAutoBuySuppliesThunk,
@@ -61,7 +60,10 @@ describe("authSlice", () => {
         error: null,
       };
 
-      const newState = authReducer(state, updateSupplies(75));
+      const newState = authReducer(
+        state,
+        applyUserUpdate({ printer_supplies: 75 }),
+      );
       expect(newState.user?.printer_supplies).toBe(75);
     });
 
@@ -74,7 +76,10 @@ describe("authSlice", () => {
         error: null,
       };
 
-      const newState = authReducer(state, updateSupplies(75));
+      const newState = authReducer(
+        state,
+        applyUserUpdate({ printer_supplies: 75 }),
+      );
       expect(newState.user).toBeNull();
     });
   });

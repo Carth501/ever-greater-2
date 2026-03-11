@@ -3,18 +3,19 @@ import type { User } from "../api/auth";
 import * as authApi from "../api/auth";
 import * as ticketApi from "../api/globalTicket";
 import * as operationsApi from "../api/operations";
-import { mockUser as buildMockUser } from "../tests/fixtures";
+import {
+  mockUser as buildMockUser,
+  mockWsCountUpdate,
+  mockWsUserUpdate,
+} from "../tests/fixtures";
 import { createTestStore } from "../tests/utils/testStore";
 import {
+  applyUserUpdate,
   AuthState,
   checkAuthThunk,
   loginThunk,
   logoutThunk,
   signupThunk,
-  updateAutoprinters,
-  updateGold,
-  updateMoney,
-  updateSupplies,
 } from "./slices/authSlice";
 import { clearError, ErrorState, setError } from "./slices/errorSlice";
 import {
@@ -395,39 +396,22 @@ describe("Redux Store Integration", () => {
       );
     });
 
-    it("should update supplies", () => {
-      store.dispatch(updateSupplies(200));
+    it("should apply a single-field user update", () => {
+      store.dispatch(applyUserUpdate({ printer_supplies: 200 }));
 
       const state = store.getState();
       expect(state.auth.user?.printer_supplies).toBe(200);
     });
 
-    it("should update money", () => {
-      store.dispatch(updateMoney(500));
-
-      const state = store.getState();
-      expect(state.auth.user?.money).toBe(500);
-    });
-
-    it("should update gold", () => {
-      store.dispatch(updateGold(25));
-
-      const state = store.getState();
-      expect(state.auth.user?.gold).toBe(25);
-    });
-
-    it("should update autoprinters", () => {
-      store.dispatch(updateAutoprinters(3));
-
-      const state = store.getState();
-      expect(state.auth.user?.autoprinters).toBe(3);
-    });
-
-    it("should handle multiple resource updates", () => {
-      store.dispatch(updateSupplies(75));
-      store.dispatch(updateMoney(250));
-      store.dispatch(updateGold(15));
-      store.dispatch(updateAutoprinters(2));
+    it("should apply a multi-field user update atomically", () => {
+      store.dispatch(
+        applyUserUpdate({
+          printer_supplies: 75,
+          money: 250,
+          gold: 15,
+          autoprinters: 2,
+        }),
+      );
 
       const state = store.getState();
       expect(state.auth.user?.printer_supplies).toBe(75);
@@ -567,6 +551,18 @@ describe("Redux Store Integration", () => {
       expect(state.ticket.error).toBeNull();
       expect(state.ticket.count).toBe(100);
     });
+
+    it("should surface GLOBAL_TICKET_LIMIT error when the global limit is reached", async () => {
+      mockOperationsApi.printTicket.mockRejectedValueOnce(
+        new Error("GLOBAL_TICKET_LIMIT"),
+      );
+
+      await store.dispatch(incrementCountThunk() as any);
+
+      const state = store.getState();
+      expect(state.ticket.error).toBe("GLOBAL_TICKET_LIMIT");
+      expect(state.auth.user).toEqual(mockUser);
+    });
   });
 
   describe("complex sequential operations", () => {
@@ -687,9 +683,9 @@ describe("Redux Store Integration", () => {
       expect(state.ticket.count).toBe(999999999);
     });
 
-    it("should handle resource updates when user is null", () => {
-      // No user logged in
-      store.dispatch(updateSupplies(100));
+    it("should handle applyUserUpdate when user is null", () => {
+      // No user logged in — update is silently ignored
+      store.dispatch(applyUserUpdate({ printer_supplies: 100 }));
 
       const state = store.getState();
       expect(state.auth.user).toBeNull();
@@ -707,6 +703,54 @@ describe("Redux Store Integration", () => {
       store.dispatch(clearError());
       state = store.getState();
       expect(state.error.message).toBeNull();
+    });
+  });
+
+  describe("WebSocket update handling", () => {
+    it("should update ticket count when a GLOBAL_COUNT_UPDATE arrives", () => {
+      const { count } = mockWsCountUpdate(42);
+      store.dispatch(updateCount(count));
+
+      const state = store.getState();
+      expect(state.ticket.count).toBe(42);
+    });
+
+    it("should apply partial user fields from a USER_RESOURCE_UPDATE", async () => {
+      mockAuthApi.login.mockResolvedValueOnce(mockUser);
+      await store.dispatch(
+        loginThunk({
+          email: "test@example.com",
+          password: "password123",
+        }) as any,
+      );
+
+      const { user_update } = mockWsUserUpdate({
+        printer_supplies: 75,
+        money: 150,
+      });
+      store.dispatch(applyUserUpdate(user_update));
+
+      const state = store.getState();
+      expect(state.auth.user?.printer_supplies).toBe(75);
+      expect(state.auth.user?.money).toBe(150);
+      expect(state.auth.user?.email).toBe(mockUser.email);
+    });
+
+    it("should update credit value from USER_RESOURCE_UPDATE without disturbing other fields", async () => {
+      mockAuthApi.login.mockResolvedValueOnce(mockUser);
+      await store.dispatch(
+        loginThunk({
+          email: "test@example.com",
+          password: "password123",
+        }) as any,
+      );
+
+      const { user_update } = mockWsUserUpdate({ credit_value: 8.5 });
+      store.dispatch(applyUserUpdate(user_update));
+
+      const state = store.getState();
+      expect(state.auth.user?.credit_value).toBe(8.5);
+      expect(state.auth.user?.printer_supplies).toBe(mockUser.printer_supplies);
     });
   });
 });

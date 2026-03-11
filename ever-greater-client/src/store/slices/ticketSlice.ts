@@ -1,7 +1,6 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import * as ticketApi from "../../api/globalTicket";
 import * as operationsApi from "../../api/operations";
-import { applyUserUpdate } from "./authSlice";
 
 export interface TicketState {
   count: number;
@@ -34,20 +33,15 @@ export const fetchCountThunk = createAsyncThunk(
 
 export const incrementCountThunk = createAsyncThunk(
   "ticket/incrementCount",
-  async (_, { rejectWithValue, dispatch }) => {
+  async (_, { rejectWithValue }) => {
     try {
       const updatedUser = await operationsApi.printTicket();
-      // Update auth state with new user resources
-      dispatch(
-        applyUserUpdate({
-          printer_supplies: updatedUser.printer_supplies,
-          money: updatedUser.money,
-          gold: updatedUser.gold,
-          autoprinters: updatedUser.autoprinters || 0,
-        }),
-      );
-      // Count updates will come via WebSocket
-      return undefined;
+      return {
+        printer_supplies: updatedUser.printer_supplies,
+        money: updatedUser.money,
+        gold: updatedUser.gold,
+        autoprinters: updatedUser.autoprinters ?? 0,
+      };
     } catch (error) {
       return rejectWithValue(
         error instanceof Error ? error.message : "Failed to print ticket",
