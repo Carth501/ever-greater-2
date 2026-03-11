@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import connectPgSimple from "connect-pg-simple";
 import cors from "cors";
+import { randomUUID } from "crypto";
 import "dotenv/config";
 import {
   OperationId,
@@ -10,6 +11,7 @@ import {
   type GlobalCountUpdate,
   type UserResourceUpdate,
 } from "ever-greater-shared";
+import type { Request } from "express";
 import express, { type Express } from "express";
 import session from "express-session";
 import http, { type Server } from "http";
@@ -41,6 +43,7 @@ declare module "express-session" {
 
 const __filename = fileURLToPath(import.meta.url);
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
+const SESSION_SECRET_FALLBACK = "your-secret-key-change-in-production";
 
 let wss: WebSocketServer | undefined;
 let server: Server | undefined;
@@ -94,6 +97,36 @@ interface IncomingSocketMessage {
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Unknown error";
+}
+
+type LogLevel = "info" | "warn" | "error";
+
+function logEvent(
+  level: LogLevel,
+  message: string,
+  fields: Record<string, unknown> = {},
+): void {
+  const entry = {
+    timestamp: new Date().toISOString(),
+    level,
+    message,
+    ...fields,
+  };
+  const formatted = JSON.stringify(entry);
+  if (level === "error") {
+    console.error(formatted);
+    return;
+  }
+  console.log(formatted);
+}
+
+function logRouteError(req: Request, error: unknown, message: string): void {
+  logEvent("error", message, {
+    method: req.method,
+    route: req.path,
+    requestId: req.header("x-request-id") ?? null,
+    error: getErrorMessage(error),
+  });
 }
 
 function broadcastCount(count: number): void {
@@ -203,6 +236,13 @@ async function broadcastCreditUpdates(): Promise<void> {
 function createApp(): Express {
   const app = express();
 
+  app.use((req, res, next) => {
+    const requestId = randomUUID();
+    req.headers["x-request-id"] = requestId;
+    res.setHeader("x-request-id", requestId);
+    next();
+  });
+
   app.use(
     cors({
       origin: process.env.CLIENT_URL || "http://localhost:3000",
@@ -214,6 +254,14 @@ function createApp(): Express {
   // Use MemoryStore for testing, PgSession for production
   const isTestEnvironment =
     process.env.NODE_ENV === "test" || process.env.VITEST === "true";
+  const sessionSecret = process.env.SESSION_SECRET || SESSION_SECRET_FALLBACK;
+  if (
+    process.env.NODE_ENV === "production" &&
+    sessionSecret === SESSION_SECRET_FALLBACK
+  ) {
+    throw new Error("SESSION_SECRET must be configured in production");
+  }
+
   const sessionStore = isTestEnvironment
     ? undefined // Uses default MemoryStore
     : new PgSession({
@@ -224,8 +272,7 @@ function createApp(): Express {
   app.use(
     session({
       store: sessionStore,
-      secret:
-        process.env.SESSION_SECRET || "your-secret-key-change-in-production",
+      secret: sessionSecret,
       resave: false,
       saveUninitialized: false,
       cookie: {
@@ -235,6 +282,25 @@ function createApp(): Express {
       },
     }),
   );
+
+  app.get("/health", async (req, res) => {
+    try {
+      await pool.query("SELECT 1");
+      return res.json({
+        status: "ok",
+        db: "up",
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      logRouteError(req, error, "Health check failed");
+      return res.status(503).json({
+        status: "error",
+        db: "down",
+        error: getErrorMessage(error),
+        timestamp: new Date().toISOString(),
+      });
+    }
+  });
 
   app.post("/api/auth/register", async (req, res) => {
     try {
@@ -262,7 +328,7 @@ function createApp(): Express {
 
       return res.status(201).json({ user: toClientUser(user) });
     } catch (error) {
-      console.error("Error registering user:", error);
+      logRouteError(req, error, "Error registering user");
       return res.status(500).json({ error: "Failed to register user" });
     }
   });
@@ -297,7 +363,7 @@ function createApp(): Express {
 
       return res.json({ user: toClientUser(user) });
     } catch (error) {
-      console.error("Error logging in user:", error);
+      logRouteError(req, error, "Error logging in user");
       return res.status(500).json({ error: "Failed to login" });
     }
   });
@@ -315,7 +381,7 @@ function createApp(): Express {
 
       return res.json({ user: toClientUser(user) });
     } catch (error) {
-      console.error("Error fetching current user:", error);
+      logRouteError(req, error, "Error fetching current user");
       return res.status(500).json({ error: "Failed to fetch user" });
     }
   });
@@ -323,19 +389,19 @@ function createApp(): Express {
   app.post("/api/auth/logout", (req, res) => {
     req.session.destroy((err?: Error) => {
       if (err) {
-        console.error("Error destroying session:", err);
+        logRouteError(req, err, "Error destroying session");
         return res.status(500).json({ error: "Failed to logout" });
       }
       return res.json({ message: "Logged out successfully" });
     });
   });
 
-  app.get("/api/count", async (_req, res) => {
+  app.get("/api/count", async (req, res) => {
     try {
       const count = await getGlobalCount();
       return res.json({ count });
     } catch (error) {
-      console.error("Error getting count:", error);
+      logRouteError(req, error, "Error getting count");
       return res.status(500).json({ error: "Failed to retrieve count" });
     }
   });
@@ -374,7 +440,7 @@ function createApp(): Express {
 
       return res.json({ user: toClientUser(updatedUser) });
     } catch (error) {
-      console.error("Error toggling auto-buy supplies:", error);
+      logRouteError(req, error, "Error toggling auto-buy supplies");
       return res
         .status(500)
         .json({ error: "Failed to toggle auto-buy supplies" });
@@ -563,7 +629,7 @@ function createApp(): Express {
           detail: error.message,
         });
       }
-      console.error("Error executing operation:", error);
+      logRouteError(req, error, "Error executing operation");
       return res.status(500).json({
         error: "Failed to execute operation",
         details: getErrorMessage(error),

@@ -1,15 +1,106 @@
 import { connectGlobalCountSocket } from "../api/globalTicket";
 import { applyUserUpdate } from "../store/slices/authSlice";
 import { setError } from "../store/slices/errorSlice";
-import { setConnected } from "../store/slices/realtimeSlice";
+import { setConnected, setReconnecting } from "../store/slices/realtimeSlice";
 import {
   clearError as clearTicketError,
   updateCount,
 } from "../store/slices/ticketSlice";
 
-let disconnectFn: (() => void) | null = null;
+type SocketStatus = "open" | "closed" | "error";
 
-export function connect(
+const CONNECT_TIMEOUT_MS = 5000;
+const BASE_RECONNECT_DELAY_MS = 1000;
+const MAX_RECONNECT_DELAY_MS = 15000;
+
+let disconnectFn: (() => void) | null = null;
+let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+let connectTimeoutTimer: ReturnType<typeof setTimeout> | null = null;
+let reconnectAttempt = 0;
+let isManualDisconnect = false;
+let activeUserId: number | null = null;
+let activeDispatch:
+  | ((
+      action: ReturnType<
+        | typeof applyUserUpdate
+        | typeof updateCount
+        | typeof clearTicketError
+        | typeof setError
+        | typeof setConnected
+        | typeof setReconnecting
+      >,
+    ) => void)
+  | null = null;
+
+const clearTimers = (): void => {
+  if (connectTimeoutTimer) {
+    clearTimeout(connectTimeoutTimer);
+    connectTimeoutTimer = null;
+  }
+
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+};
+
+const getReconnectDelay = (attempt: number): number => {
+  const backoff = Math.min(
+    MAX_RECONNECT_DELAY_MS,
+    BASE_RECONNECT_DELAY_MS * 2 ** Math.max(attempt - 1, 0),
+  );
+  const jitter = Math.floor(Math.random() * 250);
+  return backoff + jitter;
+};
+
+const scheduleReconnect = (): void => {
+  if (
+    isManualDisconnect ||
+    reconnectTimer ||
+    !activeDispatch ||
+    !activeUserId
+  ) {
+    return;
+  }
+
+  reconnectAttempt += 1;
+  const delay = getReconnectDelay(reconnectAttempt);
+  activeDispatch(setReconnecting(true));
+
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    if (!isManualDisconnect && activeDispatch && activeUserId) {
+      startConnection(activeUserId, activeDispatch);
+    }
+  }, delay);
+};
+
+const handleStatus = (status: SocketStatus): void => {
+  if (!activeDispatch) {
+    return;
+  }
+
+  if (status === "open") {
+    reconnectAttempt = 0;
+    if (connectTimeoutTimer) {
+      clearTimeout(connectTimeoutTimer);
+      connectTimeoutTimer = null;
+    }
+    activeDispatch(setConnected(true));
+    activeDispatch(setReconnecting(false));
+    return;
+  }
+
+  activeDispatch(setConnected(false));
+
+  if (status === "error") {
+    activeDispatch(setError("WebSocket connection error"));
+  }
+
+  scheduleReconnect();
+};
+
+function startConnection(
   userId: number,
   dispatch: (
     action: ReturnType<
@@ -18,12 +109,27 @@ export function connect(
       | typeof clearTicketError
       | typeof setError
       | typeof setConnected
+      | typeof setReconnecting
     >,
   ) => void,
 ): void {
   if (disconnectFn) {
     disconnectFn();
+    disconnectFn = null;
   }
+
+  if (connectTimeoutTimer) {
+    clearTimeout(connectTimeoutTimer);
+  }
+
+  connectTimeoutTimer = setTimeout(() => {
+    connectTimeoutTimer = null;
+    if (disconnectFn) {
+      disconnectFn();
+      disconnectFn = null;
+    }
+    handleStatus("error");
+  }, CONNECT_TIMEOUT_MS);
 
   disconnectFn = connectGlobalCountSocket(
     (count: number) => {
@@ -35,24 +141,50 @@ export function connect(
         dispatch(applyUserUpdate(update));
       }
     },
-    (status: "open" | "closed" | "error") => {
-      if (status === "open") {
-        dispatch(setConnected(true));
-      } else if (status === "error") {
-        dispatch(setConnected(false));
-        dispatch(setError("WebSocket connection error"));
-      } else if (status === "closed") {
-        dispatch(setConnected(false));
-        console.log("WebSocket disconnected");
-      }
+    (status) => {
+      handleStatus(status);
     },
     userId,
   );
 }
 
+export function connect(
+  userId: number,
+  dispatch: (
+    action: ReturnType<
+      | typeof applyUserUpdate
+      | typeof updateCount
+      | typeof clearTicketError
+      | typeof setError
+      | typeof setConnected
+      | typeof setReconnecting
+    >,
+  ) => void,
+): void {
+  isManualDisconnect = false;
+  activeUserId = userId;
+  activeDispatch = dispatch;
+  clearTimers();
+  dispatch(setReconnecting(false));
+  startConnection(userId, dispatch);
+}
+
 export function disconnect(): void {
+  isManualDisconnect = true;
+  clearTimers();
+
   if (disconnectFn) {
     disconnectFn();
     disconnectFn = null;
   }
+
+  reconnectAttempt = 0;
+  activeUserId = null;
+
+  if (activeDispatch) {
+    activeDispatch(setConnected(false));
+    activeDispatch(setReconnecting(false));
+  }
+
+  activeDispatch = null;
 }

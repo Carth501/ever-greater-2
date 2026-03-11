@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { ResourceType } from 'ever-greater-shared';
+import { OperationId, ResourceType } from 'ever-greater-shared';
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as db from './db.ts';
@@ -276,6 +276,54 @@ describe('Express API Endpoints', () => {
     });
   });
 
+  describe('GET /health', () => {
+    it('should return healthy status when database responds', async () => {
+      db.pool.query.mockResolvedValue({ rows: [{ '?column?': 1 }] });
+
+      const response = await request(app)
+        .get('/health')
+        .expect(200);
+
+      expect(response.body.status).toBe('ok');
+      expect(response.body.db).toBe('up');
+      expect(response.body.timestamp).toBeDefined();
+      expect(db.pool.query).toHaveBeenCalledWith('SELECT 1');
+    });
+
+    it('should return 503 when database health check fails', async () => {
+      db.pool.query.mockRejectedValue(new Error('DB unavailable'));
+
+      const response = await request(app)
+        .get('/health')
+        .expect(503);
+
+      expect(response.body.status).toBe('error');
+      expect(response.body.db).toBe('down');
+      expect(response.body.error).toBe('DB unavailable');
+    });
+  });
+
+  describe('createApp production safeguards', () => {
+    it('should throw if SESSION_SECRET is missing in production', () => {
+      const oldNodeEnv = process.env.NODE_ENV;
+      const oldSessionSecret = process.env.SESSION_SECRET;
+
+      process.env.NODE_ENV = 'production';
+      delete process.env.SESSION_SECRET;
+
+      expect(() => createApp()).toThrow(
+        'SESSION_SECRET must be configured in production',
+      );
+
+      process.env.NODE_ENV = oldNodeEnv;
+      if (oldSessionSecret === undefined) {
+        delete process.env.SESSION_SECRET;
+      } else {
+        process.env.SESSION_SECRET = oldSessionSecret;
+      }
+    });
+  });
+
   describe('POST /api/auth/logout', () => {
     it('should logout successfully', async () => {
       const response = await request(app)
@@ -287,6 +335,48 @@ describe('Express API Endpoints', () => {
   });
 
   describe('POST /api/operations', () => {
+    it('should resolve every OperationId through the operations route', async () => {
+      const testUser = {
+        id: 1,
+        email: 'test@example.com',
+        password_hash: await bcrypt.hash('password123', 10),
+        printer_supplies: 100,
+        money: 500,
+        gold: 50,
+        autoprinters: 1,
+        tickets_contributed: 100,
+        tickets_withdrawn: 0,
+        credit_value: 100,
+        credit_generation_level: 1,
+        credit_capacity_level: 5,
+        auto_buy_supplies_purchased: true,
+        auto_buy_supplies_active: true,
+      };
+
+      db.getUserByEmail.mockResolvedValue(testUser);
+      db.getUserById.mockResolvedValue(testUser);
+      db.getGlobalCount.mockResolvedValue(100);
+      db.incrementGlobalCount.mockResolvedValue(101);
+      db.executeResourceTransaction.mockResolvedValue(testUser);
+      db.purchaseAutoBuySupplies.mockResolvedValue(testUser);
+
+      await agent
+        .post('/api/auth/login')
+        .send({ email: 'test@example.com', password: 'password123' })
+        .expect(200);
+
+      for (const operationId of Object.values(OperationId)) {
+        const payload =
+          operationId === OperationId.BUY_GOLD ? { quantity: 1 } : {};
+
+        const response = await agent
+          .post(`/api/operations/${operationId}`)
+          .send(payload);
+
+        expect(response.status).not.toBe(404);
+      }
+    });
+
     it('should unlock auto-buy supplies via one-time operation', async () => {
       const testUser = {
         id: 1,

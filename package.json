@@ -6,10 +6,12 @@
 		"server": "npm --prefix ever-greater-server start",
 		"dev": "npm-run-all --parallel server client",
 		"kill": "powershell -Command \"$process = Get-NetTCPConnection -LocalPort 4000 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -First 1; if ($process) { Stop-Process -Id $process -Force; Write-Host 'Killed process on port 4000' } else { Write-Host 'No process found on port 4000' }\"",
-		"test": "npm-run-all test:shared test:server test:client",
+		"check:shared-deps": "node scripts/check-shared-deps.cjs",
+		"guardrails": "npm run check:shared-deps",
+		"test": "npm-run-all guardrails test:shared test:server test:client",
 		"test:shared": "npm --prefix ever-greater-shared test",
 		"test:server": "npm --prefix ever-greater-server test",
-		"test:client": "npm --prefix ever-greater-client test"
+		"test:client": "npm --prefix ever-greater-client run test -- --run"
 	},
 	"devDependencies": {
 		"npm-run-all": "^4.1.5"
