@@ -1,4 +1,3 @@
-import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
@@ -32,7 +31,7 @@ const ShopGroups = styled(Box)(({ theme }) => ({
 }));
 
 function Shop({ onPurchaseError }: ShopProps): JSX.Element {
-  const { user: currentUser, error } = useAuth();
+  const { user: currentUser } = useAuth();
   const { count: globalTicketCount } = useGame();
   const {
     buySupplies,
@@ -189,8 +188,6 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
             onIncreaseCreditCapacity={increaseCreditCapacity}
           />
         </ShopGroups>
-
-        {error && <Alert severity="error">{error}</Alert>}
       </Stack>
     </Paper>
   );

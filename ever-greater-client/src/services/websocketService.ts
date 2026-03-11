@@ -1,7 +1,11 @@
 import { connectGlobalCountSocket } from "../api/globalTicket";
 import { applyUserUpdate } from "../store/slices/authSlice";
 import { setError } from "../store/slices/errorSlice";
-import { setConnected, setReconnecting } from "../store/slices/realtimeSlice";
+import {
+  markUpdateReceived,
+  setConnected,
+  setReconnecting,
+} from "../store/slices/realtimeSlice";
 import {
   clearError as clearTicketError,
   updateCount,
@@ -26,6 +30,7 @@ let activeDispatch:
         | typeof updateCount
         | typeof clearTicketError
         | typeof setError
+        | typeof markUpdateReceived
         | typeof setConnected
         | typeof setReconnecting
       >,
@@ -87,6 +92,7 @@ const handleStatus = (status: SocketStatus): void => {
       connectTimeoutTimer = null;
     }
     activeDispatch(setConnected(true));
+    activeDispatch(markUpdateReceived(Date.now()));
     activeDispatch(setReconnecting(false));
     return;
   }
@@ -108,6 +114,7 @@ function startConnection(
       | typeof updateCount
       | typeof clearTicketError
       | typeof setError
+      | typeof markUpdateReceived
       | typeof setConnected
       | typeof setReconnecting
     >,
@@ -134,11 +141,13 @@ function startConnection(
   disconnectFn = connectGlobalCountSocket(
     (count: number) => {
       dispatch(updateCount(count));
+      dispatch(markUpdateReceived(Date.now()));
       dispatch(clearTicketError());
     },
     (update) => {
       if (Object.keys(update).length > 0) {
         dispatch(applyUserUpdate(update));
+        dispatch(markUpdateReceived(Date.now()));
       }
     },
     (status) => {
@@ -156,6 +165,7 @@ export function connect(
       | typeof updateCount
       | typeof clearTicketError
       | typeof setError
+      | typeof markUpdateReceived
       | typeof setConnected
       | typeof setReconnecting
     >,

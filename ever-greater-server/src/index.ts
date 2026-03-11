@@ -45,6 +45,24 @@ const __filename = fileURLToPath(import.meta.url);
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
 const SESSION_SECRET_FALLBACK = "your-secret-key-change-in-production";
 
+const DEFAULT_ALLOWED_ORIGINS = [
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+];
+
+function getAllowedOrigins(): string[] {
+  const configuredOrigins = (process.env.CLIENT_URL || "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  return configuredOrigins.length > 0
+    ? configuredOrigins
+    : DEFAULT_ALLOWED_ORIGINS;
+}
+
 let wss: WebSocketServer | undefined;
 let server: Server | undefined;
 let autoprinterInterval: NodeJS.Timeout | undefined;
@@ -235,6 +253,7 @@ async function broadcastCreditUpdates(): Promise<void> {
 
 function createApp(): Express {
   const app = express();
+  const allowedOrigins = getAllowedOrigins();
 
   app.use((req, res, next) => {
     const requestId = randomUUID();
@@ -245,7 +264,20 @@ function createApp(): Express {
 
   app.use(
     cors({
-      origin: process.env.CLIENT_URL || "http://localhost:3000",
+      origin(origin, callback) {
+        // Allow requests without an Origin header (e.g. curl, server-to-server).
+        if (!origin) {
+          callback(null, true);
+          return;
+        }
+
+        if (allowedOrigins.includes(origin)) {
+          callback(null, true);
+          return;
+        }
+
+        callback(new Error(`Not allowed by CORS: ${origin}`));
+      },
       credentials: true,
     }),
   );

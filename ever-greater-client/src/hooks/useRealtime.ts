@@ -1,8 +1,8 @@
 import { useAppSelector } from "../store/hooks";
 
 export function useRealtime() {
-  const { isConnected, isReconnecting } = useAppSelector(
+  const { isConnected, isReconnecting, lastUpdateAt } = useAppSelector(
     (state) => state.realtime,
   );
-  return { isConnected, isReconnecting };
+  return { isConnected, isReconnecting, lastUpdateAt };
 }
