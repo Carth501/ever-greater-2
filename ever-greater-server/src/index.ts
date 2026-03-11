@@ -237,10 +237,11 @@ async function broadcastCreditUpdates(): Promise<void> {
             socketUserMap.get(client) === userId
           ) {
             const payload = JSON.stringify({
+              type: "USER_RESOURCE_UPDATE",
               user_update: {
                 credit_value: user.credit_value,
               },
-            });
+            } satisfies UserResourceUpdate);
             client.send(payload);
           }
         });
@@ -679,7 +680,12 @@ function createServer(app: Express): Server {
   wss.on("connection", async (socket: WebSocket) => {
     try {
       const count = await getGlobalCount();
-      socket.send(JSON.stringify({ count }));
+      socket.send(
+        JSON.stringify({
+          type: "GLOBAL_COUNT_UPDATE",
+          count,
+        } satisfies GlobalCountUpdate),
+      );
     } catch (error) {
       console.error("Error sending initial count to WebSocket client:", error);
     }
