@@ -1,8 +1,9 @@
-import { configureStore } from "@reduxjs/toolkit";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { User } from "../../api/auth";
 import * as authApi from "../../api/auth";
 import * as operationsApi from "../../api/operations";
+import { mockUser } from "../../tests/fixtures";
+import { createTestStore } from "../../tests/utils/testStore";
 import authReducer, {
   AuthState,
   applyUserUpdate,
@@ -11,7 +12,6 @@ import authReducer, {
   loginThunk,
   logoutThunk,
   signupThunk,
-  updateSupplies,
 } from "./authSlice";
 import {
   buyAutoBuySuppliesThunk,
@@ -26,21 +26,7 @@ vi.mock("../../api/operations");
 const mockAuthApi = authApi as any;
 const mockOperationsApi = operationsApi as any;
 
-const mockUser: User = {
-  id: 1,
-  email: "test@example.com",
-  tickets_contributed: 5,
-  tickets_withdrawn: 0,
-  printer_supplies: 100,
-  money: 0,
-  gold: 0,
-  autoprinters: 0,
-  credit_value: 0,
-  credit_generation_level: 0,
-  credit_capacity_level: 0,
-  auto_buy_supplies_purchased: false,
-  auto_buy_supplies_active: false,
-};
+const defaultUser = mockUser();
 
 describe("authSlice", () => {
   const initialState: AuthState = {
@@ -67,14 +53,17 @@ describe("authSlice", () => {
 
     it("should update supplies when user exists", () => {
       const state: AuthState = {
-        user: mockUser,
+        user: defaultUser,
         isCheckingAuth: false,
         isLoading: false,
         pendingRequestCount: 0,
         error: null,
       };
 
-      const newState = authReducer(state, updateSupplies(75));
+      const newState = authReducer(
+        state,
+        applyUserUpdate({ printer_supplies: 75 }),
+      );
       expect(newState.user?.printer_supplies).toBe(75);
     });
 
@@ -87,28 +76,29 @@ describe("authSlice", () => {
         error: null,
       };
 
-      const newState = authReducer(state, updateSupplies(75));
+      const newState = authReducer(
+        state,
+        applyUserUpdate({ printer_supplies: 75 }),
+      );
       expect(newState.user).toBeNull();
     });
   });
 
   describe("thunks with store", () => {
-    let store: ReturnType<typeof configureStore>;
+    let store: ReturnType<typeof createTestStore>;
 
     beforeEach(() => {
-      store = configureStore({
-        reducer: { auth: authReducer },
-      });
+      store = createTestStore();
       vi.clearAllMocks();
     });
 
     it("should handle successful auth check", async () => {
-      mockAuthApi.getCurrentUser.mockResolvedValueOnce(mockUser);
+      mockAuthApi.getCurrentUser.mockResolvedValueOnce(defaultUser);
       await store.dispatch(checkAuthThunk() as any);
 
       const state = (store.getState() as { auth: AuthState }).auth;
       expect(state.isCheckingAuth).toBe(false);
-      expect(state.user).toEqual(mockUser);
+      expect(state.user).toEqual(defaultUser);
       expect(state.error).toBeNull();
     });
 
@@ -122,7 +112,7 @@ describe("authSlice", () => {
     });
 
     it("should handle successful login", async () => {
-      mockAuthApi.login.mockResolvedValueOnce(mockUser);
+      mockAuthApi.login.mockResolvedValueOnce(defaultUser);
 
       const credentials = {
         email: "test@example.com",
@@ -132,7 +122,7 @@ describe("authSlice", () => {
 
       const state = (store.getState() as { auth: AuthState }).auth;
       expect(state.isLoading).toBe(false);
-      expect(state.user).toEqual(mockUser);
+      expect(state.user).toEqual(defaultUser);
       expect(state.error).toBeNull();
     });
 
@@ -150,7 +140,7 @@ describe("authSlice", () => {
     });
 
     it("should handle successful signup", async () => {
-      mockAuthApi.register.mockResolvedValueOnce(mockUser);
+      mockAuthApi.register.mockResolvedValueOnce(defaultUser);
 
       const credentials = {
         email: "newuser@example.com",
@@ -160,7 +150,7 @@ describe("authSlice", () => {
 
       const state = (store.getState() as { auth: AuthState }).auth;
       expect(state.isLoading).toBe(false);
-      expect(state.user).toEqual(mockUser);
+      expect(state.user).toEqual(defaultUser);
       expect(state.error).toBeNull();
     });
 
@@ -168,14 +158,13 @@ describe("authSlice", () => {
       mockAuthApi.logout.mockResolvedValueOnce(undefined);
 
       const stateWithUser: AuthState = {
-        user: mockUser,
+        user: defaultUser,
         isCheckingAuth: false,
         isLoading: false,
         pendingRequestCount: 0,
         error: null,
       };
-      store = configureStore({
-        reducer: { auth: authReducer },
+      store = createTestStore({
         preloadedState: { auth: stateWithUser },
       });
 
@@ -190,7 +179,7 @@ describe("authSlice", () => {
     it("should preserve tickets withdrawn and credit fields when buyGold response is partial", async () => {
       const stateWithUser: AuthState = {
         user: {
-          ...mockUser,
+          ...defaultUser,
           tickets_withdrawn: 12,
           credit_value: 4,
           credit_generation_level: 3,
@@ -202,14 +191,13 @@ describe("authSlice", () => {
         error: null,
       };
 
-      store = configureStore({
-        reducer: { auth: authReducer },
+      store = createTestStore({
         preloadedState: { auth: stateWithUser },
       });
 
       mockOperationsApi.buyGold.mockResolvedValueOnce({
-        id: mockUser.id,
-        email: mockUser.email,
+        id: defaultUser.id,
+        email: defaultUser.email,
         money: 100,
         gold: 3,
       } as unknown as User);
@@ -226,7 +214,7 @@ describe("authSlice", () => {
     it("should preserve tickets withdrawn and credit fields when buySupplies response is partial", async () => {
       const stateWithUser: AuthState = {
         user: {
-          ...mockUser,
+          ...defaultUser,
           tickets_withdrawn: 9,
           credit_value: 5,
           credit_generation_level: 2,
@@ -238,14 +226,13 @@ describe("authSlice", () => {
         error: null,
       };
 
-      store = configureStore({
-        reducer: { auth: authReducer },
+      store = createTestStore({
         preloadedState: { auth: stateWithUser },
       });
 
       mockOperationsApi.buySupplies.mockResolvedValueOnce({
-        id: mockUser.id,
-        email: mockUser.email,
+        id: defaultUser.id,
+        email: defaultUser.email,
         printer_supplies: 300,
         gold: 2,
       } as unknown as User);
@@ -262,7 +249,7 @@ describe("authSlice", () => {
     it("should unlock auto-buy supplies via buyAutoBuySuppliesThunk", async () => {
       const stateWithUser: AuthState = {
         user: {
-          ...mockUser,
+          ...defaultUser,
           gold: 2,
           auto_buy_supplies_purchased: false,
           auto_buy_supplies_active: false,
@@ -273,13 +260,12 @@ describe("authSlice", () => {
         error: null,
       };
 
-      store = configureStore({
-        reducer: { auth: authReducer },
+      store = createTestStore({
         preloadedState: { auth: stateWithUser },
       });
 
       mockOperationsApi.buyAutoBuySupplies.mockResolvedValueOnce({
-        ...mockUser,
+        ...defaultUser,
         gold: 1,
         auto_buy_supplies_purchased: true,
         auto_buy_supplies_active: true,
@@ -295,7 +281,7 @@ describe("authSlice", () => {
     it("should update active state via toggleAutoBuySuppliesThunk", async () => {
       const stateWithUser: AuthState = {
         user: {
-          ...mockUser,
+          ...defaultUser,
           auto_buy_supplies_purchased: true,
           auto_buy_supplies_active: true,
         },
@@ -305,13 +291,12 @@ describe("authSlice", () => {
         error: null,
       };
 
-      store = configureStore({
-        reducer: { auth: authReducer },
+      store = createTestStore({
         preloadedState: { auth: stateWithUser },
       });
 
       mockAuthApi.setAutoBuySuppliesActive.mockResolvedValueOnce({
-        ...mockUser,
+        ...defaultUser,
         auto_buy_supplies_purchased: true,
         auto_buy_supplies_active: false,
       } as User);
@@ -328,10 +313,10 @@ describe("authSlice", () => {
     it("should set isCheckingAuth to false on checkAuthThunk.fulfilled", () => {
       const state = authReducer(
         initialState,
-        checkAuthThunk.fulfilled(mockUser, ""),
+        checkAuthThunk.fulfilled(defaultUser, ""),
       );
       expect(state.isCheckingAuth).toBe(false);
-      expect(state.user).toEqual(mockUser);
+      expect(state.user).toEqual(defaultUser);
       expect(state.error).toBeNull();
     });
 
@@ -357,10 +342,10 @@ describe("authSlice", () => {
     it("should set user on loginThunk.fulfilled", () => {
       const state = authReducer(
         initialState,
-        loginThunk.fulfilled(mockUser, "", { email: "", password: "" }),
+        loginThunk.fulfilled(defaultUser, "", { email: "", password: "" }),
       );
       expect(state.isLoading).toBe(false);
-      expect(state.user).toEqual(mockUser);
+      expect(state.user).toEqual(defaultUser);
       expect(state.error).toBeNull();
     });
 
@@ -379,7 +364,7 @@ describe("authSlice", () => {
     });
 
     it("should clear user on logoutThunk.fulfilled", () => {
-      const stateWithUser: AuthState = { ...initialState, user: mockUser };
+      const stateWithUser: AuthState = { ...initialState, user: defaultUser };
       const state = authReducer(stateWithUser, logoutThunk.fulfilled(null, ""));
       expect(state.user).toBeNull();
       expect(state.isLoading).toBe(false);
@@ -389,7 +374,7 @@ describe("authSlice", () => {
     it("should apply user update with credit level fields via applyUserUpdate reducer", () => {
       const stateWithUser: AuthState = {
         ...initialState,
-        user: mockUser,
+        user: defaultUser,
       };
 
       const updatePayload = {
@@ -404,8 +389,8 @@ describe("authSlice", () => {
       expect(state.user?.credit_generation_level).toBe(3);
       expect(state.user?.credit_capacity_level).toBe(10);
       // Verify other fields remain unchanged
-      expect(state.user?.email).toBe(mockUser.email);
-      expect(state.user?.id).toBe(mockUser.id);
+      expect(state.user?.email).toBe(defaultUser.email);
+      expect(state.user?.id).toBe(defaultUser.id);
     });
   });
 });

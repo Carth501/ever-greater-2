@@ -4,10 +4,12 @@ describe('Database Functions', () => {
   let mockPool;
   let mockClient;
   let db;
+  let consoleErrorSpy;
 
   beforeEach(async () => {
     // Clear all mocks
     vi.clearAllMocks();
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     
     // Reset modules to reload db.js fresh
     vi.resetModules();
@@ -38,6 +40,7 @@ describe('Database Functions', () => {
   });
 
   afterEach(() => {
+    consoleErrorSpy?.mockRestore();
     vi.resetModules();
     vi.clearAllMocks();
   });

@@ -98,13 +98,14 @@ Instead, it will copy all the configuration files and transitive dependencies (w
 
 ### Environment Variables
 
-| Variable                    | Description                  | Default | Required |
-| --------------------------- | ---------------------------- | ------- | -------- |
-| `DATABASE_URL`              | PostgreSQL connection string | -       | Yes      |
-| `PORT`                      | Server port                  | `4000`  | No       |
-| `DB_POOL_MAX`               | Maximum database connections | `10`    | No       |
-| `DB_POOL_IDLE_TIMEOUT`      | Connection idle timeout (ms) | `30000` | No       |
-| `STARTING_PRINTER_SUPPLIES` | Starting supplies for users  | `1000`  | No       |
+| Variable                    | Description                            | Default                                                                                   | Required |
+| --------------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------- | -------- |
+| `DATABASE_URL`              | PostgreSQL connection string           | -                                                                                         | Yes      |
+| `PORT`                      | Server port                            | `4000`                                                                                    | No       |
+| `CLIENT_URL`                | Allowed CORS origins (comma-separated) | `http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173` | No       |
+| `DB_POOL_MAX`               | Maximum database connections           | `10`                                                                                      | No       |
+| `DB_POOL_IDLE_TIMEOUT`      | Connection idle timeout (ms)           | `30000`                                                                                   | No       |
+| `STARTING_PRINTER_SUPPLIES` | Starting supplies for users            | `1000`                                                                                    | No       |
 
 ### Server Scripts
 

@@ -1,5 +1,4 @@
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import PrintControls from "./PrintControls";
 
@@ -32,7 +31,7 @@ describe("PrintControls", () => {
     expect(screen.getByText("15")).toBeTruthy();
   });
 
-  it("should call onPrintClick when print button is clicked", async () => {
+  it("should call onPrintClick when print button is clicked", () => {
     const mockOnPrintClick = vi.fn();
     render(
       <PrintControls
@@ -43,7 +42,7 @@ describe("PrintControls", () => {
     );
 
     const printButton = screen.getByRole("button", { name: /print a ticket/i });
-    await userEvent.click(printButton);
+    fireEvent.click(printButton);
 
     expect(mockOnPrintClick).toHaveBeenCalledOnce();
   });

@@ -1,7 +1,8 @@
-import { configureStore } from "@reduxjs/toolkit";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as ticketApi from "../../api/globalTicket";
 import * as operationsApi from "../../api/operations";
+import { mockUser } from "../../tests/fixtures";
+import { createTestStore } from "../../tests/utils/testStore";
 import ticketReducer, {
   clearError,
   fetchCountThunk,
@@ -42,12 +43,10 @@ describe("ticketSlice", () => {
   });
 
   describe("thunks with store", () => {
-    let store: ReturnType<typeof configureStore>;
+    let store: ReturnType<typeof createTestStore>;
 
     beforeEach(() => {
-      store = configureStore({
-        reducer: { ticket: ticketReducer },
-      });
+      store = createTestStore();
       vi.clearAllMocks();
     });
 
@@ -78,24 +77,15 @@ describe("ticketSlice", () => {
 
     it("should print ticket successfully", async () => {
       const stateWithCount: TicketState = { ...initialState, count: 100 };
-      store = configureStore({
-        reducer: { ticket: ticketReducer },
+      store = createTestStore({
         preloadedState: { ticket: stateWithCount },
       });
 
-      const mockUpdatedUser = {
-        id: 1,
-        email: "test@example.com",
+      const mockUpdatedUser = mockUser({
         tickets_contributed: 1,
-        tickets_withdrawn: 0,
         printer_supplies: 99,
         money: 1,
-        gold: 0,
-        autoprinters: 0,
-        credit_value: 0,
-        credit_generation_level: 0,
-        credit_capacity_level: 0,
-      };
+      });
 
       mockOperationsApi.printTicket.mockResolvedValueOnce(mockUpdatedUser);
 

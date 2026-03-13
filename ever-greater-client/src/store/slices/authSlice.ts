@@ -10,6 +10,7 @@ import {
   increaseCreditGenerationThunk,
   toggleAutoBuySuppliesThunk,
 } from "./operationsSlice";
+import { incrementCountThunk } from "./ticketSlice";
 
 type UserUpdatePayload = Partial<
   Pick<
@@ -125,40 +126,6 @@ const authSlice = createSlice({
   reducers: {
     clearError: (state) => {
       state.error = null;
-    },
-    updateSupplies: (state, action) => {
-      if (state.user) {
-        state.user.printer_supplies = action.payload;
-      }
-    },
-    updateMoney: (state, action) => {
-      if (state.user) {
-        state.user.money = action.payload;
-      }
-    },
-    updateTicketsContributed: (state, action) => {
-      if (state.user) {
-        // Handle both absolute value and incremental updates
-        if (typeof action.payload === "number") {
-          // If it's less than 100, treat as increment (common for WebSocket updates)
-          if (action.payload < 100) {
-            state.user.tickets_contributed += action.payload;
-          } else {
-            // Otherwise, treat as absolute value
-            state.user.tickets_contributed = action.payload;
-          }
-        }
-      }
-    },
-    updateGold: (state, action) => {
-      if (state.user) {
-        state.user.gold = action.payload;
-      }
-    },
-    updateAutoprinters: (state, action) => {
-      if (state.user) {
-        state.user.autoprinters = action.payload;
-      }
     },
     applyUserUpdate: (state, action: { payload: UserUpdatePayload }) => {
       if (state.user) {
@@ -360,16 +327,15 @@ const authSlice = createSlice({
         finishLoading(state);
         state.error = action.payload as string;
       });
+
+    // incrementCountThunk — auth reacts to fulfilled to apply returned user fields
+    builder.addCase(incrementCountThunk.fulfilled, (state, action) => {
+      if (state.user) {
+        state.user = { ...state.user, ...action.payload };
+      }
+    });
   },
 });
 
-export const {
-  clearError,
-  updateSupplies,
-  updateMoney,
-  updateTicketsContributed,
-  updateGold,
-  updateAutoprinters,
-  applyUserUpdate,
-} = authSlice.actions;
+export const { clearError, applyUserUpdate } = authSlice.actions;
 export default authSlice.reducer;
