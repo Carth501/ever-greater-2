@@ -35,8 +35,7 @@ const ActionPanel = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(2.5),
   borderRadius: 20,
   border: `1px solid ${alpha(theme.palette.primary.main, 0.28)}`,
-  background:
-    `linear-gradient(180deg, ${alpha(theme.palette.primary.main, 0.14)} 0%, ${alpha(theme.palette.background.paper, 0.96)} 100%)`,
+  background: `linear-gradient(180deg, ${alpha(theme.palette.primary.main, 0.14)} 0%, ${alpha(theme.palette.background.paper, 0.96)} 100%)`,
 }));
 
 interface SuppliesCardProps {
@@ -76,7 +75,8 @@ function PrintControls({
               Print controls
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              The primary action stays obvious even as the dashboard becomes more modular.
+              The primary action stays obvious even as the dashboard becomes
+              more modular.
             </Typography>
           </Box>
 
@@ -93,7 +93,8 @@ function PrintControls({
                 Main action
               </Typography>
               <Typography variant="body1" color="text.secondary">
-                Printing remains the clearest call to action, with the accent reserved for the highest-priority interaction.
+                Printing remains the clearest call to action, with the accent
+                reserved for the highest-priority interaction.
               </Typography>
               <Button
                 onClick={onPrintClick}

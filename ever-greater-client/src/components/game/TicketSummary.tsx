@@ -17,8 +17,7 @@ const TicketCard = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(3),
   borderRadius: 22,
   border: `1px solid ${alpha(theme.palette.primary.main, 0.28)}`,
-  background:
-    `linear-gradient(180deg, ${alpha(theme.palette.primary.main, 0.14)} 0%, ${alpha(theme.palette.background.paper, 0.96)} 100%)`,
+  background: `linear-gradient(180deg, ${alpha(theme.palette.primary.main, 0.14)} 0%, ${alpha(theme.palette.background.paper, 0.96)} 100%)`,
   boxShadow: `0 14px 30px ${alpha(theme.palette.common.black, 0.22)}`,
   textAlign: "left",
 }));

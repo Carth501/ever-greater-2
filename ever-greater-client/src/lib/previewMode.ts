@@ -1,9 +1,11 @@
-export type PreviewMode = {
-  kind: "index";
-} | {
-  kind: "dashboard";
-  showControls: boolean;
-};
+export type PreviewMode =
+  | {
+      kind: "index";
+    }
+  | {
+      kind: "dashboard";
+      showControls: boolean;
+    };
 
 type LocationShape = Pick<Location, "hash" | "pathname" | "search">;
 

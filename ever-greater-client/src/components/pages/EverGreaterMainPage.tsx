@@ -23,8 +23,7 @@ const IntroCard = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(3.5),
   borderRadius: 24,
   border: `1px solid ${alpha(theme.palette.primary.light, 0.24)}`,
-  background:
-    `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.16)} 0%, ${alpha(theme.palette.background.paper, 0.96)} 50%, ${alpha(theme.palette.secondary.dark, 0.94)} 100%)`,
+  background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.16)} 0%, ${alpha(theme.palette.background.paper, 0.96)} 50%, ${alpha(theme.palette.secondary.dark, 0.94)} 100%)`,
   boxShadow: `0 18px 48px ${alpha(theme.palette.common.black, 0.24)}`,
 }));
 
@@ -72,10 +71,17 @@ function EverGreaterMainPage({ onLogout }: MainPageProps): JSX.Element {
             Live dashboard
           </Typography>
           <Typography variant="h3" sx={{ maxWidth: 760 }}>
-            The production interface is now moving toward the modular preview style without changing the core game loop.
+            The production interface is now moving toward the modular preview
+            style without changing the core game loop.
           </Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 760 }}>
-            Ticket metrics, printing, and shop actions keep their current behavior, but the visual hierarchy now mirrors the cleaner card language from the preview system.
+          <Typography
+            variant="body1"
+            color="text.secondary"
+            sx={{ maxWidth: 760 }}
+          >
+            Ticket metrics, printing, and shop actions keep their current
+            behavior, but the visual hierarchy now mirrors the cleaner card
+            language from the preview system.
           </Typography>
         </Stack>
       </IntroCard>

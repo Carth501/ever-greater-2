@@ -32,8 +32,7 @@ const HeroCard = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(3.5),
   borderRadius: 24,
   border: `1px solid ${alpha(theme.palette.primary.light, 0.24)}`,
-  background:
-    `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.16)} 0%, ${alpha(theme.palette.background.paper, 0.96)} 48%, ${alpha(theme.palette.secondary.dark, 0.92)} 100%)`,
+  background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.16)} 0%, ${alpha(theme.palette.background.paper, 0.96)} 48%, ${alpha(theme.palette.secondary.dark, 0.92)} 100%)`,
   boxShadow: `0 18px 48px ${alpha(theme.palette.common.black, 0.26)}`,
 }));
 
@@ -70,21 +69,30 @@ function PreviewIndexPage(): JSX.Element {
           <Stack spacing={2.5}>
             <AccentPill>
               <DashboardCustomizeIcon fontSize="small" />
-              <Typography variant="subtitle2">
-                Internal preview mode
-              </Typography>
+              <Typography variant="subtitle2">Internal preview mode</Typography>
             </AccentPill>
 
             <Typography variant="h2" sx={{ maxWidth: 760 }}>
-              A stable internal entry point for design concepts, layout experiments, and future preview-only surfaces.
+              A stable internal entry point for design concepts, layout
+              experiments, and future preview-only surfaces.
             </Typography>
 
-            <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 760 }}>
-              Use this index as the durable home for concept pages. It keeps preview work discoverable without mixing it into the main authenticated flow.
+            <Typography
+              variant="body1"
+              color="text.secondary"
+              sx={{ maxWidth: 760 }}
+            >
+              Use this index as the durable home for concept pages. It keeps
+              preview work discoverable without mixing it into the main
+              authenticated flow.
             </Typography>
 
             <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-              <Chip label="#internal/preview" color="primary" variant="outlined" />
+              <Chip
+                label="#internal/preview"
+                color="primary"
+                variant="outlined"
+              />
               <Chip label="Hash-based" variant="outlined" />
               <Chip label="Safe for local preview" variant="outlined" />
             </Stack>
@@ -94,13 +102,24 @@ function PreviewIndexPage(): JSX.Element {
         <ConceptsGrid>
           <ConceptCard elevation={0}>
             <Stack spacing={2.5}>
-              <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={2}>
+              <Stack
+                direction="row"
+                justifyContent="space-between"
+                alignItems="flex-start"
+                spacing={2}
+              >
                 <Box>
                   <Typography variant="h5" fontWeight={700}>
                     Modular dashboard concept
                   </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                    The current concept page for the authenticated experience. It uses live state when available and falls back to preview data when the backend is unavailable.
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ mt: 1 }}
+                  >
+                    The current concept page for the authenticated experience.
+                    It uses live state when available and falls back to preview
+                    data when the backend is unavailable.
                   </Typography>
                 </Box>
                 <DashboardCustomizeIcon color="primary" />

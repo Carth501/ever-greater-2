@@ -34,8 +34,7 @@ const ShopCard = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(2.5),
   borderRadius: 22,
   border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
-  background:
-    `linear-gradient(180deg, ${alpha(theme.palette.background.paper, 0.96)} 0%, ${alpha(theme.palette.primary.main, 0.06)} 100%)`,
+  background: `linear-gradient(180deg, ${alpha(theme.palette.background.paper, 0.96)} 0%, ${alpha(theme.palette.primary.main, 0.06)} 100%)`,
   boxShadow: `0 14px 30px ${alpha(theme.palette.common.black, 0.2)}`,
 }));
 
@@ -155,7 +154,9 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
             Shop
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
-            Each group is still driven by the existing progression rules, but the live interface now presents them with the cleaner modular card structure from the preview.
+            Each group is still driven by the existing progression rules, but
+            the live interface now presents them with the cleaner modular card
+            structure from the preview.
           </Typography>
         </Box>
 
