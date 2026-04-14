@@ -35,6 +35,9 @@ const ControlsCard = styled(Paper)(({ theme }) => ({
 }));
 
 const ActionPanel = styled(Paper)(({ theme }) => ({
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
   padding: theme.spacing(2.25),
   borderRadius: 18,
   border: `1px solid ${alpha(theme.palette.primary.main, 0.28)}`,
@@ -77,9 +80,6 @@ function PrintControls({
             <Typography variant="h5" fontWeight={700}>
               Print controls
             </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Keep the main print action visible while tracking supply state.
-            </Typography>
           </Box>
 
           <Chip
@@ -90,24 +90,15 @@ function PrintControls({
 
         <ControlsRow>
           <ActionPanel elevation={0}>
-            <Stack spacing={2}>
-              <Typography variant="subtitle2" color="primary.light">
-                Main action
-              </Typography>
-              <Typography variant="body1" color="text.secondary">
-                Printing remains the clearest call to action, with the accent
-                reserved for the highest-priority interaction.
-              </Typography>
-              <Button
-                onClick={onPrintClick}
-                variant="contained"
-                size="large"
-                disabled={isDisabled}
-                sx={{ alignSelf: "flex-start", minWidth: 220 }}
-              >
-                Print a ticket
-              </Button>
-            </Stack>
+            <Button
+              onClick={onPrintClick}
+              variant="contained"
+              size="large"
+              disabled={isDisabled}
+              sx={{ minWidth: 220 }}
+            >
+              Print a ticket
+            </Button>
           </ActionPanel>
 
           <SuppliesCard elevation={0} depleted={isOutOfSupplies}>
