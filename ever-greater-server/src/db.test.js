@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ResourceType } from 'ever-greater-shared';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 describe('Database Functions', () => {
   let mockPool;

@@ -582,7 +582,9 @@ function createApp(): Express {
         });
       }
 
-      const requestBodyResult = operationRequestSchema.safeParse(req.body ?? {});
+      const requestBodyResult = operationRequestSchema.safeParse(
+        req.body ?? {},
+      );
       if (!requestBodyResult.success) {
         return sendError(res, 400, {
           error: "INVALID_REQUEST",
