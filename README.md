@@ -37,6 +37,17 @@ It correctly bundles React in production mode and optimizes the build for the be
 The build is minified and the filenames include hashes.\
 Your app is ready to be deployed!
 
+#### Internal Preview Mode
+
+The client includes a stable internal preview entry for dashboard concept work:
+
+- `http://localhost:3000/#internal/preview/dashboard`
+- `http://localhost:3000/#internal/preview/dashboard?controls=0`
+
+The hash-based entry avoids depending on server-side SPA routing and keeps the preview usable in local development and static preview environments.
+
+The older query-based entry (`?concept=dashboard`) still works for compatibility, but the hash route is the preferred permanent internal path.
+
 #### `npm run eject`
 
 **Note: this is a one-way operation. Once you `eject`, you can't go back!**
