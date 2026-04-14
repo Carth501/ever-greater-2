@@ -9,6 +9,7 @@ import AuthHeader from "../common/AuthHeader";
 import PrintControls from "../game/PrintControls";
 import TicketSummary from "../game/TicketSummary";
 import Shop from "../shop/Shop";
+import Upgrades from "../shop/Upgrades";
 
 type MainPageProps = {
   onLogout: () => void;
@@ -76,7 +77,12 @@ function EverGreaterMainPage({ onLogout }: MainPageProps): JSX.Element {
         </PrimaryColumn>
 
         <SecondaryColumn>
-          {currentUser.tickets_contributed > 50 && <Shop />}
+          {currentUser.tickets_contributed > 50 && (
+            <>
+              <Shop />
+              <Upgrades />
+            </>
+          )}
         </SecondaryColumn>
       </MainGrid>
     </GameRoot>

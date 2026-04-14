@@ -6,60 +6,36 @@ import Typography from "@mui/material/Typography";
 import { JSX } from "react";
 import { ShopGroup, ShopRow } from "./ShopGroupLayout";
 
-type ShopGoldGroupProps = {
+type UpgradeGoldGroupProps = {
   gold: number;
-  suppliesCostInGold: number;
-  isSuppliesButtonDisabled: boolean;
   autoBuyCost: number;
   autoBuyPurchased: boolean;
   autoBuyActive: boolean;
   canAffordAutoBuyUnlock: boolean;
   creditGenerationCost: number;
   canAffordCreditGeneration: boolean;
-  onBuySupplies: () => void;
   onBuyAutoBuySupplies: () => void;
   onToggleAutoBuySupplies: (active: boolean) => void;
   onIncreaseCreditGeneration: () => void;
 };
 
-function ShopGoldGroup({
+function UpgradeGoldGroup({
   gold,
-  suppliesCostInGold,
-  isSuppliesButtonDisabled,
   autoBuyCost,
   autoBuyPurchased,
   autoBuyActive,
   canAffordAutoBuyUnlock,
   creditGenerationCost,
   canAffordCreditGeneration,
-  onBuySupplies,
   onBuyAutoBuySupplies,
   onToggleAutoBuySupplies,
   onIncreaseCreditGeneration,
-}: ShopGoldGroupProps): JSX.Element {
+}: UpgradeGoldGroupProps): JSX.Element {
   return (
     <ShopGroup>
       <Typography variant="body2" color="text.secondary">
         Gold Available: <strong>{gold}g</strong>
       </Typography>
-
-      <ShopRow>
-        <Box>
-          <Typography variant="subtitle1" fontWeight={600}>
-            200 Supplies
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Cost: {suppliesCostInGold}g
-          </Typography>
-        </Box>
-        <Button
-          onClick={onBuySupplies}
-          variant="contained"
-          disabled={isSuppliesButtonDisabled}
-        >
-          Buy
-        </Button>
-      </ShopRow>
 
       <ShopRow>
         <Box>
@@ -122,4 +98,4 @@ function ShopGoldGroup({
   );
 }
 
-export default ShopGoldGroup;
+export default UpgradeGoldGroup;

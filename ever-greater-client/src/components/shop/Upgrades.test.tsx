@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { mockUser } from "../../tests/fixtures";
-import Shop from "./Shop";
+import Upgrades from "./Upgrades";
 
 vi.mock("../../hooks/useAuth", () => ({
   useAuth: vi.fn(),
@@ -19,7 +19,7 @@ const { useAuth } = await import("../../hooks/useAuth");
 const { useGame } = await import("../../hooks/useGame");
 const { useOperations } = await import("../../hooks/useOperations");
 
-describe("Shop", () => {
+describe("Upgrades", () => {
   function mockDependencies(userOverrides = {}) {
     const user = mockUser({
       tickets_contributed: 600,
@@ -50,26 +50,27 @@ describe("Shop", () => {
     } as ReturnType<typeof useOperations>);
   }
 
-  it("renders consumable purchases only", () => {
+  it("renders permanent upgrades only", () => {
     mockDependencies();
 
-    render(<Shop />);
+    render(<Upgrades />);
 
-    expect(screen.getByRole("heading", { name: "Shop" })).toBeTruthy();
-    expect(screen.getByText("Gold", { exact: true })).toBeTruthy();
-    expect(screen.getByText("200 Supplies")).toBeTruthy();
-    expect(screen.queryByText("Auto-Buy Supplies")).toBeNull();
-    expect(screen.queryByText("Increase Credit Generation")).toBeNull();
-    expect(screen.queryByText("Increase Credit Capacity")).toBeNull();
-    expect(screen.queryByText("Autoprinter")).toBeNull();
+    expect(screen.getByRole("heading", { name: "Upgrades" })).toBeTruthy();
+    expect(screen.getByText("Auto-Buy Supplies")).toBeTruthy();
+    expect(screen.getByText("Increase Credit Generation")).toBeTruthy();
+    expect(screen.getByText("Increase Credit Capacity")).toBeTruthy();
+    expect(screen.getByText("Autoprinter")).toBeTruthy();
+    expect(screen.queryByText("200 Supplies")).toBeNull();
+    expect(screen.queryByText("Gold", { exact: true })).toBeNull();
   });
 
-  it("keeps money-to-gold purchases locked behind the existing threshold", () => {
-    mockDependencies({ tickets_contributed: 150 });
+  it("keeps the autoprinter upgrade behind the existing late-game threshold", () => {
+    mockDependencies({ tickets_contributed: 400 });
 
-    render(<Shop />);
+    render(<Upgrades />);
 
-    expect(screen.queryByText("Gold", { exact: true })).toBeNull();
-    expect(screen.getByText("200 Supplies")).toBeTruthy();
+    expect(screen.queryByText("Autoprinter")).toBeNull();
+    expect(screen.getByText("Auto-Buy Supplies")).toBeTruthy();
+    expect(screen.getByText("Increase Credit Capacity")).toBeTruthy();
   });
 });
