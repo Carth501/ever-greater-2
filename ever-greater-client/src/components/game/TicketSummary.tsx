@@ -14,26 +14,29 @@ type TicketSummaryProps = {
 };
 
 const TicketCard = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(3),
-  borderRadius: 22,
+  padding: theme.spacing(2.5),
+  borderRadius: 20,
   border: `1px solid ${alpha(theme.palette.primary.main, 0.28)}`,
   background: `linear-gradient(180deg, ${alpha(theme.palette.primary.main, 0.14)} 0%, ${alpha(theme.palette.background.paper, 0.96)} 100%)`,
   boxShadow: `0 14px 30px ${alpha(theme.palette.common.black, 0.22)}`,
   textAlign: "left",
+  [theme.breakpoints.down("sm")]: {
+    padding: theme.spacing(2),
+  },
 }));
 
 const MetricsRow = styled(Box)(({ theme }) => ({
   display: "grid",
-  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+  gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
   gap: theme.spacing(2),
   [theme.breakpoints.down("sm")]: {
-    gridTemplateColumns: "1fr",
+    gap: theme.spacing(1.5),
   },
 }));
 
 const MetricCard = styled(Box)(({ theme }) => ({
-  padding: theme.spacing(2),
-  borderRadius: 18,
+  padding: theme.spacing(1.75),
+  borderRadius: 16,
   border: `1px solid ${alpha(theme.palette.primary.main, 0.16)}`,
   backgroundColor: alpha(theme.palette.common.white, 0.03),
 }));
@@ -48,7 +51,7 @@ function TicketSummary({
 
   return (
     <TicketCard elevation={0}>
-      <Stack spacing={2.5}>
+      <Stack spacing={2}>
         <GlobalTicketDisplay scalingNumber={scalingNumber} />
 
         <Typography variant="body1" color="text.secondary">

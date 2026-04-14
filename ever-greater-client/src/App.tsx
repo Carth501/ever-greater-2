@@ -3,7 +3,6 @@ import CircularProgress from "@mui/material/CircularProgress";
 import Container from "@mui/material/Container";
 import { styled } from "@mui/material/styles";
 import { useEffect, useState } from "react";
-import RealtimeStatusPanel from "./components/common/RealtimeStatusPanel";
 import DashboardConceptPage from "./components/pages/DashboardConceptPage";
 import EverGreaterMainPage from "./components/pages/EverGreaterMainPage";
 import LoginPage from "./components/pages/LoginPage";
@@ -138,8 +137,6 @@ function App() {
 
   return (
     <AppRoot>
-      <RealtimeStatusPanel />
-
       <Container
         maxWidth="xl"
         sx={{ flex: 1, py: 4, overflowY: "scroll", maxHeight: contentHeight }}

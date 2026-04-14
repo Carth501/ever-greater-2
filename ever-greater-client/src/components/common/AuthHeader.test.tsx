@@ -3,6 +3,10 @@ import { describe, expect, it, vi } from "vitest";
 import { mockUser } from "../../tests/fixtures";
 import AuthHeader from "./AuthHeader";
 
+vi.mock("./RealtimeStatusPanel", () => ({
+  default: () => <div data-testid="realtime-status-panel" />,
+}));
+
 describe("AuthHeader", () => {
   const user = mockUser({
     printer_supplies: 10,

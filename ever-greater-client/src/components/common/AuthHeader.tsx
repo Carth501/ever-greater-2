@@ -7,6 +7,7 @@ import Typography from "@mui/material/Typography";
 import { alpha, styled } from "@mui/material/styles";
 import { JSX } from "react";
 import type { User } from "../../api/auth";
+import RealtimeStatusPanel from "./RealtimeStatusPanel";
 
 type AuthHeaderProps = {
   user: User;
@@ -14,41 +15,46 @@ type AuthHeaderProps = {
 };
 
 const HeaderCard = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(2.5),
-  borderRadius: 22,
+  padding: theme.spacing(2.25),
+  borderRadius: 20,
   border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
   background: `linear-gradient(180deg, ${alpha(theme.palette.background.paper, 0.96)} 0%, ${alpha(theme.palette.common.white, 0.02)} 100%)`,
   boxShadow: `0 14px 30px ${alpha(theme.palette.common.black, 0.2)}`,
+  [theme.breakpoints.down("sm")]: {
+    padding: theme.spacing(2),
+  },
 }));
 
 function AuthHeader({ user, onLogout }: AuthHeaderProps): JSX.Element {
   return (
     <HeaderCard elevation={0}>
-      <Stack
-        direction={{ xs: "column", md: "row" }}
-        justifyContent="space-between"
-        alignItems={{ xs: "flex-start", md: "center" }}
-        spacing={2}
-      >
-        <Stack spacing={1.25}>
-          <Box>
-            <Typography variant="subtitle2" color="text.secondary">
-              Signed in as
-            </Typography>
-            <Typography variant="h5" fontWeight={700}>
-              {user.email}
-            </Typography>
-          </Box>
+      <Stack spacing={1.5}>
+        <Stack
+          direction={{ xs: "column", md: "row" }}
+          justifyContent="space-between"
+          alignItems={{ xs: "flex-start", md: "center" }}
+          spacing={2}
+        >
+          <Stack spacing={1.25}>
+            <Box>
+              <Typography variant="subtitle2" color="text.secondary">
+                Signed in as
+              </Typography>
+              <Typography variant="h5" fontWeight={700}>
+                {user.email}
+              </Typography>
+            </Box>
 
-          <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-            <Chip label="Active session" color="success" variant="outlined" />
-            <Chip label="Modular layout" color="primary" variant="outlined" />
+            <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+              <Chip label="Active session" color="success" variant="outlined" />
+              <RealtimeStatusPanel />
+            </Stack>
           </Stack>
-        </Stack>
 
-        <Button variant="outlined" color="inherit" onClick={onLogout}>
-          Logout
-        </Button>
+          <Button variant="outlined" color="inherit" onClick={onLogout}>
+            Logout
+          </Button>
+        </Stack>
       </Stack>
     </HeaderCard>
   );

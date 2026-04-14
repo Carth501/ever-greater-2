@@ -1,12 +1,11 @@
-import CloseIcon from "@mui/icons-material/Close";
 import SignalCellularAltIcon from "@mui/icons-material/SignalCellularAlt";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
-import Drawer from "@mui/material/Drawer";
-import IconButton from "@mui/material/IconButton";
+import Chip from "@mui/material/Chip";
+import Collapse from "@mui/material/Collapse";
 import Stack from "@mui/material/Stack";
-import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
+import { alpha, styled } from "@mui/material/styles";
 import { useEffect, useMemo, useState } from "react";
 import { useRealtime } from "../../hooks/useRealtime";
 import { useAppSelector } from "../../store/hooks";
@@ -14,6 +13,17 @@ import { useAppSelector } from "../../store/hooks";
 const LATE_UPDATE_MS = 7000;
 
 type SignalState = "healthy" | "late" | "disconnected";
+
+const StatusRow = styled(Box)(({ theme }) => ({
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: theme.spacing(2),
+  padding: theme.spacing(1, 1.25),
+  borderRadius: 14,
+  border: `1px solid ${alpha(theme.palette.common.white, 0.06)}`,
+  backgroundColor: alpha(theme.palette.common.white, 0.03),
+}));
 
 function formatTimestamp(timestamp: number | null): string {
   if (!timestamp) {
@@ -23,7 +33,7 @@ function formatTimestamp(timestamp: number | null): string {
 }
 
 export default function RealtimeStatusPanel() {
-  const [isOpen, setIsOpen] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
   const [clock, setClock] = useState(Date.now());
 
   const { isConnected, isReconnecting, lastUpdateAt } = useRealtime();
@@ -54,10 +64,10 @@ export default function RealtimeStatusPanel() {
 
   const signalColor =
     signalState === "healthy"
-      ? "success.main"
+      ? "success"
       : signalState === "late"
-        ? "warning.main"
-        : "error.main";
+        ? "warning"
+        : "error";
 
   const statusText =
     signalState === "healthy"
@@ -71,68 +81,55 @@ export default function RealtimeStatusPanel() {
   );
 
   return (
-    <>
-      <Box sx={{ position: "fixed", top: 16, right: 16, zIndex: 1400 }}>
-        <Tooltip title={statusText}>
-          <IconButton
-            aria-label="Open realtime status panel"
-            onClick={() => setIsOpen(true)}
-            sx={{ bgcolor: "background.paper", boxShadow: 3 }}
-          >
-            <SignalCellularAltIcon sx={{ color: signalColor }} />
-          </IconButton>
-        </Tooltip>
+    <Stack spacing={1} sx={{ minWidth: 0 }}>
+      <Box>
+        <Chip
+          clickable
+          icon={<SignalCellularAltIcon color={signalColor} />}
+          label={`System status: ${
+            signalState === "healthy"
+              ? "Healthy"
+              : signalState === "late"
+                ? "Delayed"
+                : "Disconnected"
+          }`}
+          color={signalColor}
+          onClick={() => setShowDetails((currentValue) => !currentValue)}
+          variant="outlined"
+        />
       </Box>
 
-      <Drawer anchor="right" open={isOpen} onClose={() => setIsOpen(false)}>
-        <Box sx={{ width: 340, p: 2 }} role="presentation">
-          <Stack spacing={2}>
-            <Stack
-              direction="row"
-              justifyContent="space-between"
-              alignItems="center"
-            >
-              <Typography variant="h6">Connection Status</Typography>
-              <IconButton
-                aria-label="Close realtime status panel"
-                onClick={() => setIsOpen(false)}
-              >
-                <CloseIcon />
-              </IconButton>
-            </Stack>
+      <Collapse in={showDetails}>
+        <Stack spacing={1} sx={{ pt: 0.5 }}>
+          <Typography variant="body2" color="text.secondary">
+            {statusText}
+          </Typography>
 
-            <Alert
-              severity={
-                signalState === "healthy"
-                  ? "success"
-                  : signalState === "late"
-                    ? "warning"
-                    : "error"
-              }
-            >
-              {statusText}
-            </Alert>
-
+          <StatusRow>
+            <Typography variant="body2">Last update</Typography>
             <Typography variant="body2" color="text.secondary">
-              Last update: {formatTimestamp(lastUpdateAt)}
+              {formatTimestamp(lastUpdateAt)}
             </Typography>
+          </StatusRow>
 
-            {errorMessages.length === 0 ? (
-              <Typography variant="body2" color="text.secondary">
-                No active errors.
-              </Typography>
-            ) : (
-              <Stack spacing={1}>
-                {errorMessages.map((message, idx) => (
-                  <Alert key={`${message}-${idx}`} severity="error">
-                    {message}
-                  </Alert>
-                ))}
-              </Stack>
-            )}
-          </Stack>
-        </Box>
-      </Drawer>
-    </>
+          <StatusRow>
+            <Typography variant="body2">Active issues</Typography>
+            <Typography variant="body2" color="text.secondary">
+              {errorMessages.length}
+            </Typography>
+          </StatusRow>
+
+          {errorMessages.length > 0 && (
+            <Stack spacing={1}>
+              {errorMessages.map((message, idx) => (
+                <Alert key={`${message}-${idx}`} severity="error">
+                  {message}
+                </Alert>
+              ))}
+            </Stack>
+          )}
+        </Stack>
+      </Collapse>
+    </Stack>
   );
 }

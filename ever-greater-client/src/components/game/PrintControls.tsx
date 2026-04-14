@@ -18,22 +18,25 @@ const ControlsRow = styled(Box)(({ theme }) => ({
   gridTemplateColumns: "minmax(0, 1.2fr) minmax(220px, 0.8fr)",
   gap: theme.spacing(2),
   alignItems: "stretch",
-  [theme.breakpoints.down("sm")]: {
+  [theme.breakpoints.down("md")]: {
     gridTemplateColumns: "1fr",
   },
 }));
 
 const ControlsCard = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(2.5),
-  borderRadius: 22,
+  padding: theme.spacing(2.25),
+  borderRadius: 20,
   border: `1px solid ${alpha(theme.palette.common.white, 0.07)}`,
   backgroundColor: alpha(theme.palette.background.paper, 0.92),
   boxShadow: `0 14px 30px ${alpha(theme.palette.common.black, 0.22)}`,
+  [theme.breakpoints.down("sm")]: {
+    padding: theme.spacing(2),
+  },
 }));
 
 const ActionPanel = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(2.5),
-  borderRadius: 20,
+  padding: theme.spacing(2.25),
+  borderRadius: 18,
   border: `1px solid ${alpha(theme.palette.primary.main, 0.28)}`,
   background: `linear-gradient(180deg, ${alpha(theme.palette.primary.main, 0.14)} 0%, ${alpha(theme.palette.background.paper, 0.96)} 100%)`,
 }));
@@ -45,8 +48,8 @@ interface SuppliesCardProps {
 const SuppliesCard = styled(Paper, {
   shouldForwardProp: (prop) => prop !== "depleted",
 })<SuppliesCardProps>(({ theme, depleted }) => ({
-  padding: theme.spacing(2.5),
-  borderRadius: 20,
+  padding: theme.spacing(2.25),
+  borderRadius: 18,
   border: `1px solid ${depleted ? theme.palette.error.main : theme.palette.divider}`,
   backgroundColor: depleted
     ? alpha(theme.palette.error.main, 0.12)
@@ -63,7 +66,7 @@ function PrintControls({
 
   return (
     <ControlsCard elevation={0}>
-      <Stack spacing={2.5}>
+      <Stack spacing={2}>
         <Stack
           direction={{ xs: "column", md: "row" }}
           justifyContent="space-between"
@@ -75,8 +78,7 @@ function PrintControls({
               Print controls
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              The primary action stays obvious even as the dashboard becomes
-              more modular.
+              Keep the main print action visible while tracking supply state.
             </Typography>
           </Box>
 
