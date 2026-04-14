@@ -27,6 +27,16 @@ type UserUpdate = {
   auto_buy_supplies_active?: boolean;
 };
 
+export type SocketStatus = "open" | "closed" | "error";
+
+export type SocketStatusDetails = {
+  readyState: number;
+  timestamp: number;
+  closeCode?: number;
+  closeReason?: string;
+  wasClean?: boolean;
+};
+
 function getWsUrl(): string {
   if (apiBase.startsWith("https://")) {
     return `wss://${apiBase.replace("https://", "")}/ws`;
@@ -42,13 +52,18 @@ export async function fetchGlobalCount(): Promise<number> {
 export function connectGlobalCountSocket(
   onCount: (count: number) => void,
   onUserUpdate?: (update: UserUpdate) => void,
-  onStatus?: (status: "open" | "closed" | "error") => void,
+  onStatus?: (status: SocketStatus, details: SocketStatusDetails) => void,
   userId?: number,
 ): () => void {
   const socket = new WebSocket(getWsUrl());
 
   socket.addEventListener("open", () => {
-    onStatus?.("open");
+    const details: SocketStatusDetails = {
+      readyState: socket.readyState,
+      timestamp: Date.now(),
+    };
+
+    onStatus?.("open", details);
 
     if (userId !== undefined) {
       try {
@@ -59,8 +74,25 @@ export function connectGlobalCountSocket(
     }
   });
 
-  socket.addEventListener("close", () => onStatus?.("closed"));
-  socket.addEventListener("error", () => onStatus?.("error"));
+  socket.addEventListener("close", (event) => {
+    const details: SocketStatusDetails = {
+      readyState: socket.readyState,
+      timestamp: Date.now(),
+      closeCode: event.code,
+      closeReason: event.reason,
+      wasClean: event.wasClean,
+    };
+
+    onStatus?.("closed", details);
+  });
+  socket.addEventListener("error", () => {
+    const details: SocketStatusDetails = {
+      readyState: socket.readyState,
+      timestamp: Date.now(),
+    };
+
+    onStatus?.("error", details);
+  });
   socket.addEventListener("message", (event) => {
     try {
       const message = JSON.parse(event.data as string) as WebSocketMessage;

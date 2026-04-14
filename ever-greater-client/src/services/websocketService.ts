@@ -1,4 +1,8 @@
-import { connectGlobalCountSocket } from "../api/globalTicket";
+import {
+  connectGlobalCountSocket,
+  type SocketStatus,
+  type SocketStatusDetails,
+} from "../api/globalTicket";
 import { applyUserUpdate } from "../store/slices/authSlice";
 import { setError } from "../store/slices/errorSlice";
 import {
@@ -11,8 +15,6 @@ import {
   updateCount,
 } from "../store/slices/ticketSlice";
 
-type SocketStatus = "open" | "closed" | "error";
-
 const CONNECT_TIMEOUT_MS = 5000;
 const BASE_RECONNECT_DELAY_MS = 1000;
 const MAX_RECONNECT_DELAY_MS = 15000;
@@ -23,6 +25,7 @@ let connectTimeoutTimer: ReturnType<typeof setTimeout> | null = null;
 let reconnectAttempt = 0;
 let isManualDisconnect = false;
 let activeUserId: number | null = null;
+let activeConnectionId = 0;
 let activeDispatch:
   | ((
       action: ReturnType<
@@ -80,8 +83,16 @@ const scheduleReconnect = (): void => {
   }, delay);
 };
 
-const handleStatus = (status: SocketStatus): void => {
+const handleStatus = (
+  status: SocketStatus,
+  connectionId: number,
+  _details?: SocketStatusDetails,
+): void => {
   if (!activeDispatch) {
+    return;
+  }
+
+  if (connectionId !== activeConnectionId) {
     return;
   }
 
@@ -120,6 +131,9 @@ function startConnection(
     >,
   ) => void,
 ): void {
+  const connectionId = activeConnectionId + 1;
+  activeConnectionId = connectionId;
+
   if (disconnectFn) {
     disconnectFn();
     disconnectFn = null;
@@ -135,23 +149,34 @@ function startConnection(
       disconnectFn();
       disconnectFn = null;
     }
-    handleStatus("error");
+    handleStatus("error", connectionId, {
+      readyState: WebSocket.CLOSED,
+      timestamp: Date.now(),
+    });
   }, CONNECT_TIMEOUT_MS);
 
   disconnectFn = connectGlobalCountSocket(
     (count: number) => {
+      if (connectionId !== activeConnectionId) {
+        return;
+      }
+
       dispatch(updateCount(count));
       dispatch(markUpdateReceived(Date.now()));
       dispatch(clearTicketError());
     },
     (update) => {
+      if (connectionId !== activeConnectionId) {
+        return;
+      }
+
       if (Object.keys(update).length > 0) {
         dispatch(applyUserUpdate(update));
         dispatch(markUpdateReceived(Date.now()));
       }
     },
-    (status) => {
-      handleStatus(status);
+    (status, details) => {
+      handleStatus(status, connectionId, details);
     },
     userId,
   );
@@ -182,6 +207,7 @@ export function connect(
 export function disconnect(): void {
   isManualDisconnect = true;
   clearTimers();
+  activeConnectionId += 1;
 
   if (disconnectFn) {
     disconnectFn();
