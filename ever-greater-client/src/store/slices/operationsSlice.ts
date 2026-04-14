@@ -1,6 +1,28 @@
-import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+import { createAsyncThunk, createSlice, isAnyOf } from "@reduxjs/toolkit";
 import * as authApi from "../../api/auth";
 import * as operationsApi from "../../api/operations";
+
+export interface OperationsState {
+  isLoading: boolean;
+  pendingRequestCount: number;
+  error: string | null;
+}
+
+const initialState: OperationsState = {
+  isLoading: false,
+  pendingRequestCount: 0,
+  error: null,
+};
+
+const startLoading = (state: OperationsState): void => {
+  state.pendingRequestCount += 1;
+  state.isLoading = state.pendingRequestCount > 0;
+};
+
+const finishLoading = (state: OperationsState): void => {
+  state.pendingRequestCount = Math.max(0, state.pendingRequestCount - 1);
+  state.isLoading = state.pendingRequestCount > 0;
+};
 
 export const buySuppliesThunk = createAsyncThunk(
   "operations/buySupplies",
@@ -110,8 +132,62 @@ export const toggleAutoBuySuppliesThunk = createAsyncThunk(
 
 const operationsSlice = createSlice({
   name: "operations",
-  initialState: {},
-  reducers: {},
+  initialState,
+  reducers: {
+    clearError: (state) => {
+      state.error = null;
+    },
+  },
+  extraReducers: (builder) => {
+    builder.addMatcher(
+      isAnyOf(
+        buySuppliesThunk.pending,
+        buyGoldThunk.pending,
+        buyAutoBuySuppliesThunk.pending,
+        buyAutoprinterThunk.pending,
+        increaseCreditGenerationThunk.pending,
+        increaseCreditCapacityThunk.pending,
+        toggleAutoBuySuppliesThunk.pending,
+      ),
+      (state) => {
+        startLoading(state);
+        state.error = null;
+      },
+    );
+
+    builder.addMatcher(
+      isAnyOf(
+        buySuppliesThunk.fulfilled,
+        buyGoldThunk.fulfilled,
+        buyAutoBuySuppliesThunk.fulfilled,
+        buyAutoprinterThunk.fulfilled,
+        increaseCreditGenerationThunk.fulfilled,
+        increaseCreditCapacityThunk.fulfilled,
+        toggleAutoBuySuppliesThunk.fulfilled,
+      ),
+      (state) => {
+        finishLoading(state);
+        state.error = null;
+      },
+    );
+
+    builder.addMatcher(
+      isAnyOf(
+        buySuppliesThunk.rejected,
+        buyGoldThunk.rejected,
+        buyAutoBuySuppliesThunk.rejected,
+        buyAutoprinterThunk.rejected,
+        increaseCreditGenerationThunk.rejected,
+        increaseCreditCapacityThunk.rejected,
+        toggleAutoBuySuppliesThunk.rejected,
+      ),
+      (state, action) => {
+        finishLoading(state);
+        state.error = action.payload as string;
+      },
+    );
+  },
 });
 
+export const { clearError } = operationsSlice.actions;
 export default operationsSlice.reducer;

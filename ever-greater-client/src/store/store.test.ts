@@ -311,7 +311,7 @@ describe("Redux Store Integration", () => {
       const state = store.getState();
       expect(state.auth.user?.printer_supplies).toBe(150);
       expect(state.auth.user?.money).toBe(50);
-      expect(state.auth.error).toBeNull();
+      expect(state.operations.error).toBeNull();
     });
 
     it("should handle buy supplies error", async () => {
@@ -323,7 +323,7 @@ describe("Redux Store Integration", () => {
       await store.dispatch(buySuppliesThunk() as any);
 
       const state = store.getState();
-      expect(state.auth.error).toBe(errorMessage);
+      expect(state.operations.error).toBe(errorMessage);
     });
 
     it("should handle buy gold", async () => {
@@ -339,7 +339,7 @@ describe("Redux Store Integration", () => {
       const state = store.getState();
       expect(state.auth.user?.gold).toBe(10);
       expect(state.auth.user?.money).toBe(0);
-      expect(state.auth.error).toBeNull();
+      expect(state.operations.error).toBeNull();
     });
 
     it("should handle buy gold error", async () => {
@@ -349,7 +349,7 @@ describe("Redux Store Integration", () => {
       await store.dispatch(buyGoldThunk(5) as any);
 
       const state = store.getState();
-      expect(state.auth.error).toBe(errorMessage);
+      expect(state.operations.error).toBe(errorMessage);
     });
 
     it("should handle buy auto-buy supplies", async () => {
@@ -365,7 +365,7 @@ describe("Redux Store Integration", () => {
       const state = store.getState();
       expect(state.auth.user?.auto_buy_supplies_purchased).toBe(true);
       expect(state.auth.user?.gold).toBe(5);
-      expect(state.auth.error).toBeNull();
+      expect(state.operations.error).toBeNull();
     });
 
     it("should handle buy autoprinter", async () => {
@@ -381,7 +381,7 @@ describe("Redux Store Integration", () => {
       const state = store.getState();
       expect(state.auth.user?.autoprinters).toBe(1);
       expect(state.auth.user?.gold).toBe(0);
-      expect(state.auth.error).toBeNull();
+      expect(state.operations.error).toBeNull();
     });
   });
 
@@ -493,13 +493,17 @@ describe("Redux Store Integration", () => {
 
       const loadingState = store.getState();
       expect(loadingState.auth.isLoading).toBe(true);
-      expect(loadingState.auth.pendingRequestCount).toBe(2);
+      expect(loadingState.auth.pendingRequestCount).toBe(1);
+      expect(loadingState.operations.isLoading).toBe(true);
+      expect(loadingState.operations.pendingRequestCount).toBe(1);
 
       await Promise.all([promise1, promise2]);
 
       const finishedState = store.getState();
       expect(finishedState.auth.isLoading).toBe(false);
       expect(finishedState.auth.pendingRequestCount).toBe(0);
+      expect(finishedState.operations.isLoading).toBe(false);
+      expect(finishedState.operations.pendingRequestCount).toBe(0);
     });
   });
 

@@ -11,7 +11,7 @@ import {
 
 export function useOperations(onError?: (message: string) => void) {
   const dispatch = useAppDispatch();
-  const { isLoading, error } = useAppSelector((state) => state.auth);
+  const { isLoading, error } = useAppSelector((state) => state.operations);
 
   const buySupplies = () => {
     dispatch(buySuppliesThunk()).then((result) => {

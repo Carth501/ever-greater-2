@@ -1,4 +1,4 @@
-import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+import { createAsyncThunk, createSlice, isAnyOf } from "@reduxjs/toolkit";
 import type { User } from "../../api/auth";
 import * as authApi from "../../api/auth";
 import {
@@ -120,6 +120,20 @@ const finishLoading = (state: AuthState): void => {
   state.isLoading = state.pendingRequestCount > 0;
 };
 
+const mergeUserUpdate = (
+  state: AuthState,
+  payload: UserUpdatePayload | null | undefined,
+): void => {
+  if (!state.user || !payload) {
+    return;
+  }
+
+  state.user = {
+    ...state.user,
+    ...payload,
+  };
+};
+
 const authSlice = createSlice({
   name: "auth",
   initialState,
@@ -202,138 +216,21 @@ const authSlice = createSlice({
         state.error = action.payload as string;
       });
 
-    // buySuppliesThunk
-    builder
-      .addCase(buySuppliesThunk.pending, (state) => {
-        startLoading(state);
-        state.error = null;
-      })
-      .addCase(buySuppliesThunk.fulfilled, (state, action) => {
-        finishLoading(state);
-        if (state.user) {
-          state.user = { ...state.user, ...action.payload };
-        }
-        state.error = null;
-      })
-      .addCase(buySuppliesThunk.rejected, (state, action) => {
-        finishLoading(state);
-        state.error = action.payload as string;
-      });
-
-    // buyGoldThunk
-    builder
-      .addCase(buyGoldThunk.pending, (state) => {
-        startLoading(state);
-        state.error = null;
-      })
-      .addCase(buyGoldThunk.fulfilled, (state, action) => {
-        finishLoading(state);
-        if (state.user) {
-          state.user = { ...state.user, ...action.payload };
-        }
-        state.error = null;
-      })
-      .addCase(buyGoldThunk.rejected, (state, action) => {
-        finishLoading(state);
-        state.error = action.payload as string;
-      });
-
-    // buyAutoBuySuppliesThunk
-    builder
-      .addCase(buyAutoBuySuppliesThunk.pending, (state) => {
-        startLoading(state);
-        state.error = null;
-      })
-      .addCase(buyAutoBuySuppliesThunk.fulfilled, (state, action) => {
-        finishLoading(state);
-        if (state.user) {
-          state.user = { ...state.user, ...action.payload };
-        }
-        state.error = null;
-      })
-      .addCase(buyAutoBuySuppliesThunk.rejected, (state, action) => {
-        finishLoading(state);
-        state.error = action.payload as string;
-      });
-
-    // buyAutoprinterThunk
-    builder
-      .addCase(buyAutoprinterThunk.pending, (state) => {
-        startLoading(state);
-        state.error = null;
-      })
-      .addCase(buyAutoprinterThunk.fulfilled, (state, action) => {
-        finishLoading(state);
-        if (state.user) {
-          state.user = { ...state.user, ...action.payload };
-        }
-        state.error = null;
-      })
-      .addCase(buyAutoprinterThunk.rejected, (state, action) => {
-        finishLoading(state);
-        state.error = action.payload as string;
-      });
-
-    // increaseCreditGenerationThunk
-    builder
-      .addCase(increaseCreditGenerationThunk.pending, (state) => {
-        startLoading(state);
-        state.error = null;
-      })
-      .addCase(increaseCreditGenerationThunk.fulfilled, (state, action) => {
-        finishLoading(state);
-        if (state.user) {
-          state.user = { ...state.user, ...action.payload };
-        }
-        state.error = null;
-      })
-      .addCase(increaseCreditGenerationThunk.rejected, (state, action) => {
-        finishLoading(state);
-        state.error = action.payload as string;
-      });
-
-    // increaseCreditCapacityThunk
-    builder
-      .addCase(increaseCreditCapacityThunk.pending, (state) => {
-        startLoading(state);
-        state.error = null;
-      })
-      .addCase(increaseCreditCapacityThunk.fulfilled, (state, action) => {
-        finishLoading(state);
-        if (state.user) {
-          state.user = { ...state.user, ...action.payload };
-        }
-        state.error = null;
-      })
-      .addCase(increaseCreditCapacityThunk.rejected, (state, action) => {
-        finishLoading(state);
-        state.error = action.payload as string;
-      });
-
-    // toggleAutoBuySuppliesThunk
-    builder
-      .addCase(toggleAutoBuySuppliesThunk.pending, (state) => {
-        startLoading(state);
-        state.error = null;
-      })
-      .addCase(toggleAutoBuySuppliesThunk.fulfilled, (state, action) => {
-        finishLoading(state);
-        if (state.user) {
-          state.user = { ...state.user, ...action.payload };
-        }
-        state.error = null;
-      })
-      .addCase(toggleAutoBuySuppliesThunk.rejected, (state, action) => {
-        finishLoading(state);
-        state.error = action.payload as string;
-      });
-
-    // incrementCountThunk — auth reacts to fulfilled to apply returned user fields
-    builder.addCase(incrementCountThunk.fulfilled, (state, action) => {
-      if (state.user) {
-        state.user = { ...state.user, ...action.payload };
-      }
-    });
+    builder.addMatcher(
+      isAnyOf(
+        buySuppliesThunk.fulfilled,
+        buyGoldThunk.fulfilled,
+        buyAutoBuySuppliesThunk.fulfilled,
+        buyAutoprinterThunk.fulfilled,
+        increaseCreditGenerationThunk.fulfilled,
+        increaseCreditCapacityThunk.fulfilled,
+        toggleAutoBuySuppliesThunk.fulfilled,
+        incrementCountThunk.fulfilled,
+      ),
+      (state, action) => {
+        mergeUserUpdate(state, action.payload);
+      },
+    );
   },
 });
 

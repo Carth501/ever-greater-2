@@ -31,7 +31,11 @@ function buildDefaultState(): RootState {
       message: null,
       timestamp: null,
     },
-    operations: {},
+    operations: {
+      isLoading: false,
+      pendingRequestCount: 0,
+      error: null,
+    },
     realtime: {
       isConnected: false,
       isReconnecting: false,
