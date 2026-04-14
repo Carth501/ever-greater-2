@@ -1,4 +1,10 @@
-import { OperationId, ResourceType, canAfford, getOperationCost, operations } from "ever-greater-shared";
+import {
+  OperationId,
+  ResourceType,
+  canAfford,
+  getOperationCost,
+  operations,
+} from "ever-greater-shared";
 import { useEffect, useMemo, useState, type JSX } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { useGame } from "../../hooks/useGame";
@@ -14,11 +20,30 @@ import {
   DashboardTicketPanel,
   DashboardToolbarSection,
 } from "./dashboard/DashboardSections";
-import { LATE_UPDATE_MS, defaultPanels, presets, previewDashboardUser } from "./dashboard/config";
-import { Grid, LeftColumn, PageRoot, RightColumn, Shell } from "./dashboard/styles";
-import type { DashboardPageProps, PanelId, PanelState, PresetId, SignalColor } from "./dashboard/types";
+import {
+  LATE_UPDATE_MS,
+  defaultPanels,
+  presets,
+  previewDashboardUser,
+} from "./dashboard/config";
+import {
+  Grid,
+  LeftColumn,
+  PageRoot,
+  RightColumn,
+  Shell,
+} from "./dashboard/styles";
+import type {
+  DashboardPageProps,
+  PanelId,
+  PanelState,
+  PresetId,
+  SignalColor,
+} from "./dashboard/types";
 
-function DashboardPage({ showControls = true }: DashboardPageProps): JSX.Element {
+function DashboardPage({
+  showControls = true,
+}: DashboardPageProps): JSX.Element {
   const { user } = useAuth();
   const {
     count,
@@ -48,7 +73,9 @@ function DashboardPage({ showControls = true }: DashboardPageProps): JSX.Element
   const isAutoBuyActive =
     dashboardUser.auto_buy_supplies_purchased &&
     dashboardUser.auto_buy_supplies_active;
-  const visibleSupplies = hasLiveUser ? supplies : dashboardUser.printer_supplies;
+  const visibleSupplies = hasLiveUser
+    ? supplies
+    : dashboardUser.printer_supplies;
   const printButtonDisabled = hasLiveUser ? isPrintDisabled : true;
 
   const signalState = useMemo(() => {
@@ -60,7 +87,11 @@ function DashboardPage({ showControls = true }: DashboardPageProps): JSX.Element
       return "disconnected" as const;
     }
 
-    if (isReconnecting || !lastUpdateAt || clock - lastUpdateAt > LATE_UPDATE_MS) {
+    if (
+      isReconnecting ||
+      !lastUpdateAt ||
+      clock - lastUpdateAt > LATE_UPDATE_MS
+    ) {
       return "late" as const;
     }
 
@@ -87,25 +118,37 @@ function DashboardPage({ showControls = true }: DashboardPageProps): JSX.Element
 
   const operationContext = { user: dashboardUser };
   const suppliesCost =
-    getOperationCost(operations[OperationId.BUY_SUPPLIES], operationContext)[ResourceType.GOLD] ?? 0;
-  const autoBuyCost =
-    getOperationCost(operations[OperationId.AUTO_BUY_SUPPLIES], operationContext)[ResourceType.GOLD] ?? 0;
-  const creditGenerationCost =
-    getOperationCost(operations[OperationId.INCREASE_CREDIT_GENERATION], operationContext)[ResourceType.GOLD] ?? 0;
-  const autoprinterCost =
-    getOperationCost(operations[OperationId.BUY_AUTOPRINTER], operationContext)[ResourceType.CREDIT] ?? 0;
-  const creditCapacityCost =
-    getOperationCost(operations[OperationId.INCREASE_CREDIT_CAPACITY], operationContext)[
-      ResourceType.GLOBAL_TICKETS
+    getOperationCost(operations[OperationId.BUY_SUPPLIES], operationContext)[
+      ResourceType.GOLD
     ] ?? 0;
+  const autoBuyCost =
+    getOperationCost(
+      operations[OperationId.AUTO_BUY_SUPPLIES],
+      operationContext,
+    )[ResourceType.GOLD] ?? 0;
+  const creditGenerationCost =
+    getOperationCost(
+      operations[OperationId.INCREASE_CREDIT_GENERATION],
+      operationContext,
+    )[ResourceType.GOLD] ?? 0;
+  const autoprinterCost =
+    getOperationCost(operations[OperationId.BUY_AUTOPRINTER], operationContext)[
+      ResourceType.CREDIT
+    ] ?? 0;
+  const creditCapacityCost =
+    getOperationCost(
+      operations[OperationId.INCREASE_CREDIT_CAPACITY],
+      operationContext,
+    )[ResourceType.GLOBAL_TICKETS] ?? 0;
   const goldUnitCost =
     getOperationCost(operations[OperationId.BUY_GOLD], {
       user: dashboardUser,
       params: { quantity: 1 },
     })[ResourceType.MONEY] ?? 0;
   const canAffordCreditCapacity =
-    canAfford(dashboardUser, { [ResourceType.GLOBAL_TICKETS]: creditCapacityCost }) &&
-    remainingCapacity >= creditCapacityCost;
+    canAfford(dashboardUser, {
+      [ResourceType.GLOBAL_TICKETS]: creditCapacityCost,
+    }) && remainingCapacity >= creditCapacityCost;
   const canAffordAutoprinter = canAfford(dashboardUser, {
     [ResourceType.CREDIT]: autoprinterCost,
   });
@@ -116,7 +159,10 @@ function DashboardPage({ showControls = true }: DashboardPageProps): JSX.Element
       : 0;
   const automationMix =
     dashboardUser.autoprinters > 0 || isAutoBuyActive
-      ? Math.min(100, dashboardUser.autoprinters * 10 + (isAutoBuyActive ? 18 : 0))
+      ? Math.min(
+          100,
+          dashboardUser.autoprinters * 10 + (isAutoBuyActive ? 18 : 0),
+        )
       : 0;
   const bestWindow =
     visibleSupplies > 0
@@ -216,7 +262,9 @@ function DashboardPage({ showControls = true }: DashboardPageProps): JSX.Element
               <DashboardShopPanel
                 autoBuyCost={autoBuyCost}
                 autoprinters={dashboardUser.autoprinters}
-                autoBuySuppliesPurchased={dashboardUser.auto_buy_supplies_purchased}
+                autoBuySuppliesPurchased={
+                  dashboardUser.auto_buy_supplies_purchased
+                }
                 canAffordAutoprinter={canAffordAutoprinter}
                 creditCapacityCost={creditCapacityCost}
                 creditGenerationCost={creditGenerationCost}

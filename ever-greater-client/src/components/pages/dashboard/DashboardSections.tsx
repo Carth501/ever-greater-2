@@ -63,7 +63,11 @@ export function DashboardHeroSection({
             A cleaner command center for printing, monitoring, and upgrading
             without locking the user into one rigid layout.
           </Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 720 }}>
+          <Typography
+            variant="body1"
+            color="text.secondary"
+            sx={{ maxWidth: 720 }}
+          >
             This dashboard keeps the current dark MUI foundation, preserves the
             branded footer, and promotes #4080C0 into a sharper accent system
             for action, status, and layout emphasis.
@@ -109,7 +113,10 @@ export function DashboardHeroSection({
         </Stack>
 
         <AccentPanel elevation={0}>
-          <Stack spacing={2} sx={{ height: "100%", justifyContent: "space-between" }}>
+          <Stack
+            spacing={2}
+            sx={{ height: "100%", justifyContent: "space-between" }}
+          >
             <Box>
               <Typography variant="overline" color="primary.light">
                 Current default capture
@@ -117,7 +124,11 @@ export function DashboardHeroSection({
               <Typography variant="h5" fontWeight={700} sx={{ mt: 0.75 }}>
                 Expanded operator layout
               </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1.25 }}>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mt: 1.25 }}
+              >
                 Designed for the user who wants ticket metrics, printing, shop
                 decisions, and system health visible in one frame.
               </Typography>
@@ -151,15 +162,17 @@ export function DashboardHeroSection({
             </MetricsRow>
 
             <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-              {(["focused", "balanced", "expanded"] as PresetId[]).map((presetId) => (
-                <Chip
-                  key={presetId}
-                  label={formatPresetLabel(presetId)}
-                  color={activePreset === presetId ? "primary" : "default"}
-                  onClick={() => onPresetChange(presetId)}
-                  variant={activePreset === presetId ? "filled" : "outlined"}
-                />
-              ))}
+              {(["focused", "balanced", "expanded"] as PresetId[]).map(
+                (presetId) => (
+                  <Chip
+                    key={presetId}
+                    label={formatPresetLabel(presetId)}
+                    color={activePreset === presetId ? "primary" : "default"}
+                    onClick={() => onPresetChange(presetId)}
+                    variant={activePreset === presetId ? "filled" : "outlined"}
+                  />
+                ),
+              )}
             </Stack>
           </Stack>
         </AccentPanel>
@@ -195,20 +208,22 @@ export function DashboardToolbarSection({
               Panel visibility
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Compose the dashboard around the user’s preferred workflow
-              without changing the underlying visual system.
+              Compose the dashboard around the user’s preferred workflow without
+              changing the underlying visual system.
             </Typography>
           </Box>
           <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-            {(["focused", "balanced", "expanded"] as PresetId[]).map((presetId) => (
-              <Chip
-                key={`toolbar-${presetId}`}
-                label={`${formatPresetLabel(presetId)} preset`}
-                color={activePreset === presetId ? "primary" : "default"}
-                onClick={() => onPresetChange(presetId)}
-                variant={activePreset === presetId ? "filled" : "outlined"}
-              />
-            ))}
+            {(["focused", "balanced", "expanded"] as PresetId[]).map(
+              (presetId) => (
+                <Chip
+                  key={`toolbar-${presetId}`}
+                  label={`${formatPresetLabel(presetId)} preset`}
+                  color={activePreset === presetId ? "primary" : "default"}
+                  onClick={() => onPresetChange(presetId)}
+                  variant={activePreset === presetId ? "filled" : "outlined"}
+                />
+              ),
+            )}
           </Stack>
         </Stack>
 
@@ -232,7 +247,8 @@ export function DashboardToolbarSection({
                 borderRadius: 3,
                 border: (theme) =>
                   `1px solid ${alpha(theme.palette.primary.main, 0.18)}`,
-                backgroundColor: (theme) => alpha(theme.palette.common.white, 0.02),
+                backgroundColor: (theme) =>
+                  alpha(theme.palette.common.white, 0.02),
               }}
             >
               <Typography variant="body2" fontWeight={600}>
@@ -267,7 +283,12 @@ export function DashboardAccountPanel({
   return (
     <PanelCard elevation={0}>
       <Stack spacing={2}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          alignItems="center"
+          spacing={2}
+        >
           <Box>
             <Typography variant="subtitle2" color="text.secondary">
               Signed in as
@@ -276,7 +297,13 @@ export function DashboardAccountPanel({
               {userEmail}
             </Typography>
           </Box>
-          <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" justifyContent="flex-end">
+          <Stack
+            direction="row"
+            spacing={1}
+            useFlexGap
+            flexWrap="wrap"
+            justifyContent="flex-end"
+          >
             <Chip
               icon={<SensorsIcon />}
               label={signalLabel}
@@ -285,7 +312,9 @@ export function DashboardAccountPanel({
             />
             <Chip
               icon={<AutoAwesomeIcon />}
-              label={hasLiveUser ? "Live data bound" : "Preview fallback active"}
+              label={
+                hasLiveUser ? "Live data bound" : "Preview fallback active"
+              }
               color="primary"
               variant="outlined"
             />
@@ -323,7 +352,9 @@ export function DashboardTicketPanel({
             Ticket pool overview
           </Typography>
           <Typography variant="h2" fontWeight={700} sx={{ mt: 0.75 }}>
-            {isTicketLoading && hasLiveUser ? "Syncing..." : formatNumber(globalTicketCount)}
+            {isTicketLoading && hasLiveUser
+              ? "Syncing..."
+              : formatNumber(globalTicketCount)}
           </Typography>
           <Typography variant="body1" color="text.secondary" sx={{ mt: 1 }}>
             Tickets contributed: {formatNumber(ticketsContributed)}
@@ -379,7 +410,12 @@ export function DashboardPrintPanel({
   return (
     <PanelCard elevation={0}>
       <Stack spacing={2.5}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          alignItems="center"
+          spacing={2}
+        >
           <Box>
             <Typography variant="h5" fontWeight={700}>
               Print controls
@@ -472,7 +508,12 @@ export function DashboardShopPanel({
   return (
     <PanelCard elevation={0}>
       <Stack spacing={2.5}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          alignItems="center"
+          spacing={2}
+        >
           <Box>
             <Typography variant="h5" fontWeight={700}>
               Modular shop surfaces
@@ -482,7 +523,12 @@ export function DashboardShopPanel({
               or hidden when the user wants a cleaner print-focused layout.
             </Typography>
           </Box>
-          <Chip icon={<LayersIcon />} label="Dockable groups" variant="outlined" color="primary" />
+          <Chip
+            icon={<LayersIcon />}
+            label="Dockable groups"
+            variant="outlined"
+            color="primary"
+          />
         </Stack>
 
         <Box
@@ -498,12 +544,20 @@ export function DashboardShopPanel({
             </Typography>
             <ShopRow>
               <Typography variant="body2">Supply refill</Typography>
-              <Chip label={`${formatNumber(suppliesCost)} gold`} color="primary" size="small" />
+              <Chip
+                label={`${formatNumber(suppliesCost)} gold`}
+                color="primary"
+                size="small"
+              />
             </ShopRow>
             <ShopRow>
               <Typography variant="body2">Auto-buy unlock</Typography>
               <Chip
-                label={autoBuySuppliesPurchased ? "Unlocked" : `${formatNumber(autoBuyCost)} gold`}
+                label={
+                  autoBuySuppliesPurchased
+                    ? "Unlocked"
+                    : `${formatNumber(autoBuyCost)} gold`
+                }
                 color={autoBuySuppliesPurchased ? "success" : "default"}
                 size="small"
               />
@@ -524,11 +578,19 @@ export function DashboardShopPanel({
             </Typography>
             <ShopRow>
               <Typography variant="body2">Autoprinters</Typography>
-              <Chip label={`${formatNumber(autoprinters)} active`} color="primary" size="small" />
+              <Chip
+                label={`${formatNumber(autoprinters)} active`}
+                color="primary"
+                size="small"
+              />
             </ShopRow>
             <ShopRow>
               <Typography variant="body2">Capacity upgrade</Typography>
-              <Chip label={`${formatNumber(creditCapacityCost)} tickets`} color="default" size="small" />
+              <Chip
+                label={`${formatNumber(creditCapacityCost)} tickets`}
+                color="default"
+                size="small"
+              />
             </ShopRow>
             <ShopRow>
               <Typography variant="body2">Spend confidence</Typography>
@@ -546,7 +608,11 @@ export function DashboardShopPanel({
             </Typography>
             <ShopRow>
               <Typography variant="body2">Money to gold</Typography>
-              <Chip label={`${formatNumber(goldUnitCost)} money / gold`} color="default" size="small" />
+              <Chip
+                label={`${formatNumber(goldUnitCost)} money / gold`}
+                color="default"
+                size="small"
+              />
             </ShopRow>
             <ShopRow>
               <Typography variant="body2">Recommended next buy</Typography>
@@ -554,7 +620,11 @@ export function DashboardShopPanel({
             </ShopRow>
             <ShopRow>
               <Typography variant="body2">Panel mode</Typography>
-              <Chip label={hasLiveUser ? "Live-bound" : "Compact"} color="primary" size="small" />
+              <Chip
+                label={hasLiveUser ? "Live-bound" : "Compact"}
+                color="primary"
+                size="small"
+              />
             </ShopRow>
           </ShopGroup>
         </Box>
