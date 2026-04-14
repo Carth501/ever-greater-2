@@ -1,4 +1,5 @@
 import Box from "@mui/material/Box";
+import Chip from "@mui/material/Chip";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
@@ -10,7 +11,7 @@ import {
   getOperationCost,
   operations,
 } from "ever-greater-shared";
-import { JSX } from "react";
+import { JSX, useEffect, useMemo, useState } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { useGame } from "../../hooks/useGame";
 import { useOperations } from "../../hooks/useOperations";
@@ -21,6 +22,19 @@ import ShopMoneyGroup from "./shop-groups/ShopMoneyGroup";
 
 type ShopProps = {
   onPurchaseError?: (error: string) => void;
+};
+
+type ShopGroupId = "money" | "gold" | "credit" | "globalTickets";
+
+type ShopGroupVisibility = Record<ShopGroupId, boolean>;
+
+const SHOP_GROUP_VISIBILITY_STORAGE_KEY = "ever-greater.shop.visible-groups";
+
+const defaultShopGroupVisibility: ShopGroupVisibility = {
+  money: true,
+  gold: true,
+  credit: true,
+  globalTickets: true,
 };
 
 const ShopGroups = styled(Box)(({ theme }) => ({
@@ -38,6 +52,48 @@ const ShopCard = styled(Paper)(({ theme }) => ({
   boxShadow: `0 14px 30px ${alpha(theme.palette.common.black, 0.2)}`,
 }));
 
+const ShopVisibilityToolbar = styled(Box)(({ theme }) => ({
+  display: "flex",
+  flexWrap: "wrap",
+  gap: theme.spacing(1),
+  padding: theme.spacing(1.5),
+  borderRadius: 18,
+  border: `1px solid ${alpha(theme.palette.primary.main, 0.16)}`,
+  backgroundColor: alpha(theme.palette.common.white, 0.03),
+}));
+
+const EmptyState = styled(Box)(({ theme }) => ({
+  padding: theme.spacing(2.5),
+  borderRadius: 20,
+  border: `1px dashed ${alpha(theme.palette.primary.main, 0.28)}`,
+  backgroundColor: alpha(theme.palette.common.white, 0.02),
+}));
+
+function loadShopGroupVisibility(): ShopGroupVisibility {
+  if (typeof window === "undefined") {
+    return defaultShopGroupVisibility;
+  }
+
+  const rawValue = window.localStorage.getItem(
+    SHOP_GROUP_VISIBILITY_STORAGE_KEY,
+  );
+
+  if (!rawValue) {
+    return defaultShopGroupVisibility;
+  }
+
+  try {
+    const parsedValue = JSON.parse(rawValue) as Partial<ShopGroupVisibility>;
+
+    return {
+      ...defaultShopGroupVisibility,
+      ...parsedValue,
+    };
+  } catch {
+    return defaultShopGroupVisibility;
+  }
+}
+
 function Shop({ onPurchaseError }: ShopProps): JSX.Element {
   const { user: currentUser } = useAuth();
   const { count: globalTicketCount } = useGame();
@@ -50,9 +106,56 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
     increaseCreditGeneration,
     increaseCreditCapacity,
   } = useOperations(onPurchaseError);
+  const [visibleGroups, setVisibleGroups] = useState<ShopGroupVisibility>(
+    loadShopGroupVisibility,
+  );
 
   if (!currentUser) {
     return <Typography>Loading...</Typography>;
+  }
+
+  const availableGroups = useMemo(
+    () => [
+      ...(currentUser.tickets_contributed > 200
+        ? ([{ id: "money", label: "Money & Gold" }] as const)
+        : []),
+      { id: "gold", label: "Gold & Supplies" } as const,
+      ...(currentUser.tickets_contributed > 500
+        ? ([{ id: "credit", label: "Credit Systems" }] as const)
+        : []),
+      { id: "globalTickets", label: "Global Tickets" } as const,
+    ],
+    [currentUser.tickets_contributed],
+  );
+
+  useEffect(() => {
+    setVisibleGroups((currentVisibility) => {
+      const nextVisibility = { ...currentVisibility };
+      let hasChanged = false;
+
+      for (const group of availableGroups) {
+        if (typeof nextVisibility[group.id] === "undefined") {
+          nextVisibility[group.id] = true;
+          hasChanged = true;
+        }
+      }
+
+      return hasChanged ? nextVisibility : currentVisibility;
+    });
+  }, [availableGroups]);
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      SHOP_GROUP_VISIBILITY_STORAGE_KEY,
+      JSON.stringify(visibleGroups),
+    );
+  }, [visibleGroups]);
+
+  function toggleGroup(groupId: ShopGroupId) {
+    setVisibleGroups((currentVisibility) => ({
+      ...currentVisibility,
+      [groupId]: !currentVisibility[groupId],
+    }));
   }
 
   const money = currentUser.money ?? 0;
@@ -143,6 +246,10 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
       [ResourceType.GLOBAL_TICKETS]: creditCapacityCost,
     }) && remainingCapacity >= creditCapacityCost;
 
+  const visibleAvailableGroups = availableGroups.filter(
+    (group) => visibleGroups[group.id] !== false,
+  );
+
   return (
     <ShopCard elevation={0}>
       <Stack spacing={2}>
@@ -160,52 +267,96 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
           </Typography>
         </Box>
 
+        <Box>
+          <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+            Visible shop groups
+          </Typography>
+          <ShopVisibilityToolbar>
+            {availableGroups.map((group) => {
+              const isVisible = visibleGroups[group.id] !== false;
+
+              return (
+                <Chip
+                  key={group.id}
+                  clickable
+                  label={`${isVisible ? "Hide" : "Show"} ${group.label}`}
+                  color={isVisible ? "primary" : "default"}
+                  onClick={() => toggleGroup(group.id)}
+                  variant={isVisible ? "filled" : "outlined"}
+                />
+              );
+            })}
+          </ShopVisibilityToolbar>
+        </Box>
+
         <ShopGroups>
-          {currentUser.tickets_contributed > 200 && (
-            <ShopMoneyGroup
-              money={money}
-              goldCostPerUnit={goldCostPerUnit}
-              canAffordGold1={canAffordGold1}
-              canAffordGold10={canAffordGold10}
-              canAffordGold100={canAffordGold100}
-              onBuyGold={buyGold}
+          {visibleGroups.money !== false &&
+            currentUser.tickets_contributed > 200 && (
+              <ShopMoneyGroup
+                money={money}
+                goldCostPerUnit={goldCostPerUnit}
+                canAffordGold1={canAffordGold1}
+                canAffordGold10={canAffordGold10}
+                canAffordGold100={canAffordGold100}
+                onBuyGold={buyGold}
+              />
+            )}
+
+          {visibleGroups.gold !== false && (
+            <ShopGoldGroup
+              gold={gold}
+              suppliesCostInGold={suppliesCostInGold}
+              isSuppliesButtonDisabled={isButtonDisabled}
+              autoBuyCost={autoBuySuppliesCost}
+              autoBuyPurchased={currentUser.auto_buy_supplies_purchased}
+              autoBuyActive={currentUser.auto_buy_supplies_active}
+              canAffordAutoBuyUnlock={canAffordAutoBuySupplies}
+              creditGenerationCost={creditGenerationCost}
+              canAffordCreditGeneration={canAffordCreditGeneration}
+              onBuySupplies={buySupplies}
+              onBuyAutoBuySupplies={buyAutoBuySupplies}
+              onToggleAutoBuySupplies={toggleAutoBuySupplies}
+              onIncreaseCreditGeneration={increaseCreditGeneration}
             />
           )}
 
-          <ShopGoldGroup
-            gold={gold}
-            suppliesCostInGold={suppliesCostInGold}
-            isSuppliesButtonDisabled={isButtonDisabled}
-            autoBuyCost={autoBuySuppliesCost}
-            autoBuyPurchased={currentUser.auto_buy_supplies_purchased}
-            autoBuyActive={currentUser.auto_buy_supplies_active}
-            canAffordAutoBuyUnlock={canAffordAutoBuySupplies}
-            creditGenerationCost={creditGenerationCost}
-            canAffordCreditGeneration={canAffordCreditGeneration}
-            onBuySupplies={buySupplies}
-            onBuyAutoBuySupplies={buyAutoBuySupplies}
-            onToggleAutoBuySupplies={toggleAutoBuySupplies}
-            onIncreaseCreditGeneration={increaseCreditGeneration}
-          />
+          {visibleGroups.credit !== false &&
+            currentUser.tickets_contributed > 500 && (
+              <ShopCreditGroup
+                user={currentUser}
+                autoprinters={autoprinters}
+                autoprinterCost={autoprinterCost}
+                canAffordAutoprinter={canAffordAutoprinter}
+                onBuyAutoprinter={buyAutoprinter}
+              />
+            )}
 
-          {currentUser.tickets_contributed > 500 && (
-            <ShopCreditGroup
-              user={currentUser}
-              autoprinters={autoprinters}
-              autoprinterCost={autoprinterCost}
-              canAffordAutoprinter={canAffordAutoprinter}
-              onBuyAutoprinter={buyAutoprinter}
+          {visibleGroups.globalTickets !== false && (
+            <ShopGlobalTicketsGroup
+              globalTicketCount={globalTicketCount}
+              remainingCapacity={remainingCapacity}
+              creditCapacityCost={creditCapacityCost}
+              canAffordCreditCapacity={canAffordCreditCapacity}
+              onIncreaseCreditCapacity={increaseCreditCapacity}
             />
           )}
-
-          <ShopGlobalTicketsGroup
-            globalTicketCount={globalTicketCount}
-            remainingCapacity={remainingCapacity}
-            creditCapacityCost={creditCapacityCost}
-            canAffordCreditCapacity={canAffordCreditCapacity}
-            onIncreaseCreditCapacity={increaseCreditCapacity}
-          />
         </ShopGroups>
+
+        {visibleAvailableGroups.length === 0 && (
+          <EmptyState>
+            <Typography variant="subtitle1" fontWeight={700}>
+              All available shop groups are hidden
+            </Typography>
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ mt: 0.75 }}
+            >
+              Use the visibility controls above to bring back the upgrade groups
+              you want in view.
+            </Typography>
+          </EmptyState>
+        )}
       </Stack>
     </ShopCard>
   );
