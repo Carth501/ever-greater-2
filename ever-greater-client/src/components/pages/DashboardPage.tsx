@@ -19,7 +19,7 @@ import {
   DashboardSummaryPanel,
   DashboardTicketPanel,
   DashboardToolbarSection,
-} from "./dashboard/DashboardSections";
+} from "./dashboard";
 import {
   LATE_UPDATE_MS,
   defaultPanels,

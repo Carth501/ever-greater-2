@@ -30,6 +30,8 @@ export const presets: Record<PresetId, PanelState> = {
   expanded: defaultPanels,
 };
 
+export const presetIds: PresetId[] = ["focused", "balanced", "expanded"];
+
 export const panelLabels: PanelLabel[] = [
   { id: "account", label: "Account" },
   { id: "ticket", label: "Ticket Pool" },
