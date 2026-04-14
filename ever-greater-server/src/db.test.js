@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ResourceType } from 'ever-greater-shared';
 
 describe('Database Functions', () => {
   let mockPool;
@@ -390,6 +391,41 @@ describe('Database Functions', () => {
       mockPool.end.mockRejectedValue(new Error('Close failed'));
 
       await expect(db.closePool()).rejects.toThrow('Close failed');
+    });
+  });
+
+  describe('executeResourceTransaction', () => {
+    it('should throw GlobalTicketLimitExceeded before spending global tickets above personal limit', async () => {
+      mockClient.query.mockImplementation(async (query) => {
+        if (query === 'BEGIN') {
+          return { rows: [] };
+        }
+
+        if (query.includes('SELECT tickets_contributed FROM users')) {
+          return { rows: [{ tickets_contributed: 5 }] };
+        }
+
+        if (query.includes('SELECT COALESCE(SUM(amount), 0) as total FROM ticket_withdrawals')) {
+          return { rows: [{ total: 4 }] };
+        }
+
+        if (query === 'ROLLBACK') {
+          return { rows: [] };
+        }
+
+        throw new Error(`Unexpected query: ${query}`);
+      });
+
+      await expect(
+        db.executeResourceTransaction(
+          1,
+          { [ResourceType.GLOBAL_TICKETS]: 2 },
+          {},
+        ),
+      ).rejects.toMatchObject({ name: 'GlobalTicketLimitExceeded' });
+
+      expect(mockClient.query).toHaveBeenCalledWith('ROLLBACK');
+      expect(mockClient.release).toHaveBeenCalled();
     });
   });
 });

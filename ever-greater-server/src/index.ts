@@ -11,7 +11,7 @@ import {
   type GlobalCountUpdate,
   type UserResourceUpdate,
 } from "ever-greater-shared";
-import type { Request } from "express";
+import type { Request, Response } from "express";
 import express, { type Express } from "express";
 import session from "express-session";
 import http, { type Server } from "http";
@@ -146,6 +146,33 @@ function logRouteError(req: Request, error: unknown, message: string): void {
     error: getErrorMessage(error),
   });
 }
+
+type ApiErrorPayload = {
+  error: string;
+  code: string;
+  detail?: string;
+} & Record<string, unknown>;
+
+function sendError(
+  res: Response,
+  status: number,
+  payload: ApiErrorPayload,
+): Response {
+  return res.status(status).json(payload);
+}
+
+const credentialsSchema = z.object({
+  email: z.string(),
+  password: z.string(),
+});
+
+const toggleAutoBuySuppliesSchema = z.object({
+  active: z.boolean(),
+});
+
+const operationRequestSchema = z.object({
+  quantity: z.number().int().positive().optional(),
+});
 
 function broadcastCount(count: number): void {
   if (!wss) return;
@@ -337,20 +364,27 @@ function createApp(): Express {
 
   app.post("/api/auth/register", async (req, res) => {
     try {
-      const { email, password } = req.body as {
-        email?: string;
-        password?: string;
-      };
-
-      if (!email || !password) {
-        return res
-          .status(400)
-          .json({ error: "Email and password are required" });
+      const credentialsResult = credentialsSchema.safeParse(req.body);
+      if (
+        !credentialsResult.success ||
+        credentialsResult.data.email.trim() === "" ||
+        credentialsResult.data.password === ""
+      ) {
+        return sendError(res, 400, {
+          error: "Email and password are required",
+          code: "INVALID_REQUEST",
+          detail: "Request body must include non-empty email and password",
+        });
       }
+
+      const { email, password } = credentialsResult.data;
 
       const existingUser = await getUserByEmail(email);
       if (existingUser) {
-        return res.status(409).json({ error: "Email already in use" });
+        return sendError(res, 409, {
+          error: "Email already in use",
+          code: "EMAIL_ALREADY_IN_USE",
+        });
       }
 
       const saltRounds = 10;
@@ -362,26 +396,37 @@ function createApp(): Express {
       return res.status(201).json({ user: toClientUser(user) });
     } catch (error) {
       logRouteError(req, error, "Error registering user");
-      return res.status(500).json({ error: "Failed to register user" });
+      return sendError(res, 500, {
+        error: "Failed to register user",
+        code: "REGISTER_FAILED",
+        detail: getErrorMessage(error),
+      });
     }
   });
 
   app.post("/api/auth/login", async (req, res) => {
     try {
-      const { email, password } = req.body as {
-        email?: string;
-        password?: string;
-      };
-
-      if (!email || !password) {
-        return res
-          .status(400)
-          .json({ error: "Email and password are required" });
+      const credentialsResult = credentialsSchema.safeParse(req.body);
+      if (
+        !credentialsResult.success ||
+        credentialsResult.data.email.trim() === "" ||
+        credentialsResult.data.password === ""
+      ) {
+        return sendError(res, 400, {
+          error: "Email and password are required",
+          code: "INVALID_REQUEST",
+          detail: "Request body must include non-empty email and password",
+        });
       }
+
+      const { email, password } = credentialsResult.data;
 
       const user = await getUserByEmail(email);
       if (!user) {
-        return res.status(401).json({ error: "Invalid email or password" });
+        return sendError(res, 401, {
+          error: "Invalid email or password",
+          code: "INVALID_CREDENTIALS",
+        });
       }
 
       const isValidPassword = await bcrypt.compare(
@@ -389,7 +434,10 @@ function createApp(): Express {
         user.password_hash,
       );
       if (!isValidPassword) {
-        return res.status(401).json({ error: "Invalid email or password" });
+        return sendError(res, 401, {
+          error: "Invalid email or password",
+          code: "INVALID_CREDENTIALS",
+        });
       }
 
       req.session.userId = user.id;
@@ -397,25 +445,39 @@ function createApp(): Express {
       return res.json({ user: toClientUser(user) });
     } catch (error) {
       logRouteError(req, error, "Error logging in user");
-      return res.status(500).json({ error: "Failed to login" });
+      return sendError(res, 500, {
+        error: "Failed to login",
+        code: "LOGIN_FAILED",
+        detail: getErrorMessage(error),
+      });
     }
   });
 
   app.get("/api/auth/me", async (req, res) => {
     try {
       if (!req.session.userId) {
-        return res.status(401).json({ error: "Not authenticated" });
+        return sendError(res, 401, {
+          error: "Not authenticated",
+          code: "AUTH_REQUIRED",
+        });
       }
 
       const user = await getUserById(req.session.userId);
       if (!user) {
-        return res.status(404).json({ error: "User not found" });
+        return sendError(res, 404, {
+          error: "User not found",
+          code: "USER_NOT_FOUND",
+        });
       }
 
       return res.json({ user: toClientUser(user) });
     } catch (error) {
       logRouteError(req, error, "Error fetching current user");
-      return res.status(500).json({ error: "Failed to fetch user" });
+      return sendError(res, 500, {
+        error: "Failed to fetch user",
+        code: "FETCH_USER_FAILED",
+        detail: getErrorMessage(error),
+      });
     }
   });
 
@@ -423,7 +485,11 @@ function createApp(): Express {
     req.session.destroy((err?: Error) => {
       if (err) {
         logRouteError(req, err, "Error destroying session");
-        return res.status(500).json({ error: "Failed to logout" });
+        return sendError(res, 500, {
+          error: "Failed to logout",
+          code: "LOGOUT_FAILED",
+          detail: getErrorMessage(err),
+        });
       }
       return res.json({ message: "Logged out successfully" });
     });
@@ -442,23 +508,36 @@ function createApp(): Express {
   app.post("/api/auth/auto-buy-supplies/toggle", async (req, res) => {
     try {
       if (!req.session.userId) {
-        return res.status(401).json({ error: "Not authenticated" });
+        return sendError(res, 401, {
+          error: "Not authenticated",
+          code: "AUTH_REQUIRED",
+        });
       }
 
-      const { active } = req.body as { active?: boolean };
-      if (typeof active !== "boolean") {
-        return res.status(400).json({ error: "'active' boolean is required" });
+      const toggleResult = toggleAutoBuySuppliesSchema.safeParse(req.body);
+      if (!toggleResult.success) {
+        return sendError(res, 400, {
+          error: "'active' boolean is required",
+          code: "INVALID_REQUEST",
+          detail: "Request body must include an 'active' boolean",
+        });
       }
+
+      const { active } = toggleResult.data;
 
       const existingUser = await getUserById(req.session.userId);
       if (!existingUser) {
-        return res.status(404).json({ error: "User not found" });
+        return sendError(res, 404, {
+          error: "User not found",
+          code: "USER_NOT_FOUND",
+        });
       }
 
       if (!existingUser.auto_buy_supplies_purchased) {
-        return res
-          .status(403)
-          .json({ error: "Auto-buy supplies not unlocked" });
+        return sendError(res, 403, {
+          error: "Auto-buy supplies not unlocked",
+          code: "AUTO_BUY_SUPPLIES_NOT_UNLOCKED",
+        });
       }
 
       const updatedUser = await setAutoBuySuppliesActive(
@@ -474,9 +553,11 @@ function createApp(): Express {
       return res.json({ user: toClientUser(updatedUser) });
     } catch (error) {
       logRouteError(req, error, "Error toggling auto-buy supplies");
-      return res
-        .status(500)
-        .json({ error: "Failed to toggle auto-buy supplies" });
+      return sendError(res, 500, {
+        error: "Failed to toggle auto-buy supplies",
+        code: "AUTO_BUY_SUPPLIES_TOGGLE_FAILED",
+        detail: getErrorMessage(error),
+      });
     }
   });
 
@@ -484,32 +565,33 @@ function createApp(): Express {
   app.post("/api/operations/:operationId", async (req, res) => {
     try {
       if (!req.session.userId) {
-        return res.status(401).json({ error: "Not authenticated" });
+        return sendError(res, 401, {
+          error: "Not authenticated",
+          code: "AUTH_REQUIRED",
+        });
       }
 
       const operationIdResult = z
         .nativeEnum(OperationId)
         .safeParse(req.params.operationId);
       if (!operationIdResult.success) {
-        return res.status(400).json({
+        return sendError(res, 400, {
           error: "INVALID_REQUEST",
+          code: "INVALID_REQUEST",
           detail: `Unknown operationId: ${req.params.operationId}`,
         });
       }
 
-      if (req.body.quantity !== undefined) {
-        const quantityResult = z
-          .number()
-          .int()
-          .positive()
-          .safeParse(req.body.quantity);
-        if (!quantityResult.success) {
-          return res.status(400).json({
-            error: "INVALID_REQUEST",
-            detail: "quantity must be a positive integer",
-          });
-        }
+      const requestBodyResult = operationRequestSchema.safeParse(req.body ?? {});
+      if (!requestBodyResult.success) {
+        return sendError(res, 400, {
+          error: "INVALID_REQUEST",
+          code: "INVALID_REQUEST",
+          detail: "quantity must be a positive integer",
+        });
       }
+
+      const requestBody = requestBodyResult.data;
 
       const operationId = operationIdResult.data;
       const operation = operations[operationId];
@@ -533,7 +615,7 @@ function createApp(): Express {
         const initialPrintValidation = validateOperation(
           user,
           operation,
-          req.body,
+          requestBody,
           globalTicketCount,
         );
 
@@ -573,21 +655,23 @@ function createApp(): Express {
       const validation = validateOperation(
         userForValidation,
         operation,
-        req.body,
+        requestBody,
         globalTicketCount,
       );
       if (!validation.valid) {
         if (validation.error === "Insufficient resources") {
-          return res.status(403).json({
+          return sendError(res, 403, {
             error: validation.error,
+            code: "INSUFFICIENT_RESOURCES",
             insufficientResources: validation.insufficientResources,
             cost: validation.cost,
             gain: validation.gain,
           });
         }
 
-        return res.status(400).json({
+        return sendError(res, 400, {
           error: validation.error || "Invalid operation parameters",
+          code: "INVALID_OPERATION",
           cost: validation.cost,
           gain: validation.gain,
         });
@@ -657,15 +741,17 @@ function createApp(): Express {
         error instanceof Error &&
         error.name === "GlobalTicketLimitExceeded"
       ) {
-        return res.status(403).json({
+        return sendError(res, 403, {
           error: "GLOBAL_TICKET_LIMIT",
+          code: "GLOBAL_TICKET_LIMIT",
           detail: error.message,
         });
       }
       logRouteError(req, error, "Error executing operation");
-      return res.status(500).json({
+      return sendError(res, 500, {
         error: "Failed to execute operation",
-        details: getErrorMessage(error),
+        code: "OPERATION_EXECUTION_FAILED",
+        detail: getErrorMessage(error),
       });
     }
   });

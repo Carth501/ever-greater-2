@@ -98,6 +98,7 @@ describe('Express API Endpoints', () => {
         .expect(400);
 
       expect(response.body.error).toBe('Email and password are required');
+      expect(response.body.code).toBe('INVALID_REQUEST');
     });
 
     it('should return 400 if both email and password are missing', async () => {
@@ -107,6 +108,7 @@ describe('Express API Endpoints', () => {
         .expect(400);
 
       expect(response.body.error).toBe('Email and password are required');
+      expect(response.body.code).toBe('INVALID_REQUEST');
     });
 
     it('should handle database errors', async () => {
@@ -183,6 +185,7 @@ describe('Express API Endpoints', () => {
         .expect(400);
 
       expect(response.body.error).toBe('Email and password are required');
+      expect(response.body.code).toBe('INVALID_REQUEST');
     });
 
     it('should handle database errors', async () => {
@@ -250,6 +253,7 @@ describe('Express API Endpoints', () => {
         .expect(401);
 
       expect(response.body.error).toBe('Not authenticated');
+      expect(response.body.code).toBe('AUTH_REQUIRED');
     });
   });
 
@@ -702,6 +706,7 @@ describe('Express API Endpoints', () => {
         .expect(400);
 
       expect(response.body.error).toBe('INVALID_REQUEST');
+      expect(response.body.code).toBe('INVALID_REQUEST');
       expect(response.body.detail).toContain('NOT_AN_OPERATION');
     });
 
@@ -736,6 +741,7 @@ describe('Express API Endpoints', () => {
         .expect(400);
 
       expect(response.body.error).toBe('INVALID_REQUEST');
+      expect(response.body.code).toBe('INVALID_REQUEST');
       expect(response.body.detail).toBe('quantity must be a positive integer');
     });
 
@@ -776,6 +782,7 @@ describe('Express API Endpoints', () => {
         .expect(403);
 
       expect(response.body.error).toBe('GLOBAL_TICKET_LIMIT');
+      expect(response.body.code).toBe('GLOBAL_TICKET_LIMIT');
       expect(response.body.detail).toBe('Personal ticket withdrawal limit exceeded');
     });
   });
@@ -853,6 +860,42 @@ describe('Express API Endpoints', () => {
         .expect(403);
 
       expect(response.body.error).toBe('Auto-buy supplies not unlocked');
+      expect(response.body.code).toBe('AUTO_BUY_SUPPLIES_NOT_UNLOCKED');
+    });
+
+    it('should reject toggle requests without an active boolean', async () => {
+      const testUser = {
+        id: 1,
+        email: 'test@example.com',
+        password_hash: await bcrypt.hash('password123', 10),
+        printer_supplies: 100,
+        money: 0,
+        gold: 2,
+        autoprinters: 0,
+        tickets_contributed: 0,
+        tickets_withdrawn: 0,
+        credit_value: 0,
+        credit_generation_level: 0,
+        credit_capacity_level: 0,
+        auto_buy_supplies_purchased: true,
+        auto_buy_supplies_active: true,
+      };
+
+      db.getUserByEmail.mockResolvedValue(testUser);
+
+      await agent
+        .post('/api/auth/login')
+        .send({ email: 'test@example.com', password: 'password123' })
+        .expect(200);
+
+      const response = await agent
+        .post('/api/auth/auto-buy-supplies/toggle')
+        .send({ active: 'yes' })
+        .expect(400);
+
+      expect(response.body.error).toBe("'active' boolean is required");
+      expect(response.body.code).toBe('INVALID_REQUEST');
+      expect(response.body.detail).toContain('active');
     });
   });
 });
