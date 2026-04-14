@@ -2,7 +2,7 @@ import Box from "@mui/material/Box";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-import { styled } from "@mui/material/styles";
+import { alpha, styled } from "@mui/material/styles";
 import {
   OperationId,
   ResourceType,
@@ -28,6 +28,15 @@ const ShopGroups = styled(Box)(({ theme }) => ({
   flexWrap: "wrap",
   gap: theme.spacing(2),
   alignItems: "stretch",
+}));
+
+const ShopCard = styled(Paper)(({ theme }) => ({
+  padding: theme.spacing(2.5),
+  borderRadius: 22,
+  border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+  background:
+    `linear-gradient(180deg, ${alpha(theme.palette.background.paper, 0.96)} 0%, ${alpha(theme.palette.primary.main, 0.06)} 100%)`,
+  boxShadow: `0 14px 30px ${alpha(theme.palette.common.black, 0.2)}`,
 }));
 
 function Shop({ onPurchaseError }: ShopProps): JSX.Element {
@@ -136,11 +145,19 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
     }) && remainingCapacity >= creditCapacityCost;
 
   return (
-    <Paper elevation={2} sx={{ p: 2 }}>
+    <ShopCard elevation={0}>
       <Stack spacing={2}>
-        <Typography variant="h6" fontWeight={700}>
-          Shop
-        </Typography>
+        <Box>
+          <Typography variant="overline" color="primary.light">
+            Upgrades and automation
+          </Typography>
+          <Typography variant="h5" fontWeight={700}>
+            Shop
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
+            Each group is still driven by the existing progression rules, but the live interface now presents them with the cleaner modular card structure from the preview.
+          </Typography>
+        </Box>
 
         <ShopGroups>
           {currentUser.tickets_contributed > 200 && (
@@ -189,7 +206,7 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
           />
         </ShopGroups>
       </Stack>
-    </Paper>
+    </ShopCard>
   );
 }
 

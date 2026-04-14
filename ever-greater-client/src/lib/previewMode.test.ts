@@ -2,6 +2,18 @@ import { describe, expect, it } from "vitest";
 import { getPreviewMode } from "./previewMode";
 
 describe("getPreviewMode", () => {
+  it("returns the preview index config for the stable internal hash route", () => {
+    const mode = getPreviewMode({
+      hash: "#internal/preview",
+      pathname: "/",
+      search: "",
+    });
+
+    expect(mode).toEqual({
+      kind: "index",
+    });
+  });
+
   it("returns dashboard preview config for the stable internal hash route", () => {
     const mode = getPreviewMode({
       hash: "#internal/preview/dashboard",
@@ -38,6 +50,18 @@ describe("getPreviewMode", () => {
     expect(mode).toEqual({
       kind: "dashboard",
       showControls: false,
+    });
+  });
+
+  it("supports the preview index query entry", () => {
+    const mode = getPreviewMode({
+      hash: "",
+      pathname: "/",
+      search: "?preview=index",
+    });
+
+    expect(mode).toEqual({
+      kind: "index",
     });
   });
 

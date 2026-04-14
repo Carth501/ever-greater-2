@@ -1,4 +1,6 @@
 export type PreviewMode = {
+  kind: "index";
+} | {
   kind: "dashboard";
   showControls: boolean;
 };
@@ -10,10 +12,14 @@ const DASHBOARD_HASH_ROUTES = new Set([
   "preview/dashboard",
 ]);
 
+const INDEX_HASH_ROUTES = new Set(["internal/preview", "preview"]);
+
 const DASHBOARD_PATH_ROUTES = new Set([
   "/internal/preview/dashboard",
   "/preview/dashboard",
 ]);
+
+const INDEX_PATH_ROUTES = new Set(["/internal/preview", "/preview"]);
 
 function getHashParts(hash: string): {
   hashPath: string;
@@ -31,6 +37,14 @@ function getHashParts(hash: string): {
 export function getPreviewMode(location: LocationShape): PreviewMode | null {
   const searchParams = new URLSearchParams(location.search);
   const { hashPath, hashSearchParams } = getHashParts(location.hash);
+
+  if (
+    searchParams.get("preview") === "index" ||
+    INDEX_HASH_ROUTES.has(hashPath) ||
+    INDEX_PATH_ROUTES.has(location.pathname)
+  ) {
+    return { kind: "index" };
+  }
 
   if (
     searchParams.get("concept") === "dashboard" ||

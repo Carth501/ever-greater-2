@@ -7,6 +7,7 @@ import RealtimeStatusPanel from "./components/common/RealtimeStatusPanel";
 import DashboardConceptPage from "./components/pages/DashboardConceptPage";
 import EverGreaterMainPage from "./components/pages/EverGreaterMainPage";
 import LoginPage from "./components/pages/LoginPage";
+import PreviewIndexPage from "./components/pages/PreviewIndexPage";
 import SignupPage from "./components/pages/SignupPage";
 import cLogo from "./images/cLogo.png";
 import { getPreviewMode } from "./lib/previewMode";
@@ -49,8 +50,9 @@ function App() {
     getPreviewMode(window.location),
   );
 
-  const isConceptMode = previewMode?.kind === "dashboard";
-  const showConceptControls = previewMode?.showControls ?? true;
+  const isPreviewMode = previewMode !== null;
+  const showConceptControls =
+    previewMode?.kind === "dashboard" ? previewMode.showControls : true;
 
   // Check if user is already logged in on mount
   useEffect(() => {
@@ -83,7 +85,7 @@ function App() {
     setAuthPage("login");
   }
 
-  if (!isConceptMode && isCheckingAuth) {
+  if (!isPreviewMode && isCheckingAuth) {
     return (
       <Box
         display="flex"
@@ -96,7 +98,7 @@ function App() {
     );
   }
 
-  if (isConceptMode) {
+  if (isPreviewMode) {
     const contentHeight = `calc(100vh - 56px)`;
 
     return (
@@ -106,7 +108,11 @@ function App() {
           disableGutters
           sx={{ flex: 1, overflowY: "scroll", maxHeight: contentHeight }}
         >
-          <DashboardConceptPage showControls={showConceptControls} />
+          {previewMode?.kind === "dashboard" ? (
+            <DashboardConceptPage showControls={showConceptControls} />
+          ) : (
+            <PreviewIndexPage />
+          )}
         </Container>
 
         <AppFooter as="footer">
