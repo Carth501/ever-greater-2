@@ -4,8 +4,11 @@ import {
   canAfford,
   getOperationCost,
   getOperationGain,
+  isUserResourceFields,
+  isWebSocketMessage,
   OperationId,
   operations,
+  parseWebSocketMessage,
   type ResourceAmount,
   ResourceType,
   type User,
@@ -167,6 +170,46 @@ describe("shared websocket contracts", () => {
         user_update: { credit_value: 3 },
       }),
     ).toBe("user:1");
+  });
+
+  it("validates websocket payloads at runtime", () => {
+    expect(
+      parseWebSocketMessage({
+        type: "GLOBAL_COUNT_UPDATE",
+        count: 42,
+      }),
+    ).toEqual({
+      type: "GLOBAL_COUNT_UPDATE",
+      count: 42,
+    });
+
+    expect(
+      parseWebSocketMessage({
+        type: "USER_RESOURCE_UPDATE",
+        user_update: { credit_value: 3, auto_buy_supplies_active: true },
+      }),
+    ).toEqual({
+      type: "USER_RESOURCE_UPDATE",
+      user_update: { credit_value: 3, auto_buy_supplies_active: true },
+    });
+
+    expect(
+      parseWebSocketMessage({
+        type: "USER_RESOURCE_UPDATE",
+        user_update: { credit_value: "3" },
+      }),
+    ).toBeNull();
+    expect(parseWebSocketMessage({ type: "UNKNOWN" })).toBeNull();
+    expect(isWebSocketMessage({ type: "GLOBAL_COUNT_UPDATE", count: 1 })).toBe(
+      true,
+    );
+    expect(
+      isUserResourceFields({
+        credit_capacity_level: 4,
+        auto_buy_supplies_purchased: false,
+      }),
+    ).toBe(true);
+    expect(isUserResourceFields({ unknown: 1 })).toBe(false);
   });
 });
 

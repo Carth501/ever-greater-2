@@ -1,3 +1,4 @@
+import type { WebSocketMessage } from "ever-greater-shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   connectGlobalCountSocket,
@@ -17,6 +18,7 @@ describe("websocketService", () => {
   let onStatus:
     | ((status: SocketStatus, details: SocketStatusDetails) => void)
     | null;
+  let onMessage: ((message: WebSocketMessage) => void) | null;
   let statusHandlers: Array<
     (status: SocketStatus, details: SocketStatusDetails) => void
   >;
@@ -33,11 +35,13 @@ describe("websocketService", () => {
       dispatchedActions.push(action);
     }) as Parameters<typeof connect>[1];
     onStatus = null;
+    onMessage = null;
     statusHandlers = [];
     disconnectCalls = 0;
 
     mockedConnectGlobalCountSocket.mockImplementation(
-      (_onCount, _onUserUpdate, statusHandler) => {
+      (messageHandler, statusHandler) => {
+        onMessage = messageHandler ?? null;
         onStatus = statusHandler ?? null;
         if (statusHandler) {
           statusHandlers.push(statusHandler);
@@ -134,5 +138,25 @@ describe("websocketService", () => {
       type: "realtime/setConnected",
       payload: true,
     });
+  });
+
+  it("routes validated websocket messages through the service", () => {
+    connect(1, dispatch);
+
+    onMessage?.({ type: "GLOBAL_COUNT_UPDATE", count: 77 });
+    onMessage?.({
+      type: "USER_RESOURCE_UPDATE",
+      user_update: { credit_value: 8.5 },
+    });
+
+    expect(dispatchedActions).toContainEqual(
+      expect.objectContaining({ type: "ticket/updateCount", payload: 77 }),
+    );
+    expect(dispatchedActions).toContainEqual(
+      expect.objectContaining({
+        type: "auth/applyUserUpdate",
+        payload: { credit_value: 8.5 },
+      }),
+    );
   });
 });

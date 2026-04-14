@@ -1,3 +1,4 @@
+import type { WebSocketMessage } from "ever-greater-shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { User } from "../../api/auth";
 import * as globalTicketApi from "../../api/globalTicket";
@@ -193,9 +194,10 @@ describe("websocketMiddleware", () => {
 
       let onCountCallback: ((count: number) => void) | null = null;
       mockGlobalTicketApi.connectGlobalCountSocket.mockImplementation(((
-        onCount: (count: number) => void,
+        onMessage?: (message: WebSocketMessage) => void,
       ) => {
-        onCountCallback = onCount;
+        onCountCallback = (count) =>
+          onMessage?.({ type: "GLOBAL_COUNT_UPDATE", count });
         return mockDisconnect;
       }) as any);
 
@@ -217,13 +219,18 @@ describe("websocketMiddleware", () => {
       const middleware = websocketMiddleware(store)(next);
 
       let onStatusCallback:
-        | ((status: "open" | "closed" | "error") => void)
+        | ((
+            status: "open" | "closed" | "error",
+            details?: { readyState: number; timestamp: number },
+          ) => void)
         | null = null;
       mockGlobalTicketApi.connectGlobalCountSocket.mockImplementation(
         (
-          _onCount: (count: number) => void,
-          _onUserUpdate?: (update: any) => void,
-          onStatus?: (status: "open" | "closed" | "error") => void,
+          _onMessage?: (message: WebSocketMessage) => void,
+          onStatus?: (
+            status: "open" | "closed" | "error",
+            details?: { readyState: number; timestamp: number },
+          ) => void,
         ) => {
           if (onStatus) {
             onStatusCallback = onStatus;
@@ -235,7 +242,10 @@ describe("websocketMiddleware", () => {
       middleware(checkAuthThunk.fulfilled(defaultUser, ""));
 
       // Simulate WebSocket error
-      onStatusCallback!("error");
+      onStatusCallback!("error", {
+        readyState: 3,
+        timestamp: Date.now(),
+      });
 
       const errorAction = dispatchedActions.find(
         (a) => a.type === "error/setError",
@@ -252,13 +262,11 @@ describe("websocketMiddleware", () => {
       let onUserUpdateCallback: ((update: any) => void) | null = null;
       mockGlobalTicketApi.connectGlobalCountSocket.mockImplementation(
         (
-          _onCount: (count: number) => void,
-          onUserUpdate?: (update: any) => void,
+          onMessage?: (message: WebSocketMessage) => void,
           _onStatus?: (status: "open" | "closed" | "error") => void,
         ) => {
-          if (onUserUpdate) {
-            onUserUpdateCallback = onUserUpdate;
-          }
+          onUserUpdateCallback = (update) =>
+            onMessage?.({ type: "USER_RESOURCE_UPDATE", user_update: update });
           return mockDisconnect;
         },
       );
@@ -289,13 +297,11 @@ describe("websocketMiddleware", () => {
       let onUserUpdateCallback: ((update: any) => void) | null = null;
       mockGlobalTicketApi.connectGlobalCountSocket.mockImplementation(
         (
-          _onCount: (count: number) => void,
-          onUserUpdate?: (update: any) => void,
+          onMessage?: (message: WebSocketMessage) => void,
           _onStatus?: (status: "open" | "closed" | "error") => void,
         ) => {
-          if (onUserUpdate) {
-            onUserUpdateCallback = onUserUpdate;
-          }
+          onUserUpdateCallback = (update) =>
+            onMessage?.({ type: "USER_RESOURCE_UPDATE", user_update: update });
           return mockDisconnect;
         },
       );

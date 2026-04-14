@@ -1,3 +1,4 @@
+import { type WebSocketMessage } from "ever-greater-shared";
 import {
   connectGlobalCountSocket,
   type SocketStatus,
@@ -117,6 +118,40 @@ const handleStatus = (
   scheduleReconnect();
 };
 
+const handleMessage = (
+  message: WebSocketMessage,
+  connectionId: number,
+  dispatch: (
+    action: ReturnType<
+      | typeof applyUserUpdate
+      | typeof updateCount
+      | typeof clearTicketError
+      | typeof setError
+      | typeof markUpdateReceived
+      | typeof setConnected
+      | typeof setReconnecting
+    >,
+  ) => void,
+): void => {
+  if (connectionId !== activeConnectionId) {
+    return;
+  }
+
+  switch (message.type) {
+    case "GLOBAL_COUNT_UPDATE":
+      dispatch(updateCount(message.count));
+      dispatch(markUpdateReceived(Date.now()));
+      dispatch(clearTicketError());
+      break;
+    case "USER_RESOURCE_UPDATE":
+      if (Object.keys(message.user_update).length > 0) {
+        dispatch(applyUserUpdate(message.user_update));
+        dispatch(markUpdateReceived(Date.now()));
+      }
+      break;
+  }
+};
+
 function startConnection(
   userId: number,
   dispatch: (
@@ -156,24 +191,8 @@ function startConnection(
   }, CONNECT_TIMEOUT_MS);
 
   disconnectFn = connectGlobalCountSocket(
-    (count: number) => {
-      if (connectionId !== activeConnectionId) {
-        return;
-      }
-
-      dispatch(updateCount(count));
-      dispatch(markUpdateReceived(Date.now()));
-      dispatch(clearTicketError());
-    },
-    (update) => {
-      if (connectionId !== activeConnectionId) {
-        return;
-      }
-
-      if (Object.keys(update).length > 0) {
-        dispatch(applyUserUpdate(update));
-        dispatch(markUpdateReceived(Date.now()));
-      }
+    (message) => {
+      handleMessage(message, connectionId, dispatch);
     },
     (status, details) => {
       handleStatus(status, connectionId, details);

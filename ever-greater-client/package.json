@@ -16,6 +16,7 @@
 		"@types/node": "^20.17.15",
 		"@types/react": "^19.2.14",
 		"@types/react-dom": "^19.2.3",
+		"ever-greater": "file:..",
 		"ever-greater-shared": "file:../ever-greater-shared",
 		"react": "^19.2.4",
 		"react-dom": "^19.2.4",
