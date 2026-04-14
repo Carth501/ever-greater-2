@@ -48,10 +48,7 @@ export function getPreviewMode(location: LocationShape): PreviewMode | null {
     return { kind: "index" };
   }
 
-  if (
-    searchParams.get("concept") === "dashboard" ||
-    searchParams.get("preview") === "dashboard"
-  ) {
+  if (searchParams.get("preview") === "dashboard") {
     return {
       kind: "dashboard",
       showControls: searchParams.get("controls") !== "0",

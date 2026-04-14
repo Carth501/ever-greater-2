@@ -40,17 +40,27 @@ describe("getPreviewMode", () => {
     });
   });
 
-  it("supports the legacy concept query entry", () => {
+  it("supports the preview dashboard query entry", () => {
     const mode = getPreviewMode({
       hash: "",
       pathname: "/",
-      search: "?concept=dashboard&controls=0",
+      search: "?preview=dashboard&controls=0",
     });
 
     expect(mode).toEqual({
       kind: "dashboard",
       showControls: false,
     });
+  });
+
+  it("ignores removed concept query entries", () => {
+    const mode = getPreviewMode({
+      hash: "",
+      pathname: "/",
+      search: "?concept=dashboard&controls=0",
+    });
+
+    expect(mode).toBeNull();
   });
 
   it("supports the preview index query entry", () => {

@@ -36,13 +36,13 @@ const HeroCard = styled(Paper)(({ theme }) => ({
   boxShadow: `0 18px 48px ${alpha(theme.palette.common.black, 0.26)}`,
 }));
 
-const ConceptsGrid = styled(Box)(({ theme }) => ({
+const PreviewGrid = styled(Box)(({ theme }) => ({
   display: "grid",
   gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
   gap: theme.spacing(3),
 }));
 
-const ConceptCard = styled(Paper)(({ theme }) => ({
+const PreviewCard = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(3),
   borderRadius: 22,
   backgroundColor: alpha(theme.palette.background.paper, 0.92),
@@ -73,7 +73,7 @@ function PreviewIndexPage(): JSX.Element {
             </AccentPill>
 
             <Typography variant="h2" sx={{ maxWidth: 760 }}>
-              A stable internal entry point for design concepts, layout
+              A stable internal entry point for dashboard previews, layout
               experiments, and future preview-only surfaces.
             </Typography>
 
@@ -82,7 +82,7 @@ function PreviewIndexPage(): JSX.Element {
               color="text.secondary"
               sx={{ maxWidth: 760 }}
             >
-              Use this index as the durable home for concept pages. It keeps
+              Use this index as the durable home for preview pages. It keeps
               preview work discoverable without mixing it into the main
               authenticated flow.
             </Typography>
@@ -99,8 +99,8 @@ function PreviewIndexPage(): JSX.Element {
           </Stack>
         </HeroCard>
 
-        <ConceptsGrid>
-          <ConceptCard elevation={0}>
+        <PreviewGrid>
+          <PreviewCard elevation={0}>
             <Stack spacing={2.5}>
               <Stack
                 direction="row"
@@ -110,14 +110,14 @@ function PreviewIndexPage(): JSX.Element {
               >
                 <Box>
                   <Typography variant="h5" fontWeight={700}>
-                    Modular dashboard concept
+                    Modular dashboard preview
                   </Typography>
                   <Typography
                     variant="body2"
                     color="text.secondary"
                     sx={{ mt: 1 }}
                   >
-                    The current concept page for the authenticated experience.
+                    The current preview page for the authenticated experience.
                     It uses live state when available and falls back to preview
                     data when the backend is unavailable.
                   </Typography>
@@ -148,8 +148,8 @@ function PreviewIndexPage(): JSX.Element {
                 </Button>
               </Stack>
             </Stack>
-          </ConceptCard>
-        </ConceptsGrid>
+          </PreviewCard>
+        </PreviewGrid>
       </Shell>
     </PageRoot>
   );

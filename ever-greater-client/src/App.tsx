@@ -3,7 +3,7 @@ import CircularProgress from "@mui/material/CircularProgress";
 import Container from "@mui/material/Container";
 import { styled } from "@mui/material/styles";
 import { useEffect, useState } from "react";
-import DashboardConceptPage from "./components/pages/DashboardConceptPage";
+import DashboardPage from "./components/pages/DashboardPage";
 import EverGreaterMainPage from "./components/pages/EverGreaterMainPage";
 import LoginPage from "./components/pages/LoginPage";
 import PreviewIndexPage from "./components/pages/PreviewIndexPage";
@@ -50,7 +50,7 @@ function App() {
   );
 
   const isPreviewMode = previewMode !== null;
-  const showConceptControls =
+  const showDashboardControls =
     previewMode?.kind === "dashboard" ? previewMode.showControls : true;
 
   // Check if user is already logged in on mount
@@ -108,7 +108,7 @@ function App() {
           sx={{ flex: 1, overflowY: "scroll", maxHeight: contentHeight }}
         >
           {previewMode?.kind === "dashboard" ? (
-            <DashboardConceptPage showControls={showConceptControls} />
+            <DashboardPage showControls={showDashboardControls} />
           ) : (
             <PreviewIndexPage />
           )}
