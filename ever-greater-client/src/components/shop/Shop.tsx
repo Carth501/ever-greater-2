@@ -89,7 +89,7 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
       <Stack spacing={2}>
         <Box>
           <Typography variant="overline" color="primary.light">
-            Upgrades and automation
+            Resources
           </Typography>
           <Typography variant="h5" fontWeight={700}>
             Shop
