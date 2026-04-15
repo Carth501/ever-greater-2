@@ -166,8 +166,6 @@ function DashboardPage({
               {panels.account && (
                 <DashboardAccountPanel
                   hasLiveUser={hasLiveUser}
-                  signalColor={signalColor}
-                  signalLabel={signalLabel}
                   userEmail={dashboardUser.email}
                 />
               )}
