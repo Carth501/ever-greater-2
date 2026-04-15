@@ -242,6 +242,52 @@ interface DbUser extends User {
   password_hash: string;
 }
 
+function toNumber(value: unknown): number {
+  if (typeof value === "number") {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  return 0;
+}
+
+function coerceUserRowNumbersInPlace(
+  userRow: Partial<
+    Pick<
+      User,
+      | "tickets_contributed"
+      | "printer_supplies"
+      | "money"
+      | "gold"
+      | "autoprinters"
+      | "credit_value"
+      | "credit_generation_level"
+      | "credit_capacity_level"
+    >
+  >,
+): void {
+  const numericFields = [
+    "tickets_contributed",
+    "printer_supplies",
+    "money",
+    "gold",
+    "autoprinters",
+    "credit_value",
+    "credit_generation_level",
+    "credit_capacity_level",
+  ] as const;
+
+  numericFields.forEach((field) => {
+    if (field in userRow) {
+      userRow[field] = toNumber(userRow[field]);
+    }
+  });
+}
+
 /**
  * Get user by email (includes password_hash for authentication)
  */
@@ -251,7 +297,8 @@ export async function getUserByEmail(email: string): Promise<DbUser | null> {
     [email],
   );
   if (!result.rows[0]) return null;
-  const userRow = result.rows[0];
+  const userRow = result.rows[0] as DbUser;
+  coerceUserRowNumbersInPlace(userRow);
   const tickets_withdrawn = await getTicketsWithdrawnIn24Hours(userRow.id);
   return Object.assign(userRow, { tickets_withdrawn }) as DbUser;
 }
@@ -268,7 +315,7 @@ export async function getTicketsWithdrawnIn24Hours(
     "SELECT COALESCE(SUM(amount), 0) as total FROM ticket_withdrawals WHERE user_id = $1 AND created_at > NOW() - INTERVAL '24 hours'",
     [userId],
   );
-  return result.rows[0]?.total || 0;
+  return toNumber(result.rows[0]?.total);
 }
 
 /**
@@ -330,7 +377,8 @@ export async function createUser(
       false,
     ],
   );
-  const userRow = result.rows[0];
+  const userRow = result.rows[0] as User;
+  coerceUserRowNumbersInPlace(userRow);
   const tickets_withdrawn = await getTicketsWithdrawnIn24Hours(userRow.id);
   return Object.assign(userRow, { tickets_withdrawn }) as User;
 }
@@ -344,7 +392,8 @@ export async function getUserById(userId: number): Promise<User | null> {
     [userId],
   );
   if (!result.rows[0]) return null;
-  const userRow = result.rows[0];
+  const userRow = result.rows[0] as User;
+  coerceUserRowNumbersInPlace(userRow);
   const tickets_withdrawn = await getTicketsWithdrawnIn24Hours(userRow.id);
   return Object.assign(userRow, { tickets_withdrawn }) as User;
 }
@@ -504,7 +553,8 @@ export async function executeResourceTransaction(
       await txClient.query("COMMIT");
     }
 
-    const userRow = result.rows[0];
+    const userRow = result.rows[0] as User;
+    coerceUserRowNumbersInPlace(userRow);
     // Enrich with current withdrawal total for this transaction
     const tickets_withdrawn = await getTicketsWithdrawnIn24Hours(userId);
     return Object.assign(userRow, { tickets_withdrawn }) as User;
@@ -549,7 +599,8 @@ export async function purchaseAutoBuySupplies(
     throw new Error("Auto-buy supplies already unlocked or insufficient gold");
   }
 
-  const userRow = result.rows[0];
+  const userRow = result.rows[0] as User;
+  coerceUserRowNumbersInPlace(userRow);
   const tickets_withdrawn = await getTicketsWithdrawnIn24Hours(userId);
   return Object.assign(userRow, { tickets_withdrawn }) as User;
 }
@@ -575,7 +626,8 @@ export async function setAutoBuySuppliesActive(
     throw new Error("Auto-buy supplies not unlocked");
   }
 
-  const userRow = result.rows[0];
+  const userRow = result.rows[0] as User;
+  coerceUserRowNumbersInPlace(userRow);
   const tickets_withdrawn = await getTicketsWithdrawnIn24Hours(userId);
   return Object.assign(userRow, { tickets_withdrawn }) as User;
 }

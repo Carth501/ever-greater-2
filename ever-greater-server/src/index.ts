@@ -876,18 +876,25 @@ if (isMainModule) {
         );
       });
 
+      let periodicTickSeconds = 0;
+
       autoprinterInterval = setInterval(async () => {
         try {
-          const result = await processAutoprinters();
+          periodicTickSeconds += 1;
+          const shouldRunAutoprinter = periodicTickSeconds % 4 === 0;
+
+          if (shouldRunAutoprinter) {
+            const result = await processAutoprinters();
+
+            if (
+              result?.newGlobalCount !== null &&
+              result?.newGlobalCount !== undefined
+            ) {
+              broadcastCount(result.newGlobalCount);
+            }
+          }
 
           await updateAllUsersCreditValues();
-
-          if (
-            result?.newGlobalCount !== null &&
-            result?.newGlobalCount !== undefined
-          ) {
-            broadcastCount(result.newGlobalCount);
-          }
 
           await broadcastPeriodicUserUpdates();
         } catch (error) {
