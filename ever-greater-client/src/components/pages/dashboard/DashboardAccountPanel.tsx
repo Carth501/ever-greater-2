@@ -19,11 +19,7 @@ export function DashboardAccountPanel({
   const emailId = useId();
 
   return (
-    <Box
-      component="section"
-      aria-labelledby={headingId}
-      aria-describedby={emailId}
-    >
+    <Box component="section" aria-label="Account" aria-describedby={emailId}>
       <PanelCard elevation={0}>
         <Stack spacing={2}>
           <Stack

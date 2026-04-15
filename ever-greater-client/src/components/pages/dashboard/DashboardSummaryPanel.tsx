@@ -12,7 +12,7 @@ export function DashboardSummaryPanel() {
   return (
     <Box
       component="section"
-      aria-labelledby={headingId}
+      aria-label="Dashboard summary"
       aria-describedby={descriptionId}
     >
       <AccentPanel elevation={0}>

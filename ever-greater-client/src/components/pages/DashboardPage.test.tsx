@@ -90,34 +90,26 @@ describe("DashboardPage", () => {
     ).toBeTruthy();
     expect(screen.getByText("operator@example.com")).toBeTruthy();
     expect(
-      screen.getByRole("region", {
-        name: /a cleaner command center for printing, monitoring, and upgrading/i,
-      }),
+      screen.getByRole("region", { name: /dashboard hero/i }),
     ).toBeTruthy();
     expect(
-      screen.getByRole("region", { name: /panel visibility/i }),
+      screen.getByRole("region", { name: /panel controls/i }),
     ).toBeTruthy();
     expect(screen.getAllByText(/Realtime healthy/i).length).toBeGreaterThan(0);
+    expect(screen.getByRole("region", { name: /account/i })).toBeTruthy();
     expect(
-      screen.getByRole("region", { name: /signed in account/i }),
-    ).toBeTruthy();
-    expect(
-      screen.getByRole("region", { name: /ticket pool overview/i }),
+      screen.getByRole("region", { name: /ticket overview/i }),
     ).toBeTruthy();
     expect(
       screen.getByRole("region", { name: /print controls/i }),
     ).toBeTruthy();
+    expect(screen.getByRole("region", { name: /shop overview/i })).toBeTruthy();
     expect(
-      screen.getByRole("region", { name: /modular shop surfaces/i }),
+      screen.getByRole("region", { name: /realtime status/i }),
     ).toBeTruthy();
+    expect(screen.getByRole("region", { name: /insights/i })).toBeTruthy();
     expect(
-      screen.getByRole("region", { name: /realtime health/i }),
-    ).toBeTruthy();
-    expect(
-      screen.getByRole("region", { name: /secondary insights/i }),
-    ).toBeTruthy();
-    expect(
-      screen.getByRole("region", { name: /why this dashboard works/i }),
+      screen.getByRole("region", { name: /dashboard summary/i }),
     ).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: /print a ticket/i }));

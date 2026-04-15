@@ -25,7 +25,7 @@ export function DashboardInsightsPanel({
   return (
     <Box
       component="section"
-      aria-labelledby={headingId}
+      aria-label="Insights"
       aria-describedby={descriptionId}
     >
       <PanelCard elevation={0}>

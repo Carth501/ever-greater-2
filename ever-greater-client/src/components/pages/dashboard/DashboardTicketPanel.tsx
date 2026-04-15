@@ -30,7 +30,7 @@ export function DashboardTicketPanel({
   return (
     <Box
       component="section"
-      aria-labelledby={headingId}
+      aria-label="Ticket overview"
       aria-describedby={descriptionId}
     >
       <AccentPanel elevation={0}>

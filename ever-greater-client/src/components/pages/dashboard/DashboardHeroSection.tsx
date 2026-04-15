@@ -36,7 +36,7 @@ export function DashboardHeroSection({
   return (
     <Box
       component="section"
-      aria-labelledby={headingId}
+      aria-label="Dashboard hero"
       aria-describedby={descriptionId}
     >
       <HeroCard elevation={0}>

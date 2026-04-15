@@ -43,7 +43,7 @@ export function DashboardPrintPanel({
   return (
     <Box
       component="section"
-      aria-labelledby={headingId}
+      aria-label="Print controls"
       aria-describedby={descriptionId}
     >
       <PanelCard elevation={0}>

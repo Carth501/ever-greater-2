@@ -41,7 +41,7 @@ export function DashboardShopPanel({
   return (
     <Box
       component="section"
-      aria-labelledby={headingId}
+      aria-label="Shop overview"
       aria-describedby={descriptionId}
     >
       <PanelCard elevation={0}>

@@ -29,7 +29,7 @@ export function DashboardToolbarSection({
   return (
     <Box
       component="section"
-      aria-labelledby={headingId}
+      aria-label="Panel controls"
       aria-describedby={descriptionId}
     >
       <ToolbarCard elevation={0}>

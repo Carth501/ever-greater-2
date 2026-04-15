@@ -27,7 +27,7 @@ export function DashboardStatusPanel({
   return (
     <Box
       component="section"
-      aria-labelledby={headingId}
+      aria-label="Realtime status"
       aria-describedby={descriptionId}
     >
       <PanelCard elevation={0}>
