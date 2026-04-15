@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as authApi from "../../api/auth";
+import { DomainError } from "../../api/client";
 import * as operationsApi from "../../api/operations";
 import { mockUser } from "../../tests/fixtures";
 import { createTestStore } from "../../tests/utils/testStore";
@@ -69,7 +70,10 @@ describe("operationsSlice", () => {
 
     it("should store operation errors in operations state", async () => {
       mockOperationsApi.buyGold.mockRejectedValueOnce(
-        new Error("Invalid quantity"),
+        new DomainError("Invalid quantity", 400, {
+          code: "INVALID_REQUEST",
+          detail: "quantity must be a positive integer",
+        }),
       );
 
       await store.dispatch(buyGoldThunk(0) as any);
@@ -78,6 +82,10 @@ describe("operationsSlice", () => {
       expect(state.operations.isLoading).toBe(false);
       expect(state.operations.pendingRequestCount).toBe(0);
       expect(state.operations.error).toBe("Invalid quantity");
+      expect(state.operations.errorCode).toBe("INVALID_REQUEST");
+      expect(state.operations.errorDetail).toBe(
+        "quantity must be a positive integer",
+      );
     });
 
     it("should keep concurrent operation requests isolated from auth loading", async () => {

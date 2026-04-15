@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { User } from "../../api/auth";
 import * as authApi from "../../api/auth";
+import { AuthError } from "../../api/client";
 import * as operationsApi from "../../api/operations";
 import { mockUser } from "../../tests/fixtures";
 import { createTestStore } from "../../tests/utils/testStore";
@@ -128,7 +129,12 @@ describe("authSlice", () => {
 
     it("should handle login failure", async () => {
       const errorMessage = "Invalid credentials";
-      mockAuthApi.login.mockRejectedValueOnce(new Error(errorMessage));
+      mockAuthApi.login.mockRejectedValueOnce(
+        new AuthError(errorMessage, 401, {
+          code: "INVALID_CREDENTIALS",
+          detail: "Try again",
+        }),
+      );
 
       const credentials = { email: "test@example.com", password: "wrong" };
       await store.dispatch(loginThunk(credentials) as any);
@@ -137,6 +143,8 @@ describe("authSlice", () => {
       expect(state.isLoading).toBe(false);
       expect(state.user).toBeNull();
       expect(state.error).toBe(errorMessage);
+      expect(state.errorCode).toBe("INVALID_CREDENTIALS");
+      expect(state.errorDetail).toBe("Try again");
     });
 
     it("should handle successful signup", async () => {

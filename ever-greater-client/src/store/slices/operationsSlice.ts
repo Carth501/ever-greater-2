@@ -1,17 +1,26 @@
 import { createAsyncThunk, createSlice, isAnyOf } from "@reduxjs/toolkit";
 import * as authApi from "../../api/auth";
+import {
+  getApiErrorInfo,
+  type ApiErrorCode,
+  type ApiErrorInfo,
+} from "../../api/client";
 import * as operationsApi from "../../api/operations";
 
 export interface OperationsState {
   isLoading: boolean;
   pendingRequestCount: number;
   error: string | null;
+  errorCode?: ApiErrorCode | null;
+  errorDetail?: string | null;
 }
 
 const initialState: OperationsState = {
   isLoading: false,
   pendingRequestCount: 0,
   error: null,
+  errorCode: null,
+  errorDetail: null,
 };
 
 const startLoading = (state: OperationsState): void => {
@@ -24,6 +33,29 @@ const finishLoading = (state: OperationsState): void => {
   state.isLoading = state.pendingRequestCount > 0;
 };
 
+const clearOperationError = (state: OperationsState): void => {
+  state.error = null;
+  state.errorCode = null;
+  state.errorDetail = null;
+};
+
+const applyOperationError = (
+  state: OperationsState,
+  payload: ApiErrorInfo | string | null | undefined,
+  fallbackMessage: string,
+): void => {
+  if (typeof payload === "string") {
+    state.error = payload;
+    state.errorCode = null;
+    state.errorDetail = null;
+    return;
+  }
+
+  state.error = payload?.message || fallbackMessage;
+  state.errorCode = payload?.code ?? null;
+  state.errorDetail = payload?.detail ?? null;
+};
+
 export const buySuppliesThunk = createAsyncThunk(
   "operations/buySupplies",
   async (_, { rejectWithValue }) => {
@@ -31,9 +63,7 @@ export const buySuppliesThunk = createAsyncThunk(
       const user = await operationsApi.buySupplies();
       return user;
     } catch (error) {
-      return rejectWithValue(
-        error instanceof Error ? error.message : "Failed to buy supplies",
-      );
+      return rejectWithValue(getApiErrorInfo(error, "Failed to buy supplies"));
     }
   },
 );
@@ -45,9 +75,7 @@ export const buyGoldThunk = createAsyncThunk(
       const user = await operationsApi.buyGold(quantity);
       return user;
     } catch (error) {
-      return rejectWithValue(
-        error instanceof Error ? error.message : "Failed to buy gold",
-      );
+      return rejectWithValue(getApiErrorInfo(error, "Failed to buy gold"));
     }
   },
 );
@@ -60,9 +88,7 @@ export const buyAutoBuySuppliesThunk = createAsyncThunk(
       return user;
     } catch (error) {
       return rejectWithValue(
-        error instanceof Error
-          ? error.message
-          : "Failed to unlock auto-buy supplies",
+        getApiErrorInfo(error, "Failed to unlock auto-buy supplies"),
       );
     }
   },
@@ -76,7 +102,7 @@ export const buyAutoprinterThunk = createAsyncThunk(
       return user;
     } catch (error) {
       return rejectWithValue(
-        error instanceof Error ? error.message : "Failed to buy autoprinter",
+        getApiErrorInfo(error, "Failed to buy autoprinter"),
       );
     }
   },
@@ -90,9 +116,7 @@ export const increaseCreditGenerationThunk = createAsyncThunk(
       return user;
     } catch (error) {
       return rejectWithValue(
-        error instanceof Error
-          ? error.message
-          : "Failed to increase credit generation",
+        getApiErrorInfo(error, "Failed to increase credit generation"),
       );
     }
   },
@@ -106,9 +130,7 @@ export const increaseCreditCapacityThunk = createAsyncThunk(
       return user;
     } catch (error) {
       return rejectWithValue(
-        error instanceof Error
-          ? error.message
-          : "Failed to increase credit capacity",
+        getApiErrorInfo(error, "Failed to increase credit capacity"),
       );
     }
   },
@@ -122,9 +144,7 @@ export const toggleAutoBuySuppliesThunk = createAsyncThunk(
       return user;
     } catch (error) {
       return rejectWithValue(
-        error instanceof Error
-          ? error.message
-          : "Failed to toggle auto-buy supplies",
+        getApiErrorInfo(error, "Failed to toggle auto-buy supplies"),
       );
     }
   },
@@ -135,7 +155,7 @@ const operationsSlice = createSlice({
   initialState,
   reducers: {
     clearError: (state) => {
-      state.error = null;
+      clearOperationError(state);
     },
   },
   extraReducers: (builder) => {
@@ -151,7 +171,7 @@ const operationsSlice = createSlice({
       ),
       (state) => {
         startLoading(state);
-        state.error = null;
+        clearOperationError(state);
       },
     );
 
@@ -167,7 +187,7 @@ const operationsSlice = createSlice({
       ),
       (state) => {
         finishLoading(state);
-        state.error = null;
+        clearOperationError(state);
       },
     );
 
@@ -183,7 +203,11 @@ const operationsSlice = createSlice({
       ),
       (state, action) => {
         finishLoading(state);
-        state.error = action.payload as string;
+        applyOperationError(
+          state,
+          action.payload as ApiErrorInfo | string,
+          "Operation failed",
+        );
       },
     );
   },

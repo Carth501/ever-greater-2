@@ -2,6 +2,11 @@ import { createAsyncThunk, createSlice, isAnyOf } from "@reduxjs/toolkit";
 import type { User } from "../../api/auth";
 import * as authApi from "../../api/auth";
 import {
+  getApiErrorInfo,
+  type ApiErrorCode,
+  type ApiErrorInfo,
+} from "../../api/client";
+import {
   buyAutoBuySuppliesThunk,
   buyAutoprinterThunk,
   buyGoldThunk,
@@ -35,6 +40,8 @@ export interface AuthState {
   isLoading: boolean;
   pendingRequestCount: number;
   error: string | null;
+  errorCode?: ApiErrorCode | null;
+  errorDetail?: string | null;
 }
 
 const initialState: AuthState = {
@@ -43,6 +50,8 @@ const initialState: AuthState = {
   isLoading: false,
   pendingRequestCount: 0,
   error: null,
+  errorCode: null,
+  errorDetail: null,
 };
 
 // Async thunks
@@ -54,9 +63,7 @@ export const checkAuthThunk = createAsyncThunk(
       return user;
     } catch (error) {
       return rejectWithValue(
-        error instanceof Error
-          ? error.message
-          : "Failed to check authentication",
+        getApiErrorInfo(error, "Failed to check authentication"),
       );
     }
   },
@@ -72,9 +79,7 @@ export const loginThunk = createAsyncThunk(
       const user = await authApi.login(email, password);
       return user;
     } catch (error) {
-      return rejectWithValue(
-        error instanceof Error ? error.message : "Failed to login",
-      );
+      return rejectWithValue(getApiErrorInfo(error, "Failed to login"));
     }
   },
 );
@@ -89,9 +94,7 @@ export const signupThunk = createAsyncThunk(
       const user = await authApi.register(email, password);
       return user;
     } catch (error) {
-      return rejectWithValue(
-        error instanceof Error ? error.message : "Failed to sign up",
-      );
+      return rejectWithValue(getApiErrorInfo(error, "Failed to sign up"));
     }
   },
 );
@@ -103,9 +106,7 @@ export const logoutThunk = createAsyncThunk(
       await authApi.logout();
       return null;
     } catch (error) {
-      return rejectWithValue(
-        error instanceof Error ? error.message : "Failed to logout",
-      );
+      return rejectWithValue(getApiErrorInfo(error, "Failed to logout"));
     }
   },
 );
@@ -118,6 +119,29 @@ const startLoading = (state: AuthState): void => {
 const finishLoading = (state: AuthState): void => {
   state.pendingRequestCount = Math.max(0, state.pendingRequestCount - 1);
   state.isLoading = state.pendingRequestCount > 0;
+};
+
+const clearApiError = (state: AuthState): void => {
+  state.error = null;
+  state.errorCode = null;
+  state.errorDetail = null;
+};
+
+const applyApiError = (
+  state: AuthState,
+  payload: ApiErrorInfo | string | null | undefined,
+  fallbackMessage: string,
+): void => {
+  if (typeof payload === "string") {
+    state.error = payload;
+    state.errorCode = null;
+    state.errorDetail = null;
+    return;
+  }
+
+  state.error = payload?.message || fallbackMessage;
+  state.errorCode = payload?.code ?? null;
+  state.errorDetail = payload?.detail ?? null;
 };
 
 const mergeUserUpdate = (
@@ -139,7 +163,7 @@ const authSlice = createSlice({
   initialState,
   reducers: {
     clearError: (state) => {
-      state.error = null;
+      clearApiError(state);
     },
     applyUserUpdate: (state, action: { payload: UserUpdatePayload }) => {
       if (state.user) {
@@ -155,65 +179,81 @@ const authSlice = createSlice({
     builder
       .addCase(checkAuthThunk.pending, (state) => {
         state.isCheckingAuth = true;
-        state.error = null;
+        clearApiError(state);
       })
       .addCase(checkAuthThunk.fulfilled, (state, action) => {
         state.isCheckingAuth = false;
         state.user = action.payload;
-        state.error = null;
+        clearApiError(state);
       })
       .addCase(checkAuthThunk.rejected, (state, action) => {
         state.isCheckingAuth = false;
         state.user = null;
-        state.error = action.payload as string;
+        applyApiError(
+          state,
+          action.payload as ApiErrorInfo | string,
+          "Failed to check authentication",
+        );
       });
 
     // loginThunk
     builder
       .addCase(loginThunk.pending, (state) => {
         startLoading(state);
-        state.error = null;
+        clearApiError(state);
       })
       .addCase(loginThunk.fulfilled, (state, action) => {
         finishLoading(state);
         state.user = action.payload;
-        state.error = null;
+        clearApiError(state);
       })
       .addCase(loginThunk.rejected, (state, action) => {
         finishLoading(state);
-        state.error = action.payload as string;
+        applyApiError(
+          state,
+          action.payload as ApiErrorInfo | string,
+          "Failed to login",
+        );
       });
 
     // signupThunk
     builder
       .addCase(signupThunk.pending, (state) => {
         startLoading(state);
-        state.error = null;
+        clearApiError(state);
       })
       .addCase(signupThunk.fulfilled, (state, action) => {
         finishLoading(state);
         state.user = action.payload;
-        state.error = null;
+        clearApiError(state);
       })
       .addCase(signupThunk.rejected, (state, action) => {
         finishLoading(state);
-        state.error = action.payload as string;
+        applyApiError(
+          state,
+          action.payload as ApiErrorInfo | string,
+          "Failed to sign up",
+        );
       });
 
     // logoutThunk
     builder
       .addCase(logoutThunk.pending, (state) => {
         startLoading(state);
-        state.error = null;
+        clearApiError(state);
       })
       .addCase(logoutThunk.fulfilled, (state) => {
         finishLoading(state);
         state.user = null;
-        state.error = null;
+        clearApiError(state);
       })
       .addCase(logoutThunk.rejected, (state, action) => {
         finishLoading(state);
-        state.error = action.payload as string;
+        applyApiError(
+          state,
+          action.payload as ApiErrorInfo | string,
+          "Failed to logout",
+        );
       });
 
     builder.addMatcher(

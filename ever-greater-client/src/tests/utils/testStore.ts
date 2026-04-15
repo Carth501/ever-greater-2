@@ -20,6 +20,8 @@ function buildDefaultState(): RootState {
       isLoading: false,
       pendingRequestCount: 0,
       error: null,
+      errorCode: null,
+      errorDetail: null,
     },
     ticket: {
       count: 0,
@@ -35,6 +37,8 @@ function buildDefaultState(): RootState {
       isLoading: false,
       pendingRequestCount: 0,
       error: null,
+      errorCode: null,
+      errorDetail: null,
     },
     realtime: {
       isConnected: false,

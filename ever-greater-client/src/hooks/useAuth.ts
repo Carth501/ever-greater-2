@@ -7,9 +7,8 @@ import {
 
 export function useAuth() {
   const dispatch = useAppDispatch();
-  const { user, isCheckingAuth, isLoading, error } = useAppSelector(
-    (state) => state.auth,
-  );
+  const { user, isCheckingAuth, isLoading, error, errorCode, errorDetail } =
+    useAppSelector((state) => state.auth);
 
   const login = (email: string, password: string) => {
     dispatch(loginThunk({ email, password }));
@@ -23,5 +22,15 @@ export function useAuth() {
     dispatch(signupThunk({ email, password }));
   };
 
-  return { user, isCheckingAuth, isLoading, error, login, logout, signup };
+  return {
+    user,
+    isCheckingAuth,
+    isLoading,
+    error,
+    errorCode,
+    errorDetail,
+    login,
+    logout,
+    signup,
+  };
 }

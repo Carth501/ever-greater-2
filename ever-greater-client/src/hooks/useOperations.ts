@@ -1,3 +1,4 @@
+import { formatApiErrorForDisplay, type ApiErrorInfo } from "../api/client";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import {
   buyAutoBuySuppliesThunk,
@@ -11,12 +12,23 @@ import {
 
 export function useOperations(onError?: (message: string) => void) {
   const dispatch = useAppDispatch();
-  const { isLoading, error } = useAppSelector((state) => state.operations);
+  const { isLoading, error, errorCode, errorDetail } = useAppSelector(
+    (state) => state.operations,
+  );
+
+  const notifyRejected = (payload: unknown) => {
+    const displayMessage = formatApiErrorForDisplay(
+      payload as ApiErrorInfo | null | undefined,
+    );
+    if (displayMessage) {
+      onError?.(displayMessage);
+    }
+  };
 
   const buySupplies = () => {
     dispatch(buySuppliesThunk()).then((result) => {
       if (result.type === buySuppliesThunk.rejected.type) {
-        onError?.(result.payload as string);
+        notifyRejected(result.payload);
       }
     });
   };
@@ -28,7 +40,7 @@ export function useOperations(onError?: (message: string) => void) {
     }
     dispatch(buyGoldThunk(quantity)).then((result) => {
       if (result.type === buyGoldThunk.rejected.type) {
-        onError?.(result.payload as string);
+        notifyRejected(result.payload);
       }
     });
   };
@@ -36,7 +48,7 @@ export function useOperations(onError?: (message: string) => void) {
   const buyAutoprinter = () => {
     dispatch(buyAutoprinterThunk()).then((result) => {
       if (result.type === buyAutoprinterThunk.rejected.type) {
-        onError?.(result.payload as string);
+        notifyRejected(result.payload);
       }
     });
   };
@@ -44,7 +56,7 @@ export function useOperations(onError?: (message: string) => void) {
   const buyAutoBuySupplies = () => {
     dispatch(buyAutoBuySuppliesThunk()).then((result) => {
       if (result.type === buyAutoBuySuppliesThunk.rejected.type) {
-        onError?.(result.payload as string);
+        notifyRejected(result.payload);
       }
     });
   };
@@ -52,7 +64,7 @@ export function useOperations(onError?: (message: string) => void) {
   const toggleAutoBuySupplies = (active: boolean) => {
     dispatch(toggleAutoBuySuppliesThunk(active)).then((result) => {
       if (result.type === toggleAutoBuySuppliesThunk.rejected.type) {
-        onError?.(result.payload as string);
+        notifyRejected(result.payload);
       }
     });
   };
@@ -60,7 +72,7 @@ export function useOperations(onError?: (message: string) => void) {
   const increaseCreditGeneration = () => {
     dispatch(increaseCreditGenerationThunk()).then((result) => {
       if (result.type === increaseCreditGenerationThunk.rejected.type) {
-        onError?.(result.payload as string);
+        notifyRejected(result.payload);
       }
     });
   };
@@ -68,7 +80,7 @@ export function useOperations(onError?: (message: string) => void) {
   const increaseCreditCapacity = () => {
     dispatch(increaseCreditCapacityThunk()).then((result) => {
       if (result.type === increaseCreditCapacityThunk.rejected.type) {
-        onError?.(result.payload as string);
+        notifyRejected(result.payload);
       }
     });
   };
@@ -76,6 +88,8 @@ export function useOperations(onError?: (message: string) => void) {
   return {
     isLoading,
     error,
+    errorCode,
+    errorDetail,
     buySupplies,
     buyGold,
     buyAutoprinter,

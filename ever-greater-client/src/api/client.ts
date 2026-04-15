@@ -22,6 +22,13 @@ export type ApiErrorPayload = {
   detail?: string;
 };
 
+export type ApiErrorInfo = {
+  message: string;
+  code?: ApiErrorCode;
+  detail?: string;
+  status?: number;
+};
+
 export class NetworkError extends Error {
   constructor(message: string) {
     super(message);
@@ -68,6 +75,53 @@ async function parseApiError(response: Response): Promise<ApiErrorPayload> {
     return (await response.json()) as ApiErrorPayload;
   } catch {
     return {};
+  }
+}
+
+export function getApiErrorInfo(
+  error: unknown,
+  fallbackMessage: string,
+): ApiErrorInfo {
+  if (error instanceof AuthError || error instanceof DomainError) {
+    return {
+      message: error.message,
+      code: error.code,
+      detail: error.detail,
+      status: error.status,
+    };
+  }
+
+  if (error instanceof NetworkError) {
+    return { message: error.message };
+  }
+
+  if (error instanceof Error) {
+    return { message: error.message };
+  }
+
+  return { message: fallbackMessage };
+}
+
+export function formatApiErrorForDisplay(
+  error: Pick<ApiErrorInfo, "message" | "code" | "detail"> | null | undefined,
+): string | null {
+  if (!error) {
+    return null;
+  }
+
+  switch (error.code) {
+    case "INVALID_CREDENTIALS":
+      return "Check your email and password and try again.";
+    case "EMAIL_ALREADY_IN_USE":
+      return "That email is already registered. Try logging in instead.";
+    case "AUTH_REQUIRED":
+      return "Your session has expired. Log in again.";
+    case "GLOBAL_TICKET_LIMIT":
+      return error.detail || "You have reached your current withdrawal limit.";
+    case "AUTO_BUY_SUPPLIES_NOT_UNLOCKED":
+      return "Unlock auto-buy supplies before toggling it.";
+    default:
+      return error.detail || error.message;
   }
 }
 

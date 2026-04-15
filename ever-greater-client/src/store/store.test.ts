@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { User } from "../api/auth";
 import * as authApi from "../api/auth";
+import { AuthError } from "../api/client";
 import * as ticketApi from "../api/globalTicket";
 import * as operationsApi from "../api/operations";
 import {
@@ -77,7 +78,12 @@ describe("Redux Store Integration", () => {
 
     it("should handle login error", async () => {
       const errorMessage = "Invalid credentials";
-      mockAuthApi.login.mockRejectedValueOnce(new Error(errorMessage));
+      mockAuthApi.login.mockRejectedValueOnce(
+        new AuthError(errorMessage, 401, {
+          code: "INVALID_CREDENTIALS",
+          detail: "Try again",
+        }),
+      );
 
       await store.dispatch(
         loginThunk({ email: "test@example.com", password: "wrong" }) as any,
@@ -86,6 +92,8 @@ describe("Redux Store Integration", () => {
       const state = store.getState();
       expect(state.auth.user).toBeNull();
       expect(state.auth.error).toBe(errorMessage);
+      expect(state.auth.errorCode).toBe("INVALID_CREDENTIALS");
+      expect(state.auth.errorDetail).toBe("Try again");
     });
 
     it("should handle logout", async () => {

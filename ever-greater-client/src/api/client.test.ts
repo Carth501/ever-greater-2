@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { apiFetch, AuthError, DomainError, NetworkError } from "./client";
+import {
+  apiFetch,
+  AuthError,
+  DomainError,
+  formatApiErrorForDisplay,
+  NetworkError,
+} from "./client";
 
 const originalFetch = global.fetch;
 
@@ -99,5 +105,22 @@ describe("apiFetch", () => {
         status: 500,
       },
     );
+  });
+
+  it("formats known api error codes into clearer UI messages", () => {
+    expect(
+      formatApiErrorForDisplay({
+        message: "Invalid email or password",
+        code: "INVALID_CREDENTIALS",
+      }),
+    ).toBe("Check your email and password and try again.");
+
+    expect(
+      formatApiErrorForDisplay({
+        message: "GLOBAL_TICKET_LIMIT",
+        code: "GLOBAL_TICKET_LIMIT",
+        detail: "Personal ticket withdrawal limit exceeded",
+      }),
+    ).toBe("Personal ticket withdrawal limit exceeded");
   });
 });
