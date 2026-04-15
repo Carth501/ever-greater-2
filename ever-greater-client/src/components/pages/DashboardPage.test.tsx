@@ -85,10 +85,30 @@ describe("DashboardPage", () => {
   it("renders live dashboard state and delegates print actions", () => {
     render(<DashboardPage />);
 
+    expect(
+      screen.getByRole("main", { name: /dashboard preview/i }),
+    ).toBeTruthy();
     expect(screen.getByText("operator@example.com")).toBeTruthy();
+    expect(
+      screen.getByRole("region", {
+        name: /a cleaner command center for printing, monitoring, and upgrading/i,
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("region", { name: /panel visibility/i }),
+    ).toBeTruthy();
     expect(screen.getAllByText(/Realtime healthy/i).length).toBeGreaterThan(0);
     expect(
       screen.getByRole("region", { name: /signed in account/i }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("region", { name: /ticket pool overview/i }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("region", { name: /print controls/i }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("region", { name: /modular shop surfaces/i }),
     ).toBeTruthy();
     expect(
       screen.getByRole("region", { name: /realtime health/i }),

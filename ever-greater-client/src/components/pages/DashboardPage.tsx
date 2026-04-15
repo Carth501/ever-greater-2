@@ -1,3 +1,4 @@
+import Box from "@mui/material/Box";
 import {} from "ever-greater-shared";
 import { useEffect, useMemo, useState, type JSX } from "react";
 import { useAuth } from "../../hooks/useAuth";
@@ -127,97 +128,99 @@ function DashboardPage({
 
   return (
     <PageRoot>
-      <Shell>
-        <DashboardHeroSection
-          activePreset={activePreset}
-          onPresetChange={applyPreset}
-          visiblePanelsCount={visiblePanelsCount}
-        />
-
-        {showControls && (
-          <DashboardToolbarSection
+      <Box component="main" aria-label="Dashboard preview">
+        <Shell>
+          <DashboardHeroSection
             activePreset={activePreset}
-            panels={panels}
             onPresetChange={applyPreset}
-            onTogglePanel={togglePanel}
+            visiblePanelsCount={visiblePanelsCount}
           />
-        )}
 
-        <Grid>
-          <LeftColumn>
-            {panels.account && (
-              <DashboardAccountPanel
-                hasLiveUser={hasLiveUser}
-                signalColor={signalColor}
-                signalLabel={signalLabel}
-                userEmail={dashboardUser.email}
-              />
-            )}
+          {showControls && (
+            <DashboardToolbarSection
+              activePreset={activePreset}
+              panels={panels}
+              onPresetChange={applyPreset}
+              onTogglePanel={togglePanel}
+            />
+          )}
 
-            {panels.ticket && (
-              <DashboardTicketPanel
-                globalTicketCount={globalTicketCount}
-                hasLiveUser={hasLiveUser}
-                isTicketLoading={isTicketLoading}
-                poolMomentum={poolMomentum}
-                remainingCapacity={remainingCapacity}
-                ticketsContributed={ticketsContributed}
-                ticketsWithdrawn={ticketsWithdrawn}
-              />
-            )}
+          <Grid>
+            <LeftColumn>
+              {panels.account && (
+                <DashboardAccountPanel
+                  hasLiveUser={hasLiveUser}
+                  signalColor={signalColor}
+                  signalLabel={signalLabel}
+                  userEmail={dashboardUser.email}
+                />
+              )}
 
-            {panels.print && (
-              <DashboardPrintPanel
-                hasLiveUser={hasLiveUser}
-                isAutoBuyActive={isAutoBuyActive}
-                onPrintTicket={printTicket}
-                printButtonDisabled={printButtonDisabled}
-                visibleSupplies={visibleSupplies}
-              />
-            )}
+              {panels.ticket && (
+                <DashboardTicketPanel
+                  globalTicketCount={globalTicketCount}
+                  hasLiveUser={hasLiveUser}
+                  isTicketLoading={isTicketLoading}
+                  poolMomentum={poolMomentum}
+                  remainingCapacity={remainingCapacity}
+                  ticketsContributed={ticketsContributed}
+                  ticketsWithdrawn={ticketsWithdrawn}
+                />
+              )}
 
-            {panels.shop && (
-              <DashboardShopPanel
-                autoBuyCost={autoBuyCost}
-                autoprinters={dashboardUser.autoprinters}
-                autoBuySuppliesPurchased={
-                  dashboardUser.auto_buy_supplies_purchased
-                }
-                canAffordAutoprinter={canAffordAutoprinter}
-                creditCapacityCost={creditCapacityCost}
-                creditGenerationCost={creditGenerationCost}
-                creditGenerationLevel={dashboardUser.credit_generation_level}
-                goldUnitCost={goldUnitCost}
-                hasLiveUser={hasLiveUser}
-                suggestedFocus={suggestedFocus}
-                suppliesCost={suppliesCost}
-              />
-            )}
-          </LeftColumn>
+              {panels.print && (
+                <DashboardPrintPanel
+                  hasLiveUser={hasLiveUser}
+                  isAutoBuyActive={isAutoBuyActive}
+                  onPrintTicket={printTicket}
+                  printButtonDisabled={printButtonDisabled}
+                  visibleSupplies={visibleSupplies}
+                />
+              )}
 
-          <RightColumn>
-            {panels.status && (
-              <DashboardStatusPanel
-                hasLiveUser={hasLiveUser}
-                lastUpdateAt={lastUpdateAt}
-                signalColor={signalColor}
-                signalLabel={signalLabel}
-              />
-            )}
+              {panels.shop && (
+                <DashboardShopPanel
+                  autoBuyCost={autoBuyCost}
+                  autoprinters={dashboardUser.autoprinters}
+                  autoBuySuppliesPurchased={
+                    dashboardUser.auto_buy_supplies_purchased
+                  }
+                  canAffordAutoprinter={canAffordAutoprinter}
+                  creditCapacityCost={creditCapacityCost}
+                  creditGenerationCost={creditGenerationCost}
+                  creditGenerationLevel={dashboardUser.credit_generation_level}
+                  goldUnitCost={goldUnitCost}
+                  hasLiveUser={hasLiveUser}
+                  suggestedFocus={suggestedFocus}
+                  suppliesCost={suppliesCost}
+                />
+              )}
+            </LeftColumn>
 
-            {panels.insights && (
-              <DashboardInsightsPanel
-                automationMix={automationMix}
-                bestWindow={bestWindow}
-                poolTrend={poolTrend}
-                suggestedFocus={suggestedFocus}
-              />
-            )}
+            <RightColumn>
+              {panels.status && (
+                <DashboardStatusPanel
+                  hasLiveUser={hasLiveUser}
+                  lastUpdateAt={lastUpdateAt}
+                  signalColor={signalColor}
+                  signalLabel={signalLabel}
+                />
+              )}
 
-            <DashboardSummaryPanel />
-          </RightColumn>
-        </Grid>
-      </Shell>
+              {panels.insights && (
+                <DashboardInsightsPanel
+                  automationMix={automationMix}
+                  bestWindow={bestWindow}
+                  poolTrend={poolTrend}
+                  suggestedFocus={suggestedFocus}
+                />
+              )}
+
+              <DashboardSummaryPanel />
+            </RightColumn>
+          </Grid>
+        </Shell>
+      </Box>
     </PageRoot>
   );
 }
