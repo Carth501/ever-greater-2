@@ -9,6 +9,7 @@
 		"check:shared-deps": "node scripts/check-shared-deps.cjs",
 		"check:client-slice-boundaries": "node scripts/check-client-slice-boundaries.cjs",
 		"check:client-typecheck": "npm --prefix ever-greater-client run typecheck",
+		"check:client-test-typecheck": "npm --prefix ever-greater-client run typecheck:tests",
 		"guardrails": "npm-run-all check:shared-deps check:client-slice-boundaries check:client-typecheck",
 		"test": "npm-run-all guardrails test:shared test:server test:client",
 		"test:shared": "npm --prefix ever-greater-shared test",

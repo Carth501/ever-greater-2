@@ -6,6 +6,10 @@ on:
     branches:
       - main
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   guardrails-and-tests:
     name: Guardrails And Monorepo Tests
@@ -48,7 +52,7 @@ jobs:
   client-test-typecheck:
     name: Client Test Typecheck
     runs-on: ubuntu-latest
-    continue-on-error: true
+    continue-on-error: ${{ github.event_name == 'pull_request' }}
 
     steps:
       - name: Checkout
