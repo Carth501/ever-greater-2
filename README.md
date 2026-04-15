@@ -10,7 +10,7 @@ A full-stack application with a React client and Express WebSocket server for ma
 
 ## Local Development
 
-- **Node.js** - 20.x (the repo is pinned via `.nvmrc` and CI runs on Node 20)
+- **Node.js** - 20 or later (the repo prefers Node 20 via `.nvmrc`, and CI runs on Node 20)
 - **PostgreSQL** - 12 or later
 
 From the repository root, run `npm run dev` to start the Vite client and the server watch process together.
@@ -58,7 +58,7 @@ The older query-based entry (`?concept=dashboard`) still works for compatibility
 
 ### Prerequisites
 
-- **Node.js** (20.x)
+- **Node.js** (20 or later; 20.x preferred)
 - **PostgreSQL** (v12 or later) - [Installation Guide](ever-greater-server/DATABASE_SETUP.md#installing-postgresql)
 
 ### Configuration

@@ -2,7 +2,7 @@
 	"name": "ever-greater",
 	"private": true,
 	"engines": {
-		"node": ">=20 <21"
+		"node": ">=20"
 	},
 	"scripts": {
 		"client": "npm --prefix ever-greater-client start",

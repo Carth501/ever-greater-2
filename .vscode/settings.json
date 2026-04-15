@@ -1,0 +1,4 @@
+{
+  "typescript.tsdk": "ever-greater-server/node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true
+}
