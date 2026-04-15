@@ -427,5 +427,118 @@ describe('Database Functions', () => {
       expect(mockClient.query).toHaveBeenCalledWith('ROLLBACK');
       expect(mockClient.release).toHaveBeenCalled();
     });
+
+    it('spends global tickets and records the withdrawal when within the personal limit', async () => {
+      mockPool.query.mockResolvedValue({ rows: [{ total: 3 }] });
+
+      mockClient.query.mockImplementation(async (query) => {
+        if (query === 'BEGIN' || query === 'COMMIT') {
+          return { rows: [] };
+        }
+
+        if (query.includes('SELECT tickets_contributed FROM users')) {
+          return { rows: [{ tickets_contributed: 10 }] };
+        }
+
+        if (query.includes('SELECT COALESCE(SUM(amount), 0) as total FROM ticket_withdrawals')) {
+          return { rows: [{ total: 1 }] };
+        }
+
+        if (query.includes('UPDATE global_state')) {
+          return { rows: [{ count: 98 }] };
+        }
+
+        if (query.includes('UPDATE users')) {
+          return {
+            rows: [{
+              id: 1,
+              email: 'test@example.com',
+              tickets_contributed: 10,
+              printer_supplies: 100,
+              money: 0,
+              gold: 0,
+              autoprinters: 0,
+              credit_value: 0,
+              credit_generation_level: 0,
+              credit_capacity_level: 0,
+              auto_buy_supplies_purchased: false,
+              auto_buy_supplies_active: false,
+            }],
+          };
+        }
+
+        if (query.includes('INSERT INTO ticket_withdrawals')) {
+          return { rows: [] };
+        }
+
+        throw new Error(`Unexpected query: ${query}`);
+      });
+
+      const user = await db.executeResourceTransaction(
+        1,
+        { [ResourceType.GLOBAL_TICKETS]: 2 },
+        {},
+      );
+
+      expect(user.tickets_withdrawn).toBe(3);
+      expect(mockClient.query).toHaveBeenCalledWith(
+        expect.stringContaining('INSERT INTO ticket_withdrawals'),
+        [1, 2],
+      );
+      expect(mockClient.query).toHaveBeenCalledWith('COMMIT');
+    });
+  });
+
+  describe('processAutoprinters', () => {
+    it('updates global count when autoprinters produce tickets', async () => {
+      mockClient.query.mockImplementation(async (query) => {
+        if (query === 'BEGIN' || query === 'COMMIT') {
+          return { rows: [] };
+        }
+
+        if (query.includes('UPDATE users') && query.includes('auto_buy_supplies_active')) {
+          return { rows: [], rowCount: 1 };
+        }
+
+        if (query.includes('RETURNING LEAST(autoprinters, printer_supplies) as tickets_printed')) {
+          return { rows: [{ tickets_printed: 2 }, { tickets_printed: 3 }] };
+        }
+
+        if (query.includes('UPDATE global_state SET count = count + $1')) {
+          return { rows: [{ count: 105 }] };
+        }
+
+        throw new Error(`Unexpected query: ${query}`);
+      });
+
+      await expect(db.processAutoprinters()).resolves.toEqual({
+        totalTickets: 5,
+        newGlobalCount: 105,
+      });
+      expect(mockClient.query).toHaveBeenCalledWith('COMMIT');
+      expect(mockClient.release).toHaveBeenCalled();
+    });
+
+    it('rolls back autoprinter processing when the transaction fails', async () => {
+      mockClient.query.mockImplementation(async (query) => {
+        if (query === 'BEGIN') {
+          return { rows: [] };
+        }
+
+        if (query.includes('auto_buy_supplies_active')) {
+          throw new Error('Autoprinter failure');
+        }
+
+        if (query === 'ROLLBACK') {
+          return { rows: [] };
+        }
+
+        throw new Error(`Unexpected query: ${query}`);
+      });
+
+      await expect(db.processAutoprinters()).rejects.toThrow('Autoprinter failure');
+      expect(mockClient.query).toHaveBeenCalledWith('ROLLBACK');
+      expect(mockClient.release).toHaveBeenCalled();
+    });
   });
 });

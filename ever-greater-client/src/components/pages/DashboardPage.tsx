@@ -1,10 +1,4 @@
-import {
-  OperationId,
-  ResourceType,
-  canAfford,
-  getOperationCost,
-  operations,
-} from "ever-greater-shared";
+import {} from "ever-greater-shared";
 import { useEffect, useMemo, useState, type JSX } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { useGame } from "../../hooks/useGame";
@@ -20,12 +14,7 @@ import {
   DashboardTicketPanel,
   DashboardToolbarSection,
 } from "./dashboard";
-import {
-  LATE_UPDATE_MS,
-  defaultPanels,
-  presets,
-  previewDashboardUser,
-} from "./dashboard/config";
+import { defaultPanels, presets } from "./dashboard/config";
 import {
   Grid,
   LeftColumn,
@@ -38,8 +27,8 @@ import type {
   PanelId,
   PanelState,
   PresetId,
-  SignalColor,
 } from "./dashboard/types";
+import { buildDashboardViewModel } from "./dashboard/viewModel";
 
 function DashboardPage({
   showControls = true,
@@ -63,131 +52,60 @@ function DashboardPage({
     return () => window.clearInterval(interval);
   }, []);
 
-  const hasLiveUser = Boolean(user);
-  const dashboardUser = user ?? previewDashboardUser;
-
-  const globalTicketCount = hasLiveUser ? count : 1842750;
-  const ticketsContributed = dashboardUser.tickets_contributed ?? 0;
-  const ticketsWithdrawn = dashboardUser.tickets_withdrawn ?? 0;
-  const remainingCapacity = Math.max(0, ticketsContributed - ticketsWithdrawn);
-  const isAutoBuyActive =
-    dashboardUser.auto_buy_supplies_purchased &&
-    dashboardUser.auto_buy_supplies_active;
-  const visibleSupplies = hasLiveUser
-    ? supplies
-    : dashboardUser.printer_supplies;
-  const printButtonDisabled = hasLiveUser ? isPrintDisabled : true;
-
-  const signalState = useMemo(() => {
-    if (!hasLiveUser) {
-      return "preview" as const;
-    }
-
-    if (!isConnected) {
-      return "disconnected" as const;
-    }
-
-    if (
-      isReconnecting ||
-      !lastUpdateAt ||
-      clock - lastUpdateAt > LATE_UPDATE_MS
-    ) {
-      return "late" as const;
-    }
-
-    return "healthy" as const;
-  }, [clock, hasLiveUser, isConnected, isReconnecting, lastUpdateAt]);
-
-  const signalLabel =
-    signalState === "healthy"
-      ? "Realtime healthy"
-      : signalState === "late"
-        ? "Updates delayed"
-        : signalState === "disconnected"
-          ? "Realtime offline"
-          : "Preview data";
-
-  const signalColor: SignalColor =
-    signalState === "healthy"
-      ? "success"
-      : signalState === "late"
-        ? "warning"
-        : signalState === "disconnected"
-          ? "error"
-          : "default";
-
-  const operationContext = { user: dashboardUser };
-  const suppliesCost =
-    getOperationCost(operations[OperationId.BUY_SUPPLIES], operationContext)[
-      ResourceType.GOLD
-    ] ?? 0;
-  const autoBuyCost =
-    getOperationCost(
-      operations[OperationId.AUTO_BUY_SUPPLIES],
-      operationContext,
-    )[ResourceType.GOLD] ?? 0;
-  const creditGenerationCost =
-    getOperationCost(
-      operations[OperationId.INCREASE_CREDIT_GENERATION],
-      operationContext,
-    )[ResourceType.GOLD] ?? 0;
-  const autoprinterCost =
-    getOperationCost(operations[OperationId.BUY_AUTOPRINTER], operationContext)[
-      ResourceType.CREDIT
-    ] ?? 0;
-  const creditCapacityCost =
-    getOperationCost(
-      operations[OperationId.INCREASE_CREDIT_CAPACITY],
-      operationContext,
-    )[ResourceType.GLOBAL_TICKETS] ?? 0;
-  const goldUnitCost =
-    getOperationCost(operations[OperationId.BUY_GOLD], {
-      user: dashboardUser,
-      params: { quantity: 1 },
-    })[ResourceType.MONEY] ?? 0;
-  const canAffordCreditCapacity =
-    canAfford(dashboardUser, {
-      [ResourceType.GLOBAL_TICKETS]: creditCapacityCost,
-    }) && remainingCapacity >= creditCapacityCost;
-  const canAffordAutoprinter = canAfford(dashboardUser, {
-    [ResourceType.CREDIT]: autoprinterCost,
-  });
-
-  const poolMomentum =
-    ticketsContributed > 0
-      ? ((remainingCapacity - ticketsWithdrawn) / ticketsContributed) * 100
-      : 0;
-  const automationMix =
-    dashboardUser.autoprinters > 0 || isAutoBuyActive
-      ? Math.min(
-          100,
-          dashboardUser.autoprinters * 10 + (isAutoBuyActive ? 18 : 0),
-        )
-      : 0;
-  const bestWindow =
-    visibleSupplies > 0
-      ? isAutoBuyActive
-        ? "Active now"
-        : "Next refill cycle"
-      : "Refill needed";
-  const suggestedFocus =
-    visibleSupplies === 0
-      ? "Refill supplies"
-      : !dashboardUser.auto_buy_supplies_purchased
-        ? "Unlock auto-buy"
-        : remainingCapacity < creditCapacityCost
-          ? "Contribute more tickets"
-          : canAffordCreditCapacity
-            ? "Capacity upgrades"
-            : "Grow gold reserves";
-  const poolTrend =
-    signalState === "healthy"
-      ? "Live updates"
-      : signalState === "late"
-        ? "Monitoring delay"
-        : signalState === "disconnected"
-          ? "Offline snapshot"
-          : "Preview snapshot";
+  const {
+    hasLiveUser,
+    dashboardUser,
+    globalTicketCount,
+    ticketsContributed,
+    ticketsWithdrawn,
+    remainingCapacity,
+    isAutoBuyActive,
+    visibleSupplies,
+    printButtonDisabled,
+    signalLabel,
+    signalColor,
+    suppliesCost,
+    autoBuyCost,
+    creditGenerationCost,
+    autoprinterCost,
+    creditCapacityCost,
+    goldUnitCost,
+    canAffordCreditCapacity,
+    canAffordAutoprinter,
+    poolMomentum,
+    automationMix,
+    bestWindow,
+    suggestedFocus,
+    poolTrend,
+  } = useMemo(
+    () =>
+      buildDashboardViewModel(
+        {
+          user,
+          count,
+          isTicketLoading,
+          supplies,
+          isPrintDisabled,
+        },
+        {
+          isConnected,
+          isReconnecting,
+          lastUpdateAt,
+          clock,
+        },
+      ),
+    [
+      clock,
+      count,
+      isConnected,
+      isPrintDisabled,
+      isReconnecting,
+      isTicketLoading,
+      lastUpdateAt,
+      supplies,
+      user,
+    ],
+  );
 
   const visiblePanelsCount = useMemo(
     () => Object.values(panels).filter(Boolean).length,
