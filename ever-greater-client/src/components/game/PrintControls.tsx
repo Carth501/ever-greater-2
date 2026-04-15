@@ -5,7 +5,7 @@ import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { alpha, styled } from "@mui/material/styles";
-import { JSX } from "react";
+import { JSX, useId } from "react";
 
 type PrintControlsProps = {
   supplies: number;
@@ -65,7 +65,16 @@ function PrintControls({
   isDisabled,
   onPrintClick,
 }: PrintControlsProps): JSX.Element {
+  const helperTextId = useId();
   const isOutOfSupplies = supplies === 0;
+  const buttonHelperText = isOutOfSupplies
+    ? "Printing is disabled because supplies are depleted. Refill stock to resume ticket printing."
+    : isDisabled
+      ? "Printing is temporarily unavailable while the current action finishes."
+      : "Printing is available and ready from this panel.";
+  const suppliesStatusText = isOutOfSupplies
+    ? "No supplies available. Printing is blocked until stock is restored."
+    : "Supplies are in a healthy range and ready for the current print loop.";
 
   return (
     <ControlsCard elevation={0}>
@@ -82,23 +91,36 @@ function PrintControls({
             </Typography>
           </Box>
 
-          <Chip
-            label={isOutOfSupplies ? "Refill needed" : "Ready to print"}
-            color={isOutOfSupplies ? "warning" : "primary"}
-          />
+          <Box role="status" aria-live="polite" aria-atomic="true">
+            <Chip
+              label={isOutOfSupplies ? "Refill needed" : "Ready to print"}
+              color={isOutOfSupplies ? "warning" : "primary"}
+            />
+          </Box>
         </Stack>
 
         <ControlsRow>
           <ActionPanel elevation={0}>
-            <Button
-              onClick={onPrintClick}
-              variant="contained"
-              size="large"
-              disabled={isDisabled}
-              sx={{ minWidth: 220 }}
-            >
-              Print a ticket
-            </Button>
+            <Stack spacing={1.25} alignItems="center">
+              <Button
+                onClick={onPrintClick}
+                variant="contained"
+                size="large"
+                disabled={isDisabled}
+                aria-describedby={helperTextId}
+                sx={{ minWidth: 220 }}
+              >
+                Print a ticket
+              </Button>
+              <Typography
+                id={helperTextId}
+                variant="body2"
+                color="text.secondary"
+                align="center"
+              >
+                {buttonHelperText}
+              </Typography>
+            </Stack>
           </ActionPanel>
 
           <SuppliesCard elevation={0} depleted={isOutOfSupplies}>
@@ -109,10 +131,14 @@ function PrintControls({
               <Typography variant="h3" fontWeight={700}>
                 {supplies}
               </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {isOutOfSupplies
-                  ? "No supplies available. Printing is blocked until stock is restored."
-                  : "Supplies are in a healthy range and ready for the current print loop."}
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
+              >
+                {suppliesStatusText}
               </Typography>
             </Stack>
           </SuppliesCard>

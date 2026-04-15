@@ -61,6 +61,11 @@ describe("PrintControls", () => {
       name: /print a ticket/i,
     }) as HTMLButtonElement;
     expect(printButton.disabled).toBe(true);
+    expect(
+      screen.getByText(
+        /printing is disabled because supplies are depleted\. refill stock to resume ticket printing\./i,
+      ),
+    ).toBeTruthy();
   });
 
   it("should enable the print button when isDisabled is false", () => {
@@ -90,5 +95,26 @@ describe("PrintControls", () => {
     );
 
     expect(screen.getByText("Supplies")).toBeTruthy();
+  });
+
+  it("announces readiness state and button guidance", () => {
+    const mockOnPrintClick = vi.fn();
+    render(
+      <PrintControls
+        supplies={10}
+        isDisabled={false}
+        onPrintClick={mockOnPrintClick}
+      />,
+    );
+
+    expect(screen.getAllByRole("status").length).toBeGreaterThanOrEqual(2);
+    expect(
+      screen.getByText(/printing is available and ready from this panel\./i),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        /supplies are in a healthy range and ready for the current print loop\./i,
+      ),
+    ).toBeTruthy();
   });
 });

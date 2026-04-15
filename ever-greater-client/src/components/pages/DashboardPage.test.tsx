@@ -113,5 +113,18 @@ describe("DashboardPage", () => {
         }) as HTMLButtonElement
       ).disabled,
     ).toBe(true);
+    expect(
+      screen.getByText(
+        /printing is disabled in preview mode because no live account is connected\./i,
+      ),
+    ).toBeTruthy();
+  });
+
+  it("surfaces live print guidance when printing is available", () => {
+    render(<DashboardPage />);
+
+    expect(
+      screen.getByText(/printing is available and ready from this panel\./i),
+    ).toBeTruthy();
   });
 });
