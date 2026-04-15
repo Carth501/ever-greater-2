@@ -164,7 +164,15 @@ describe("ticketSlice", () => {
       const stateWithCount: TicketState = { ...initialState, count: 100 };
       const state = ticketReducer(
         stateWithCount,
-        incrementCountThunk.fulfilled(undefined, ""),
+        incrementCountThunk.fulfilled(
+          {
+            printer_supplies: 10,
+            money: 5,
+            gold: 1,
+            autoprinters: 0,
+          },
+          "",
+        ),
       );
       expect(state.isLoading).toBe(false);
       expect(state.count).toBe(100);

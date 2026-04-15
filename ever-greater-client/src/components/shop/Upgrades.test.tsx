@@ -1,5 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { useAuth } from "../../hooks/useAuth";
+import { useGame } from "../../hooks/useGame";
+import { useOperations } from "../../hooks/useOperations";
 import { mockUser } from "../../tests/fixtures";
 import Upgrades from "./Upgrades";
 
@@ -15,9 +18,9 @@ vi.mock("../../hooks/useOperations", () => ({
   useOperations: vi.fn(),
 }));
 
-const { useAuth } = await import("../../hooks/useAuth");
-const { useGame } = await import("../../hooks/useGame");
-const { useOperations } = await import("../../hooks/useOperations");
+type AuthHookValue = ReturnType<typeof useAuth>;
+type GameHookValue = ReturnType<typeof useGame>;
+type OperationsHookValue = ReturnType<typeof useOperations>;
 
 describe("Upgrades", () => {
   function mockDependencies(userOverrides = {}) {
@@ -35,19 +38,46 @@ describe("Upgrades", () => {
       ...userOverrides,
     });
 
-    vi.mocked(useAuth).mockReturnValue({ user } as ReturnType<typeof useAuth>);
-    vi.mocked(useGame).mockReturnValue({ count: 5000 } as ReturnType<
-      typeof useGame
-    >);
+    const authValue: AuthHookValue = {
+      user,
+      isCheckingAuth: false,
+      isLoading: false,
+      error: null,
+      errorCode: null,
+      errorDetail: null,
+      login: vi.fn<(email: string, password: string) => void>(),
+      logout: vi.fn<() => void>(),
+      signup: vi.fn<(email: string, password: string) => void>(),
+    };
+
+    const gameValue: GameHookValue = {
+      count: 5000,
+      error: null,
+      isLoading: false,
+      supplies: user.printer_supplies,
+      isPrintDisabled: false,
+      printTicket: vi.fn<() => void>(),
+    };
+
+    const operationsValue: OperationsHookValue = {
+      isLoading: false,
+      error: null,
+      errorCode: null,
+      errorDetail: null,
+      buySupplies: vi.fn<() => void>(),
+      buyGold: vi.fn<(quantity: number) => void>(),
+      buyAutoprinter: vi.fn<() => void>(),
+      buyAutoBuySupplies: vi.fn<() => void>(),
+      toggleAutoBuySupplies: vi.fn<(active: boolean) => void>(),
+      increaseCreditGeneration: vi.fn<() => void>(),
+      increaseCreditCapacity: vi.fn<() => void>(),
+    };
+
+    vi.mocked(useAuth).mockReturnValue(authValue);
+    vi.mocked(useGame).mockReturnValue(gameValue);
     vi.mocked(useOperations).mockReturnValue({
-      buySupplies: vi.fn(),
-      buyGold: vi.fn(),
-      buyAutoprinter: vi.fn(),
-      buyAutoBuySupplies: vi.fn(),
-      toggleAutoBuySupplies: vi.fn(),
-      increaseCreditGeneration: vi.fn(),
-      increaseCreditCapacity: vi.fn(),
-    } as ReturnType<typeof useOperations>);
+      ...operationsValue,
+    });
   }
 
   it("renders permanent upgrades only", () => {

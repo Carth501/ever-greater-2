@@ -1,4 +1,4 @@
-import { configureStore, type PreloadedState } from "@reduxjs/toolkit";
+import { configureStore } from "@reduxjs/toolkit";
 import { websocketMiddleware } from "../../store/middleware/websocketMiddleware";
 import authReducer from "../../store/slices/authSlice";
 import errorReducer from "../../store/slices/errorSlice";
@@ -85,11 +85,11 @@ export function createTestStore(options: TestStoreOptions = {}) {
       operations: operationsReducer,
       realtime: realtimeReducer,
     },
-    preloadedState: mergeState(preloadedState) as PreloadedState<RootState>,
+    preloadedState: mergeState(preloadedState),
     middleware: (getDefaultMiddleware) =>
-      includeWebsocketMiddleware
-        ? getDefaultMiddleware().concat(websocketMiddleware)
-        : getDefaultMiddleware(),
+      getDefaultMiddleware().concat(
+        ...(includeWebsocketMiddleware ? [websocketMiddleware] : []),
+      ),
   });
 }
 

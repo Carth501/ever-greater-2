@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  guardrails-and-tests:
+    name: Guardrails And Monorepo Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install shared dependencies
+        run: npm --prefix ever-greater-shared ci
+
+      - name: Install server dependencies
+        run: npm --prefix ever-greater-server ci
+
+      - name: Install client dependencies
+        run: npm --prefix ever-greater-client ci
+
+      - name: Run guardrails
+        run: npm run guardrails
+
+      - name: Run shared tests
+        run: npm run test:shared
+
+      - name: Run server tests
+        run: npm run test:server
+
+      - name: Run client tests
+        run: npm run test:client
+
+  client-test-typecheck:
+    name: Client Test Typecheck
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install client dependencies
+        run: npm --prefix ever-greater-client ci
+
+      - name: Run client test typecheck
+        run: npm --prefix ever-greater-client run typecheck:tests

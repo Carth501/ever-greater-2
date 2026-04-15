@@ -39,12 +39,10 @@ describe("apiFetch", () => {
       .fn()
       .mockRejectedValue(new Error("socket down")) as typeof fetch;
 
-    await expect(apiFetch("/test")).rejects.toMatchObject<
-      Partial<NetworkError>
-    >({
+    await expect(apiFetch("/test")).rejects.toMatchObject({
       name: "NetworkError",
       message: "socket down",
-    });
+    } satisfies Partial<NetworkError>);
   });
 
   it("throws AuthError with code and detail for auth failures", async () => {
@@ -59,13 +57,13 @@ describe("apiFetch", () => {
       ),
     ) as typeof fetch;
 
-    await expect(apiFetch("/test")).rejects.toMatchObject<Partial<AuthError>>({
+    await expect(apiFetch("/test")).rejects.toMatchObject({
       name: "AuthError",
       message: "Not authenticated",
       status: 401,
       code: "AUTH_REQUIRED",
       detail: "Session missing",
-    });
+    } satisfies Partial<AuthError>);
   });
 
   it("throws DomainError with code and detail for domain failures", async () => {
@@ -80,15 +78,13 @@ describe("apiFetch", () => {
       ),
     ) as typeof fetch;
 
-    await expect(apiFetch("/test")).rejects.toMatchObject<Partial<DomainError>>(
-      {
-        name: "DomainError",
-        message: "GLOBAL_TICKET_LIMIT",
-        status: 400,
-        code: "GLOBAL_TICKET_LIMIT",
-        detail: "Personal ticket withdrawal limit exceeded",
-      },
-    );
+    await expect(apiFetch("/test")).rejects.toMatchObject({
+      name: "DomainError",
+      message: "GLOBAL_TICKET_LIMIT",
+      status: 400,
+      code: "GLOBAL_TICKET_LIMIT",
+      detail: "Personal ticket withdrawal limit exceeded",
+    } satisfies Partial<DomainError>);
   });
 
   it("falls back to statusText when the error body is not json", async () => {
@@ -98,13 +94,11 @@ describe("apiFetch", () => {
         new Response("plain text", { status: 500, statusText: "Server Error" }),
       ) as typeof fetch;
 
-    await expect(apiFetch("/test")).rejects.toMatchObject<Partial<DomainError>>(
-      {
-        name: "DomainError",
-        message: "Server Error",
-        status: 500,
-      },
-    );
+    await expect(apiFetch("/test")).rejects.toMatchObject({
+      name: "DomainError",
+      message: "Server Error",
+      status: 500,
+    } satisfies Partial<DomainError>);
   });
 
   it("formats known api error codes into clearer UI messages", () => {
