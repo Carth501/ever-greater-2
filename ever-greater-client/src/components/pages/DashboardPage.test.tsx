@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockUser } from "../../tests/fixtures";
 import DashboardPage from "./DashboardPage";
@@ -143,6 +143,18 @@ describe("DashboardPage", () => {
     );
 
     render(<DashboardPage showControls={false} />);
+
+    expect(screen.getAllByText(/Updates delayed/i).length).toBeGreaterThan(0);
+  });
+
+  it("updates realtime status when a healthy feed becomes stale", () => {
+    render(<DashboardPage showControls={false} />);
+
+    expect(screen.getAllByText(/Realtime healthy/i).length).toBeGreaterThan(0);
+
+    act(() => {
+      vi.advanceTimersByTime(8_001);
+    });
 
     expect(screen.getAllByText(/Updates delayed/i).length).toBeGreaterThan(0);
   });

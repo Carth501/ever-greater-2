@@ -15,7 +15,7 @@ import {
   DashboardTicketPanel,
   DashboardToolbarSection,
 } from "./dashboard";
-import { defaultPanels, presets } from "./dashboard/config";
+import { defaultPanels, LATE_UPDATE_MS, presets } from "./dashboard/config";
 import {
   Grid,
   LeftColumn,
@@ -48,10 +48,26 @@ function DashboardPage({
   const [clock, setClock] = useState(Date.now());
 
   useEffect(() => {
-    const interval = window.setInterval(() => setClock(Date.now()), 1000);
+    setClock(Date.now());
 
-    return () => window.clearInterval(interval);
-  }, []);
+    if (!user || !isConnected || isReconnecting || !lastUpdateAt) {
+      return;
+    }
+
+    const elapsed = Date.now() - lastUpdateAt;
+    if (elapsed >= LATE_UPDATE_MS) {
+      return;
+    }
+
+    const timeout = window.setTimeout(
+      () => {
+        setClock(Date.now());
+      },
+      LATE_UPDATE_MS - elapsed + 1,
+    );
+
+    return () => window.clearTimeout(timeout);
+  }, [isConnected, isReconnecting, lastUpdateAt, user]);
 
   const {
     hasLiveUser,
