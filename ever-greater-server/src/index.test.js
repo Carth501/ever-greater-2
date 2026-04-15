@@ -8,6 +8,7 @@ import { buildPeriodicUserUpdatePayload, createApp } from './index.ts';
 // Mock database BEFORE importing the app
 vi.mock('./db.ts', () => ({
   initializeDatabase: vi.fn().mockResolvedValue(undefined),
+  prepareDatabaseForRuntime: vi.fn().mockResolvedValue(undefined),
   closePool: vi.fn().mockResolvedValue(undefined),
   createUser: vi.fn(),
   getUserByEmail: vi.fn(),

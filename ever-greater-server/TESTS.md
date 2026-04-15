@@ -14,6 +14,11 @@ Tests for all database functions with mocked PostgreSQL pool:
   - Skips insertion if table is already populated
   - Properly releases client connections on errors
 
+- **`prepareDatabaseForRuntime`** - Runtime database readiness checks
+  - Fails when migrations have not been applied
+  - Fails when tracked migrations are still pending
+  - Validates the ready schema without rerunning migrations
+
 - **`getGlobalCount`** - Retrieve current global count
   - Returns count successfully
   - Handles database errors

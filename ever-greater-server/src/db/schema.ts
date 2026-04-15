@@ -7,6 +7,8 @@ import {
 } from "./migrations/index.js";
 
 const MIGRATIONS_TABLE_NAME = "schema_migrations";
+const MIGRATION_COMMAND_HINT =
+  "Run `npm run server:migrate` from the repository root or `npm run migrate` inside ever-greater-server before starting the server.";
 
 async function ensureMigrationsTable(client: PoolClient): Promise<void> {
   await client.query(`
@@ -28,6 +30,33 @@ async function getAppliedMigrationIds(
   return new Set(
     result.rows.map((row: { id: number | string }) => Number(row.id)),
   );
+}
+
+function getPendingMigrations(
+  appliedMigrationIds: Set<number>,
+): DatabaseMigration[] {
+  return databaseMigrations.filter(
+    (migration) => !appliedMigrationIds.has(migration.id),
+  );
+}
+
+async function assertMigrationsTableExists(client: PoolClient): Promise<void> {
+  const result = await client.query(
+    `
+      SELECT EXISTS (
+        SELECT 1
+        FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = $1
+      ) AS exists
+    `,
+    [MIGRATIONS_TABLE_NAME],
+  );
+
+  if (!result.rows[0]?.exists) {
+    throw new Error(
+      `Database migrations have not been applied. ${MIGRATION_COMMAND_HINT}`,
+    );
+  }
 }
 
 async function applyMigration(
@@ -58,13 +87,27 @@ async function runPendingMigrations(client: PoolClient): Promise<void> {
   await ensureMigrationsTable(client);
   const appliedMigrationIds = await getAppliedMigrationIds(client);
 
-  for (const migration of databaseMigrations) {
-    if (appliedMigrationIds.has(migration.id)) {
-      continue;
-    }
-
+  for (const migration of getPendingMigrations(appliedMigrationIds)) {
     await applyMigration(client, migration);
   }
+}
+
+async function assertNoPendingMigrations(client: PoolClient): Promise<void> {
+  await assertMigrationsTableExists(client);
+  const appliedMigrationIds = await getAppliedMigrationIds(client);
+  const pendingMigrations = getPendingMigrations(appliedMigrationIds);
+
+  if (pendingMigrations.length === 0) {
+    return;
+  }
+
+  const pendingDescription = pendingMigrations
+    .map((migration) => `${migration.id}:${migration.name}`)
+    .join(", ");
+
+  throw new Error(
+    `Database has pending migrations (${pendingDescription}). ${MIGRATION_COMMAND_HINT}`,
+  );
 }
 
 async function validateResourceMappings(client: PoolClient): Promise<void> {
@@ -99,6 +142,14 @@ async function ensureGlobalStateSeed(client: PoolClient): Promise<void> {
 export async function initializeDatabase(): Promise<void> {
   return withPoolClient(async (client) => {
     await runPendingMigrations(client);
+    await validateResourceMappings(client);
+    await ensureGlobalStateSeed(client);
+  });
+}
+
+export async function prepareDatabaseForRuntime(): Promise<void> {
+  return withPoolClient(async (client) => {
+    await assertNoPendingMigrations(client);
     await validateResourceMappings(client);
     await ensureGlobalStateSeed(client);
   });

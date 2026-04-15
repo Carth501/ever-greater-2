@@ -210,6 +210,82 @@ describe('Database Functions', () => {
     });
   });
 
+  describe('prepareDatabaseForRuntime', () => {
+    it('should fail when migrations have not been applied', async () => {
+      mockClient.query.mockImplementation(async (query) => {
+        if (query.includes('information_schema.tables')) {
+          return { rows: [{ exists: false }] };
+        }
+
+        throw new Error(`Unexpected query: ${query}`);
+      });
+
+      await expect(db.prepareDatabaseForRuntime()).rejects.toThrow(
+        'Database migrations have not been applied'
+      );
+      expect(mockClient.release).toHaveBeenCalled();
+    });
+
+    it('should fail when migrations are still pending', async () => {
+      mockClient.query.mockImplementation(async (query) => {
+        if (query.includes('information_schema.tables')) {
+          return { rows: [{ exists: true }] };
+        }
+
+        if (query.includes('SELECT id FROM schema_migrations')) {
+          return { rows: [{ id: 1 }] };
+        }
+
+        throw new Error(`Unexpected query: ${query}`);
+      });
+
+      await expect(db.prepareDatabaseForRuntime()).rejects.toThrow(
+        'Database has pending migrations'
+      );
+      expect(mockClient.release).toHaveBeenCalled();
+    });
+
+    it('should validate a ready database without rerunning migrations', async () => {
+      mockClient.query.mockImplementation(async (query) => {
+        if (query.includes('information_schema.tables')) {
+          return { rows: [{ exists: true }] };
+        }
+
+        if (query.includes('SELECT id FROM schema_migrations')) {
+          return { rows: [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }] };
+        }
+
+        if (query.includes("information_schema.columns WHERE table_name = 'users'")) {
+          return {
+            rows: [
+              { column_name: 'tickets_contributed' },
+              { column_name: 'printer_supplies' },
+              { column_name: 'money' },
+              { column_name: 'gold' },
+              { column_name: 'autoprinters' },
+              { column_name: 'credit_value' },
+              { column_name: 'credit_generation_level' },
+              { column_name: 'credit_capacity_level' },
+            ],
+          };
+        }
+
+        if (query.includes('SELECT COUNT(*) FROM global_state')) {
+          return { rows: [{ count: 1 }] };
+        }
+
+        return { rows: [] };
+      });
+
+      await db.prepareDatabaseForRuntime();
+
+      expect(mockClient.query).not.toHaveBeenCalledWith(
+        expect.stringContaining('CREATE TABLE IF NOT EXISTS global_state')
+      );
+      expect(mockClient.release).toHaveBeenCalled();
+    });
+  });
+
   describe('getGlobalCount', () => {
     it('should return the current global count', async () => {
       mockPool.query.mockResolvedValue({ rows: [{ count: 42 }] });
@@ -483,7 +559,7 @@ describe('Database Functions', () => {
     });
 
     it('spends global tickets and records the withdrawal when within the personal limit', async () => {
-      mockPool.query.mockResolvedValue({ rows: [{ total: 3 }] });
+      let withdrawalRecorded = false;
 
       mockClient.query.mockImplementation(async (query) => {
         if (query === 'BEGIN' || query === 'COMMIT') {
@@ -495,7 +571,7 @@ describe('Database Functions', () => {
         }
 
         if (query.includes('SELECT COALESCE(SUM(amount), 0) as total FROM ticket_withdrawals')) {
-          return { rows: [{ total: 1 }] };
+          return { rows: [{ total: withdrawalRecorded ? 3 : 1 }] };
         }
 
         if (query.includes('UPDATE global_state')) {
@@ -522,6 +598,7 @@ describe('Database Functions', () => {
         }
 
         if (query.includes('INSERT INTO ticket_withdrawals')) {
+          withdrawalRecorded = true;
           return { rows: [] };
         }
 

@@ -13,7 +13,7 @@ A full-stack application with a React client and Express WebSocket server for ma
 - **Node.js** - 20 or later (the repo prefers Node 20 via `.nvmrc`, and CI runs on Node 20)
 - **PostgreSQL** - 12 or later
 
-From the repository root, run `npm run dev` to start the Vite client and the server watch process together.
+From the repository root, run `npm run server:migrate` after database schema changes and before starting the server for the first time. Then run `npm run dev` to start the Vite client and the server watch process together.
 
 ---
 
@@ -100,7 +100,21 @@ The older query-based entry (`?concept=dashboard`) still works for compatibility
 
    **Important:** Never commit the `.env` file to version control. It's already included in `.gitignore`.
 
-4. **Start the Server**
+4. **Apply Database Migrations**
+
+   From the repository root:
+
+   ```bash
+   npm run server:migrate
+   ```
+
+   Or from inside `ever-greater-server`:
+
+   ```bash
+   npm run migrate
+   ```
+
+5. **Start the Server**
 
    ```bash
    npm run dev
@@ -108,7 +122,7 @@ The older query-based entry (`?concept=dashboard`) still works for compatibility
 
    Use `npm start` when you want a production-style build and run.
 
-   The server will automatically create the necessary database tables on first startup.
+   The server now expects migrations to be applied before startup and will fail fast if the schema is behind.
 
 ### Environment Variables
 
@@ -126,6 +140,7 @@ The older query-based entry (`?concept=dashboard`) still works for compatibility
 
 - `npm start` - run the server
 - `npm run dev` - run the server in watch mode with TypeScript entrypoint reloads
+- `npm run server:migrate` - apply pending server database migrations from the repository root
 
 ### API Endpoints
 

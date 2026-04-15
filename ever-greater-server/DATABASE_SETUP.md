@@ -90,23 +90,31 @@ The DATABASE_URL follows this format:
 postgresql://[username]:[password]@[host]:[port]/[database]
 ```
 
-## Automatic Table Creation
+## Database Migrations
 
-The application automatically creates the required `global_state` table on first startup. You don't need to run any SQL scripts manually.
+The application uses tracked database migrations. Apply them explicitly before starting the server:
 
-When you start the server for the first time, you'll see:
-
-```
-Database initialized with count = 0
-Database initialized successfully
-ever-greater-server listening on http://localhost:4000
+```bash
+npm run migrate
 ```
 
-On subsequent starts, you'll see:
+From the repository root, the equivalent command is:
+
+```bash
+npm run server:migrate
+```
+
+When migrations run successfully, you'll see:
 
 ```
-Database already initialized
-Database initialized successfully
+Database migrations applied successfully
+Database pool closed
+```
+
+Once migrations are applied, normal server startup will log:
+
+```
+Database ready for runtime
 ever-greater-server listening on http://localhost:4000
 ```
 

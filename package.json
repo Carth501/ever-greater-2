@@ -8,6 +8,7 @@
 		"client": "npm --prefix ever-greater-client start",
 		"server": "npm --prefix ever-greater-server start",
 		"server:dev": "npm --prefix ever-greater-server run dev",
+		"server:migrate": "npm --prefix ever-greater-server run migrate",
 		"dev": "npm-run-all --parallel server:dev client",
 		"kill": "powershell -Command \"$process = Get-NetTCPConnection -LocalPort 4000 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -First 1; if ($process) { Stop-Process -Id $process -Force; Write-Host 'Killed process on port 4000' } else { Write-Host 'No process found on port 4000' }\"",
 		"check:shared-deps": "node scripts/check-shared-deps.cjs",

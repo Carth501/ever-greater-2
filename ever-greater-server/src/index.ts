@@ -29,8 +29,8 @@ import {
   getUserByEmail,
   getUserById,
   incrementGlobalCount,
-  initializeDatabase,
   pool,
+  prepareDatabaseForRuntime,
   processAutoprinters,
   purchaseAutoBuySupplies,
   setAutoBuySuppliesActive,
@@ -859,8 +859,8 @@ async function startServer(): Promise<void> {
   assertRequiredEnvironment(serverConfig);
 
   try {
-    await initializeDatabase();
-    console.log("Database initialized successfully");
+    await prepareDatabaseForRuntime();
+    console.log("Database ready for runtime");
 
     const app = createApp();
     server = createServer(app);
@@ -908,7 +908,7 @@ async function startServer(): Promise<void> {
       }
     }, 3600000); // 1 hour
   } catch (error) {
-    console.error("Failed to initialize database:", error);
+    console.error("Failed to prepare database for runtime:", error);
     process.exit(1);
   }
 }
