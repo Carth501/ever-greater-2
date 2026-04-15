@@ -15,9 +15,11 @@ import type { Request, Response } from "express";
 import express, { type Express } from "express";
 import session from "express-session";
 import http, { type Server } from "http";
+import path from "path";
 import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer, type RawData } from "ws";
 import { z } from "zod";
+import { assertRequiredEnvironment, getServerConfig } from "./config.js";
 import {
   cleanupOldTicketWithdrawals,
   closePool,
@@ -42,26 +44,7 @@ declare module "express-session" {
 }
 
 const __filename = fileURLToPath(import.meta.url);
-const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
 const SESSION_SECRET_FALLBACK = "your-secret-key-change-in-production";
-
-const DEFAULT_ALLOWED_ORIGINS = [
-  "http://localhost:3000",
-  "http://127.0.0.1:3000",
-  "http://localhost:5173",
-  "http://127.0.0.1:5173",
-];
-
-function getAllowedOrigins(): string[] {
-  const configuredOrigins = (process.env.CLIENT_URL || "")
-    .split(",")
-    .map((origin) => origin.trim())
-    .filter(Boolean);
-
-  return configuredOrigins.length > 0
-    ? configuredOrigins
-    : DEFAULT_ALLOWED_ORIGINS;
-}
 
 let wss: WebSocketServer | undefined;
 let server: Server | undefined;
@@ -317,8 +300,9 @@ async function broadcastPeriodicUserUpdates(): Promise<void> {
 }
 
 function createApp(): Express {
+  const serverConfig = getServerConfig();
   const app = express();
-  const allowedOrigins = getAllowedOrigins();
+  const allowedOrigins = serverConfig.allowedOrigins;
 
   app.use((req, res, next) => {
     const requestId = randomUUID();
@@ -350,12 +334,9 @@ function createApp(): Express {
 
   // Use MemoryStore for testing, PgSession for production
   const isTestEnvironment =
-    process.env.NODE_ENV === "test" || process.env.VITEST === "true";
-  const sessionSecret = process.env.SESSION_SECRET || SESSION_SECRET_FALLBACK;
-  if (
-    process.env.NODE_ENV === "production" &&
-    sessionSecret === SESSION_SECRET_FALLBACK
-  ) {
+    serverConfig.nodeEnv === "test" || process.env.VITEST === "true";
+  const sessionSecret = serverConfig.sessionSecret || SESSION_SECRET_FALLBACK;
+  if (serverConfig.nodeEnv === "production" && !serverConfig.sessionSecret) {
     throw new Error("SESSION_SECRET must be configured in production");
   }
 
@@ -373,7 +354,7 @@ function createApp(): Express {
       resave: false,
       saveUninitialized: false,
       cookie: {
-        secure: process.env.NODE_ENV === "production",
+        secure: serverConfig.nodeEnv === "production",
         httpOnly: true,
         maxAge: 30 * 24 * 60 * 60 * 1000,
       },
@@ -856,69 +837,84 @@ function createServer(app: Express): Server {
   return httpServer;
 }
 
-// Start server only if this is the main module (not when required by tests)
-// Check if the script was invoked directly (contains index.js in argv[1])
-// When required by tests, process.argv[1] will be different (jest)
-const isMainModule = process.argv[1]?.includes("index.js") ?? false;
+function normalizeFilePath(filePath: string): string {
+  return path.normalize(filePath).toLowerCase();
+}
 
-if (isMainModule) {
-  (async () => {
-    try {
-      await initializeDatabase();
-      console.log("Database initialized successfully");
+function isDirectExecutionTarget(candidatePath: string | undefined): boolean {
+  if (!candidatePath) {
+    return false;
+  }
 
-      const app = createApp();
-      server = createServer(app);
+  return (
+    normalizeFilePath(path.resolve(candidatePath)) ===
+    normalizeFilePath(__filename)
+  );
+}
 
-      server.listen(PORT, () => {
-        console.log(
-          `ever-greater-server listening on http://localhost:${PORT}`,
-        );
-      });
+async function startServer(): Promise<void> {
+  const serverConfig = getServerConfig();
+  const port = serverConfig.port;
 
-      let periodicTickSeconds = 0;
+  assertRequiredEnvironment(serverConfig);
 
-      autoprinterInterval = setInterval(async () => {
-        try {
-          periodicTickSeconds += 1;
-          const shouldRunAutoprinter = periodicTickSeconds % 4 === 0;
+  try {
+    await initializeDatabase();
+    console.log("Database initialized successfully");
 
-          if (shouldRunAutoprinter) {
-            const result = await processAutoprinters();
+    const app = createApp();
+    server = createServer(app);
 
-            if (
-              result?.newGlobalCount !== null &&
-              result?.newGlobalCount !== undefined
-            ) {
-              broadcastCount(result.newGlobalCount);
-            }
+    server.listen(port, () => {
+      console.log(`ever-greater-server listening on http://localhost:${port}`);
+    });
+
+    let periodicTickSeconds = 0;
+
+    autoprinterInterval = setInterval(async () => {
+      try {
+        periodicTickSeconds += 1;
+        const shouldRunAutoprinter = periodicTickSeconds % 4 === 0;
+
+        if (shouldRunAutoprinter) {
+          const result = await processAutoprinters();
+
+          if (
+            result?.newGlobalCount !== null &&
+            result?.newGlobalCount !== undefined
+          ) {
+            broadcastCount(result.newGlobalCount);
           }
-
-          await updateAllUsersCreditValues();
-
-          await broadcastPeriodicUserUpdates();
-        } catch (error) {
-          console.error("Error processing periodic game updates:", error);
         }
-      }, 1000);
 
-      ticketCleanupInterval = setInterval(async () => {
-        try {
-          const deletedCount = await cleanupOldTicketWithdrawals();
-          if (deletedCount > 0) {
-            console.log(
-              `Cleaned up ${deletedCount} old ticket withdrawal records`,
-            );
-          }
-        } catch (error) {
-          console.error("Error cleaning up old ticket withdrawals:", error);
+        await updateAllUsersCreditValues();
+
+        await broadcastPeriodicUserUpdates();
+      } catch (error) {
+        console.error("Error processing periodic game updates:", error);
+      }
+    }, 1000);
+
+    ticketCleanupInterval = setInterval(async () => {
+      try {
+        const deletedCount = await cleanupOldTicketWithdrawals();
+        if (deletedCount > 0) {
+          console.log(
+            `Cleaned up ${deletedCount} old ticket withdrawal records`,
+          );
         }
-      }, 3600000); // 1 hour
-    } catch (error) {
-      console.error("Failed to initialize database:", error);
-      process.exit(1);
-    }
-  })();
+      } catch (error) {
+        console.error("Error cleaning up old ticket withdrawals:", error);
+      }
+    }, 3600000); // 1 hour
+  } catch (error) {
+    console.error("Failed to initialize database:", error);
+    process.exit(1);
+  }
+}
+
+if (isDirectExecutionTarget(process.argv[1])) {
+  void startServer();
 }
 
 const shutdown = async (signal: NodeJS.Signals): Promise<void> => {
@@ -980,4 +976,4 @@ process.on("SIGINT", () => {
   void shutdown("SIGINT");
 });
 
-export { buildPeriodicUserUpdatePayload, createApp, createServer };
+export { buildPeriodicUserUpdatePayload, createApp, createServer, startServer };

@@ -1,10 +1,14 @@
 {
 	"name": "ever-greater",
 	"private": true,
+	"engines": {
+		"node": ">=20 <21"
+	},
 	"scripts": {
 		"client": "npm --prefix ever-greater-client start",
 		"server": "npm --prefix ever-greater-server start",
-		"dev": "npm-run-all --parallel server client",
+		"server:dev": "npm --prefix ever-greater-server run dev",
+		"dev": "npm-run-all --parallel server:dev client",
 		"kill": "powershell -Command \"$process = Get-NetTCPConnection -LocalPort 4000 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -First 1; if ($process) { Stop-Process -Id $process -Force; Write-Host 'Killed process on port 4000' } else { Write-Host 'No process found on port 4000' }\"",
 		"check:shared-deps": "node scripts/check-shared-deps.cjs",
 		"check:client-slice-boundaries": "node scripts/check-client-slice-boundaries.cjs",

@@ -5,6 +5,9 @@ import {
   User,
 } from "ever-greater-shared";
 import { Pool, PoolClient } from "pg";
+import { getServerConfig } from "./config.js";
+
+const serverConfig = getServerConfig();
 
 /**
  * Thrown when a user attempts to withdraw global tickets beyond their personal
@@ -17,25 +20,13 @@ export class GlobalTicketLimitExceeded extends Error {
   }
 }
 
-const DEFAULT_STARTING_PRINTER_SUPPLIES = 1000;
-const parsedStartingPrinterSupplies = Number.parseInt(
-  process.env.STARTING_PRINTER_SUPPLIES ??
-    `${DEFAULT_STARTING_PRINTER_SUPPLIES}`,
-  10,
-);
-export const STARTING_PRINTER_SUPPLIES =
-  Number.isFinite(parsedStartingPrinterSupplies) &&
-  parsedStartingPrinterSupplies >= 0
-    ? parsedStartingPrinterSupplies
-    : DEFAULT_STARTING_PRINTER_SUPPLIES;
+export const STARTING_PRINTER_SUPPLIES = serverConfig.startingPrinterSupplies;
 
 // Create PostgreSQL connection pool
 export const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  max: process.env.DB_POOL_MAX ? parseInt(process.env.DB_POOL_MAX) : 10,
-  idleTimeoutMillis: process.env.DB_POOL_IDLE_TIMEOUT
-    ? parseInt(process.env.DB_POOL_IDLE_TIMEOUT)
-    : 30000,
+  connectionString: serverConfig.databaseUrl,
+  max: serverConfig.dbPoolMax,
+  idleTimeoutMillis: serverConfig.dbPoolIdleTimeout,
 });
 
 // Handle pool errors (only if pool.on exists, for testing compatibility)

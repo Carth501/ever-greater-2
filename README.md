@@ -8,6 +8,13 @@ A full-stack application with a React client and Express WebSocket server for ma
 - **ever-greater-server** - Node.js Express + WebSocket backend
 - **ever-greater-shared** - Shared types and utilities
 
+## Local Development
+
+- **Node.js** - 20.x (the repo is pinned via `.nvmrc` and CI runs on Node 20)
+- **PostgreSQL** - 12 or later
+
+From the repository root, run `npm run dev` to start the Vite client and the server watch process together.
+
 ---
 
 ## Client Setup
@@ -26,13 +33,12 @@ You will also see any lint errors in the console.
 
 #### `npm test`
 
-Launches the test runner in interactive watch mode.\
-See the [Create React App testing documentation](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Runs the Vitest test runner in watch mode.
 
 #### `npm run build`
 
 Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+It uses Vite to bundle the application for production and optimize the output.
 
 The build is minified and the filenames include hashes.\
 Your app is ready to be deployed!
@@ -48,19 +54,11 @@ The hash-based entry avoids depending on server-side SPA routing and keeps the p
 
 The older query-based entry (`?concept=dashboard`) still works for compatibility, but the hash route is the preferred permanent internal path.
 
-#### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and transitive dependencies (webpack, Babel, ESLint, etc) into your project so you have full control over them.
-
 ## Server Setup
 
 ### Prerequisites
 
-- **Node.js** (v18 or later)
+- **Node.js** (20.x)
 - **PostgreSQL** (v12 or later) - [Installation Guide](ever-greater-server/DATABASE_SETUP.md#installing-postgresql)
 
 ### Configuration
@@ -90,38 +88,44 @@ Instead, it will copy all the configuration files and transitive dependencies (w
    cp .env.example .env
    ```
 
-   Edit `.env` and update the `DATABASE_URL` with your PostgreSQL credentials:
+   Edit `.env` and update the database settings for your machine:
 
    ```
    DATABASE_URL=postgresql://postgres:your_password@localhost:5432/ever_greater_db
+   SESSION_SECRET=local-dev-session-secret
    STARTING_PRINTER_SUPPLIES=1000
    ```
+
+   `SESSION_SECRET` can be any non-empty value for local development. It is required in production.
 
    **Important:** Never commit the `.env` file to version control. It's already included in `.gitignore`.
 
 4. **Start the Server**
 
    ```bash
-   npm start
+   npm run dev
    ```
+
+   Use `npm start` when you want a production-style build and run.
 
    The server will automatically create the necessary database tables on first startup.
 
 ### Environment Variables
 
-| Variable                    | Description                            | Default                                                                                   | Required |
-| --------------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------- | -------- |
-| `DATABASE_URL`              | PostgreSQL connection string           | -                                                                                         | Yes      |
-| `PORT`                      | Server port                            | `4000`                                                                                    | No       |
-| `CLIENT_URL`                | Allowed CORS origins (comma-separated) | `http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173` | No       |
-| `DB_POOL_MAX`               | Maximum database connections           | `10`                                                                                      | No       |
-| `DB_POOL_IDLE_TIMEOUT`      | Connection idle timeout (ms)           | `30000`                                                                                   | No       |
-| `STARTING_PRINTER_SUPPLIES` | Starting supplies for users            | `1000`                                                                                    | No       |
+| Variable                    | Description                            | Default                                                                                   | Required                                    |
+| --------------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------- |
+| `DATABASE_URL`              | PostgreSQL connection string           | -                                                                                         | Yes                                         |
+| `PORT`                      | Server port                            | `4000`                                                                                    | No                                          |
+| `CLIENT_URL`                | Allowed CORS origins (comma-separated) | `http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173` | No                                          |
+| `DB_POOL_MAX`               | Maximum database connections           | `10`                                                                                      | No                                          |
+| `DB_POOL_IDLE_TIMEOUT`      | Connection idle timeout (ms)           | `30000`                                                                                   | No                                          |
+| `SESSION_SECRET`            | Session cookie signing secret          | Local fallback only; set explicitly for stable environments                               | Local-only optional, required in production |
+| `STARTING_PRINTER_SUPPLIES` | Starting supplies for users            | `1000`                                                                                    | No                                          |
 
 ### Server Scripts
 
 - `npm start` - run the server
-- `npm run dev` - run the server in development mode
+- `npm run dev` - run the server in watch mode with TypeScript entrypoint reloads
 
 ### API Endpoints
 
@@ -162,4 +166,4 @@ The database uses a single-row table design with atomic UPDATE operations to pre
 ## Learn More
 
 - [React documentation](https://reactjs.org/)
-- [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started)
+- [Vite documentation](https://vite.dev/guide/)
