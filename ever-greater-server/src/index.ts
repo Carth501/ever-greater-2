@@ -66,9 +66,9 @@ function getAllowedOrigins(): string[] {
 let wss: WebSocketServer | undefined;
 let server: Server | undefined;
 let autoprinterInterval: NodeJS.Timeout | undefined;
-let creditUpdateInterval: NodeJS.Timeout | undefined;
 let ticketCleanupInterval: NodeJS.Timeout | undefined;
 const socketUserMap = new Map<WebSocket, number>();
+const userPeriodicSnapshotMap = new Map<number, Required<UserUpdatePayload>>();
 
 const PgSession = connectPgSimple(session);
 
@@ -85,6 +85,78 @@ type UserUpdatePayload = Partial<{
   auto_buy_supplies_purchased: boolean;
   auto_buy_supplies_active: boolean;
 }>;
+
+function toPeriodicUserSnapshot(
+  user: NonNullable<Awaited<ReturnType<typeof getUserById>>>,
+): Required<UserUpdatePayload> {
+  return {
+    printer_supplies: user.printer_supplies,
+    money: user.money,
+    gold: user.gold,
+    autoprinters: user.autoprinters || 0,
+    tickets_contributed: user.tickets_contributed,
+    tickets_withdrawn: user.tickets_withdrawn || 0,
+    credit_value: user.credit_value || 0,
+    credit_generation_level: user.credit_generation_level || 0,
+    credit_capacity_level: user.credit_capacity_level || 0,
+    auto_buy_supplies_purchased: user.auto_buy_supplies_purchased || false,
+    auto_buy_supplies_active: user.auto_buy_supplies_active || false,
+  };
+}
+
+function buildPeriodicUserUpdatePayload(
+  current: Required<UserUpdatePayload>,
+  previous: Required<UserUpdatePayload> | undefined,
+): UserUpdatePayload {
+  const payload: UserUpdatePayload = {
+    printer_supplies: current.printer_supplies,
+    tickets_contributed: current.tickets_contributed,
+    tickets_withdrawn: current.tickets_withdrawn,
+    credit_value: current.credit_value,
+  };
+
+  if (!previous || previous.money !== current.money) {
+    payload.money = current.money;
+  }
+
+  if (!previous || previous.gold !== current.gold) {
+    payload.gold = current.gold;
+  }
+
+  if (!previous || previous.autoprinters !== current.autoprinters) {
+    payload.autoprinters = current.autoprinters;
+  }
+
+  if (
+    !previous ||
+    previous.credit_generation_level !== current.credit_generation_level
+  ) {
+    payload.credit_generation_level = current.credit_generation_level;
+  }
+
+  if (
+    !previous ||
+    previous.credit_capacity_level !== current.credit_capacity_level
+  ) {
+    payload.credit_capacity_level = current.credit_capacity_level;
+  }
+
+  if (
+    !previous ||
+    previous.auto_buy_supplies_purchased !== current.auto_buy_supplies_purchased
+  ) {
+    payload.auto_buy_supplies_purchased = current.auto_buy_supplies_purchased;
+  }
+
+  if (
+    !previous ||
+    previous.auto_buy_supplies_active !== current.auto_buy_supplies_active
+  ) {
+    payload.auto_buy_supplies_active = current.auto_buy_supplies_active;
+  }
+
+  return payload;
+}
 
 function toClientUser(user: Awaited<ReturnType<typeof getUserById>>) {
   if (!user) {
@@ -207,74 +279,39 @@ async function sendUserUpdate(
   });
 }
 
-async function broadcastAutoprinterUpdates(): Promise<void> {
-  if (!wss) return;
-
+function getConnectedUserIds(): Set<number> {
   const userIds = new Set<number>();
   socketUserMap.forEach((userId) => {
     userIds.add(userId);
   });
 
+  return userIds;
+}
+
+async function broadcastPeriodicUserUpdates(): Promise<void> {
+  if (!wss) return;
+
+  const userIds = getConnectedUserIds();
+
   for (const userId of userIds) {
     try {
       const user = await getUserById(userId);
       if (user) {
-        wss.clients.forEach((client) => {
-          if (
-            client.readyState === WebSocket.OPEN &&
-            socketUserMap.get(client) === userId
-          ) {
-            const payload = JSON.stringify({
-              type: "USER_RESOURCE_UPDATE",
-              user_update: {
-                printer_supplies: user.printer_supplies,
-                money: user.money,
-                tickets_contributed: user.tickets_contributed,
-                tickets_withdrawn: user.tickets_withdrawn,
-              },
-            } satisfies UserResourceUpdate);
-            client.send(payload);
-          }
-        });
+        const currentSnapshot = toPeriodicUserSnapshot(user);
+        const previousSnapshot = userPeriodicSnapshotMap.get(userId);
+
+        await sendUserUpdate(
+          userId,
+          buildPeriodicUserUpdatePayload(currentSnapshot, previousSnapshot),
+        );
+
+        userPeriodicSnapshotMap.set(userId, currentSnapshot);
       }
     } catch (error) {
       console.error(
-        `Error sending autoprinter update to user ${userId}:`,
+        `Error sending periodic user update to user ${userId}:`,
         error,
       );
-    }
-  }
-}
-
-async function broadcastCreditUpdates(): Promise<void> {
-  if (!wss) return;
-
-  const userIds = new Set<number>();
-  socketUserMap.forEach((userId) => {
-    userIds.add(userId);
-  });
-
-  for (const userId of userIds) {
-    try {
-      const user = await getUserById(userId);
-      if (user) {
-        wss.clients.forEach((client) => {
-          if (
-            client.readyState === WebSocket.OPEN &&
-            socketUserMap.get(client) === userId
-          ) {
-            const payload = JSON.stringify({
-              type: "USER_RESOURCE_UPDATE",
-              user_update: {
-                credit_value: user.credit_value,
-              },
-            } satisfies UserResourceUpdate);
-            client.send(payload);
-          }
-        });
-      }
-    } catch (error) {
-      console.error(`Error sending credit update to user ${userId}:`, error);
     }
   }
 }
@@ -799,7 +836,20 @@ function createServer(app: Express): Server {
     });
 
     socket.on("close", () => {
+      const disconnectedUserId = socketUserMap.get(socket);
       socketUserMap.delete(socket);
+
+      if (disconnectedUserId === undefined) {
+        return;
+      }
+
+      const hasOtherConnectionsForUser = Array.from(
+        socketUserMap.values(),
+      ).some((mappedUserId) => mappedUserId === disconnectedUserId);
+
+      if (!hasOtherConnectionsForUser) {
+        userPeriodicSnapshotMap.delete(disconnectedUserId);
+      }
     });
   });
 
@@ -829,21 +879,19 @@ if (isMainModule) {
       autoprinterInterval = setInterval(async () => {
         try {
           const result = await processAutoprinters();
-          if (result.totalTickets > 0 && result.newGlobalCount !== null) {
-            broadcastCount(result.newGlobalCount);
-            await broadcastAutoprinterUpdates();
-          }
-        } catch (error) {
-          console.error("Error processing autoprinters:", error);
-        }
-      }, 4000);
 
-      creditUpdateInterval = setInterval(async () => {
-        try {
           await updateAllUsersCreditValues();
-          await broadcastCreditUpdates();
+
+          if (
+            result?.newGlobalCount !== null &&
+            result?.newGlobalCount !== undefined
+          ) {
+            broadcastCount(result.newGlobalCount);
+          }
+
+          await broadcastPeriodicUserUpdates();
         } catch (error) {
-          console.error("Error updating user credit values:", error);
+          console.error("Error processing periodic game updates:", error);
         }
       }, 1000);
 
@@ -871,10 +919,6 @@ const shutdown = async (signal: NodeJS.Signals): Promise<void> => {
 
   if (autoprinterInterval) {
     clearInterval(autoprinterInterval);
-  }
-
-  if (creditUpdateInterval) {
-    clearInterval(creditUpdateInterval);
   }
 
   if (ticketCleanupInterval) {
@@ -929,4 +973,4 @@ process.on("SIGINT", () => {
   void shutdown("SIGINT");
 });
 
-export { createApp, createServer };
+export { buildPeriodicUserUpdatePayload, createApp, createServer };

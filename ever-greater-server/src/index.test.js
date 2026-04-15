@@ -3,7 +3,7 @@ import { OperationId, ResourceType } from 'ever-greater-shared';
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as db from './db.ts';
-import { createApp } from './index.ts';
+import { buildPeriodicUserUpdatePayload, createApp } from './index.ts';
 
 // Mock database BEFORE importing the app
 vi.mock('./db.ts', () => ({
@@ -897,5 +897,86 @@ describe('Express API Endpoints', () => {
       expect(response.body.code).toBe('INVALID_REQUEST');
       expect(response.body.detail).toContain('active');
     });
+  });
+});
+
+describe('buildPeriodicUserUpdatePayload', () => {
+  it('always includes required core fields', () => {
+    const current = {
+      printer_supplies: 15,
+      money: 30,
+      gold: 4,
+      autoprinters: 2,
+      tickets_contributed: 10,
+      tickets_withdrawn: 3,
+      credit_value: 25,
+      credit_generation_level: 1,
+      credit_capacity_level: 5,
+      auto_buy_supplies_purchased: true,
+      auto_buy_supplies_active: false,
+    };
+
+    const previous = {
+      ...current,
+      money: 25,
+      gold: 3,
+    };
+
+    const payload = buildPeriodicUserUpdatePayload(current, previous);
+
+    expect(payload.printer_supplies).toBe(15);
+    expect(payload.tickets_contributed).toBe(10);
+    expect(payload.tickets_withdrawn).toBe(3);
+    expect(payload.credit_value).toBe(25);
+  });
+
+  it('includes non-core fields only when changed from previous snapshot', () => {
+    const previous = {
+      printer_supplies: 15,
+      money: 30,
+      gold: 4,
+      autoprinters: 2,
+      tickets_contributed: 10,
+      tickets_withdrawn: 3,
+      credit_value: 25,
+      credit_generation_level: 1,
+      credit_capacity_level: 5,
+      auto_buy_supplies_purchased: true,
+      auto_buy_supplies_active: false,
+    };
+
+    const current = {
+      ...previous,
+      money: 35,
+      auto_buy_supplies_active: true,
+    };
+
+    const payload = buildPeriodicUserUpdatePayload(current, previous);
+
+    expect(payload.money).toBe(35);
+    expect(payload.auto_buy_supplies_active).toBe(true);
+    expect(payload.gold).toBeUndefined();
+    expect(payload.autoprinters).toBeUndefined();
+    expect(payload.credit_generation_level).toBeUndefined();
+  });
+
+  it('includes all fields for first periodic snapshot', () => {
+    const current = {
+      printer_supplies: 15,
+      money: 30,
+      gold: 4,
+      autoprinters: 2,
+      tickets_contributed: 10,
+      tickets_withdrawn: 3,
+      credit_value: 25,
+      credit_generation_level: 1,
+      credit_capacity_level: 5,
+      auto_buy_supplies_purchased: true,
+      auto_buy_supplies_active: false,
+    };
+
+    const payload = buildPeriodicUserUpdatePayload(current, undefined);
+
+    expect(payload).toEqual(current);
   });
 });
