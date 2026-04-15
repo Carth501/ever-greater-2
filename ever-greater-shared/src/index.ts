@@ -27,7 +27,7 @@ export type {
   OperationContext,
   ResourceCalculator,
   ValidationResult,
-} from "./operations";
+} from "./operations.js";
 
 // Export typed WebSocket message shapes
 export type {
