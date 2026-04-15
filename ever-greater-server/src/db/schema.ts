@@ -1,6 +1,6 @@
 import { RESOURCE_DB_FIELDS } from "ever-greater-shared";
 import type { PoolClient } from "pg";
-import { pool, STARTING_PRINTER_SUPPLIES } from "./core.js";
+import { STARTING_PRINTER_SUPPLIES, withPoolClient } from "./core.js";
 
 const SCHEMA_STATEMENTS = [
   `
@@ -129,15 +129,12 @@ async function ensureGlobalStateSeed(client: PoolClient): Promise<void> {
 }
 
 export async function initializeDatabase(): Promise<void> {
-  const client = await pool.connect();
-  try {
+  return withPoolClient(async (client) => {
     for (const statement of SCHEMA_STATEMENTS) {
       await client.query(statement);
     }
 
     await validateResourceMappings(client);
     await ensureGlobalStateSeed(client);
-  } finally {
-    client.release();
-  }
+  });
 }

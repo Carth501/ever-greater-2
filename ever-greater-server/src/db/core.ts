@@ -1,5 +1,5 @@
 import { User } from "ever-greater-shared";
-import { Pool } from "pg";
+import { Pool, type PoolClient } from "pg";
 import { getServerConfig } from "../config.js";
 
 const serverConfig = getServerConfig();
@@ -91,6 +91,33 @@ export function coerceUserRowNumbersInPlace(userRow: CoercibleUserRow): void {
   USER_NUMERIC_FIELDS.forEach((field) => {
     if (field in userRow) {
       userRow[field] = toNumber(userRow[field]);
+    }
+  });
+}
+
+export async function withPoolClient<T>(
+  run: (client: PoolClient) => Promise<T>,
+): Promise<T> {
+  const client = await pool.connect();
+  try {
+    return await run(client);
+  } finally {
+    client.release();
+  }
+}
+
+export async function withTransaction<T>(
+  run: (client: PoolClient) => Promise<T>,
+): Promise<T> {
+  return withPoolClient(async (client) => {
+    await client.query("BEGIN");
+    try {
+      const result = await run(client);
+      await client.query("COMMIT");
+      return result;
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => undefined);
+      throw error;
     }
   });
 }
