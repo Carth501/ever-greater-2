@@ -5,6 +5,7 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { useId } from "react";
 import { ShopGroup, ShopRow } from "../../shop/shop-groups/ShopGroupLayout";
+import { dashboardContent } from "./content";
 import { formatNumber } from "./helpers";
 import { PanelCard } from "./styles";
 
@@ -41,7 +42,7 @@ export function DashboardShopPanel({
   return (
     <Box
       component="section"
-      aria-label="Shop overview"
+      aria-label={dashboardContent.shop.regionLabel}
       aria-describedby={descriptionId}
     >
       <PanelCard elevation={0}>
@@ -54,20 +55,19 @@ export function DashboardShopPanel({
           >
             <Box>
               <Typography id={headingId} variant="h5" fontWeight={700}>
-                Modular shop surfaces
+                {dashboardContent.shop.heading}
               </Typography>
               <Typography
                 id={descriptionId}
                 variant="body2"
                 color="text.secondary"
               >
-                Shop groups become independent cards that can be docked together
-                or hidden when the user wants a cleaner print-focused layout.
+                {dashboardContent.shop.description}
               </Typography>
             </Box>
             <Chip
               icon={<LayersIcon />}
-              label="Dockable groups"
+              label={dashboardContent.shop.dockableGroupsLabel}
               variant="outlined"
               color="primary"
             />

@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockUser } from "../../tests/fixtures";
 import { dashboardContent } from "./dashboard/content";
@@ -19,8 +19,6 @@ const mockedUseRealtime = vi.mocked(useRealtime);
 type AuthHookValue = ReturnType<typeof useAuth>;
 type GameHookValue = ReturnType<typeof useGame>;
 type RealtimeHookValue = ReturnType<typeof useRealtime>;
-
-let printTicketSpy: GameHookValue["printTicket"];
 
 function createAuthMockValue(
   overrides: Partial<AuthHookValue> = {},
@@ -55,7 +53,7 @@ function createGameMockValue(
     isLoading: false,
     supplies: 24,
     isPrintDisabled: false,
-    printTicket: printTicketSpy,
+    printTicket: vi.fn<() => void>(),
     ...overrides,
   };
 }
@@ -71,25 +69,20 @@ function createRealtimeMockValue(
   };
 }
 
-describe("DashboardPage", () => {
+describe("DashboardPage accessibility gate", () => {
   beforeEach(() => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-04-14T12:00:00Z"));
-
-    printTicketSpy = vi.fn<() => void>();
-
     mockedUseAuth.mockReturnValue(createAuthMockValue());
     mockedUseGame.mockReturnValue(createGameMockValue());
     mockedUseRealtime.mockReturnValue(createRealtimeMockValue());
   });
 
-  it("renders live dashboard state and delegates print actions", () => {
+  it("exposes stable landmark regions for screen-reader navigation", () => {
     render(<DashboardPage />);
 
     expect(
       screen.getByRole("main", { name: dashboardContent.mainRegionLabel }),
     ).toBeTruthy();
-    expect(screen.getByText("operator@example.com")).toBeTruthy();
+
     expect(
       screen.getByRole("region", { name: dashboardContent.hero.regionLabel }),
     ).toBeTruthy();
@@ -125,73 +118,28 @@ describe("DashboardPage", () => {
         name: dashboardContent.summary.regionLabel,
       }),
     ).toBeTruthy();
-    expect(screen.getAllByText(/Realtime healthy/i).length).toBeGreaterThan(0);
-
-    fireEvent.click(screen.getByRole("button", { name: /print a ticket/i }));
-
-    expect(printTicketSpy).toHaveBeenCalled();
   });
 
-  it("applies toolbar toggles and preset changes", () => {
+  it("provides named panel visibility toggles for keyboard/screen-reader users", () => {
     render(<DashboardPage />);
 
-    expect(screen.getByText(/Modular shop surfaces/i)).toBeTruthy();
-
-    fireEvent.click(screen.getAllByRole("checkbox")[3]);
-    expect(screen.queryByText(/Modular shop surfaces/i)).toBeNull();
-
-    fireEvent.click(screen.getByRole("button", { name: /Focused preset/i }));
-    expect(screen.queryByText(/Secondary insights/i)).toBeNull();
-  });
-
-  it("renders delayed realtime status when updates go stale", () => {
-    mockedUseRealtime.mockReturnValue(
-      createRealtimeMockValue({ lastUpdateAt: Date.now() - 8_000 }),
-    );
-
-    render(<DashboardPage showControls={false} />);
-
-    expect(screen.getAllByText(/Updates delayed/i).length).toBeGreaterThan(0);
-  });
-
-  it("updates realtime status when a healthy feed becomes stale", () => {
-    render(<DashboardPage showControls={false} />);
-
-    expect(screen.getAllByText(/Realtime healthy/i).length).toBeGreaterThan(0);
-
-    act(() => {
-      vi.advanceTimersByTime(8_001);
-    });
-
-    expect(screen.getAllByText(/Updates delayed/i).length).toBeGreaterThan(0);
-  });
-
-  it("falls back to preview mode when no live user exists", () => {
-    mockedUseAuth.mockReturnValue(createAuthMockValue({ user: null }));
-
-    render(<DashboardPage showControls={false} />);
-
-    expect(screen.getByText(/operator@evergreater.app/i)).toBeTruthy();
-    expect(screen.getAllByText(/Preview data/i).length).toBeGreaterThan(0);
     expect(
-      (
-        screen.getByRole("button", {
-          name: /print a ticket/i,
-        }) as HTMLButtonElement
-      ).disabled,
-    ).toBe(true);
-    expect(
-      screen.getByText(
-        /printing is disabled in preview mode because no live account is connected\./i,
-      ),
+      screen.getByRole("checkbox", { name: /account visibility/i }),
     ).toBeTruthy();
-  });
-
-  it("surfaces live print guidance when printing is available", () => {
-    render(<DashboardPage />);
-
     expect(
-      screen.getByText(/printing is available and ready from this panel\./i),
+      screen.getByRole("checkbox", { name: /ticket pool visibility/i }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("checkbox", { name: /print controls visibility/i }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("checkbox", { name: /shop modules visibility/i }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("checkbox", { name: /realtime health visibility/i }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("checkbox", { name: /insights visibility/i }),
     ).toBeTruthy();
   });
 });

@@ -4,6 +4,7 @@ import Chip from "@mui/material/Chip";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { useId } from "react";
+import { dashboardContent } from "./content";
 import { PanelCard } from "./styles";
 
 type DashboardAccountPanelProps = {
@@ -30,11 +31,11 @@ export function DashboardAccountPanel({
           >
             <Box>
               <Typography
-                id={headingId}
+                aria-label={dashboardContent.account.regionLabel}
                 variant="subtitle2"
                 color="text.secondary"
               >
-                Signed in account
+                {dashboardContent.account.heading}
               </Typography>
               <Typography id={emailId} variant="h5" fontWeight={700}>
                 {userEmail}
@@ -51,7 +52,9 @@ export function DashboardAccountPanel({
                 <Chip
                   icon={<AutoAwesomeIcon />}
                   label={
-                    hasLiveUser ? "Live data bound" : "Preview fallback active"
+                    hasLiveUser
+                      ? dashboardContent.account.modeLive
+                      : dashboardContent.account.modePreview
                   }
                   color="primary"
                   variant="outlined"

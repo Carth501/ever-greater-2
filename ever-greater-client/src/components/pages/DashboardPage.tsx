@@ -16,6 +16,7 @@ import {
   DashboardToolbarSection,
 } from "./dashboard";
 import { defaultPanels, LATE_UPDATE_MS, presets } from "./dashboard/config";
+import { dashboardContent } from "./dashboard/content";
 import {
   Grid,
   LeftColumn,
@@ -144,7 +145,7 @@ function DashboardPage({
 
   return (
     <PageRoot>
-      <Box component="main" aria-label="Dashboard preview">
+      <Box component="main" aria-label={dashboardContent.mainRegionLabel}>
         <Shell>
           <DashboardHeroSection
             activePreset={activePreset}

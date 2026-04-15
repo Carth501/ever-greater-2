@@ -6,6 +6,7 @@ import Typography from "@mui/material/Typography";
 import { alpha } from "@mui/material/styles";
 import { useId } from "react";
 import { panelLabels, presetIds } from "./config";
+import { dashboardContent } from "./content";
 import { formatPresetLabel } from "./helpers";
 import { ToolbarCard } from "./styles";
 import type { PanelId, PanelState, PresetId } from "./types";
@@ -29,7 +30,7 @@ export function DashboardToolbarSection({
   return (
     <Box
       component="section"
-      aria-label="Panel controls"
+      aria-label={dashboardContent.toolbar.regionLabel}
       aria-describedby={descriptionId}
     >
       <ToolbarCard elevation={0}>
@@ -42,15 +43,14 @@ export function DashboardToolbarSection({
           >
             <Box>
               <Typography id={headingId} variant="h6" fontWeight={700}>
-                Panel visibility
+                {dashboardContent.toolbar.heading}
               </Typography>
               <Typography
                 id={descriptionId}
                 variant="body2"
                 color="text.secondary"
               >
-                Compose the dashboard around the user’s preferred workflow
-                without changing the underlying visual system.
+                {dashboardContent.toolbar.description}
               </Typography>
             </Box>
             <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
@@ -97,6 +97,11 @@ export function DashboardToolbarSection({
                   checked={panels[panel.id]}
                   onChange={() => onTogglePanel(panel.id)}
                   color="primary"
+                  slotProps={{
+                    input: {
+                      "aria-label": `${panel.label} visibility`,
+                    },
+                  }}
                 />
               </Box>
             ))}

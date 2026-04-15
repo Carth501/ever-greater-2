@@ -4,6 +4,7 @@ import Chip from "@mui/material/Chip";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { useId } from "react";
+import { dashboardContent } from "./content";
 import { formatTimestamp } from "./helpers";
 import { PanelCard, StatusList, StatusRow } from "./styles";
 import type { SignalColor } from "./types";
@@ -27,7 +28,7 @@ export function DashboardStatusPanel({
   return (
     <Box
       component="section"
-      aria-label="Realtime status"
+      aria-label={dashboardContent.status.regionLabel}
       aria-describedby={descriptionId}
     >
       <PanelCard elevation={0}>
@@ -36,15 +37,14 @@ export function DashboardStatusPanel({
             <SensorsIcon color="primary" />
             <Box>
               <Typography id={headingId} variant="h6" fontWeight={700}>
-                Realtime health
+                {dashboardContent.status.heading}
               </Typography>
               <Typography
                 id={descriptionId}
                 variant="body2"
                 color="text.secondary"
               >
-                Compact enough to stay visible, detailed enough to remain
-                useful.
+                {dashboardContent.status.description}
               </Typography>
             </Box>
           </Stack>

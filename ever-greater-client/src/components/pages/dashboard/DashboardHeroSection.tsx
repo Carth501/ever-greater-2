@@ -7,6 +7,7 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { useId } from "react";
 import { presetIds } from "./config";
+import { dashboardContent } from "./content";
 import { formatPresetLabel } from "./helpers";
 import {
   AccentPanel,
@@ -36,7 +37,7 @@ export function DashboardHeroSection({
   return (
     <Box
       component="section"
-      aria-label="Dashboard hero"
+      aria-label={dashboardContent.hero.regionLabel}
       aria-describedby={descriptionId}
     >
       <HeroCard elevation={0}>
@@ -45,12 +46,11 @@ export function DashboardHeroSection({
             <Pill>
               <PaletteIcon fontSize="small" />
               <Typography variant="subtitle2">
-                Dashboard preview: modular operator system
+                {dashboardContent.hero.eyebrow}
               </Typography>
             </Pill>
             <Typography id={headingId} variant="h2" sx={{ maxWidth: 760 }}>
-              A cleaner command center for printing, monitoring, and upgrading
-              without locking the user into one rigid layout.
+              {dashboardContent.hero.heading}
             </Typography>
             <Typography
               id={descriptionId}
@@ -58,9 +58,7 @@ export function DashboardHeroSection({
               color="text.secondary"
               sx={{ maxWidth: 720 }}
             >
-              This dashboard keeps the current dark MUI foundation, preserves
-              the branded footer, and promotes #4080C0 into a sharper accent
-              system for action, status, and layout emphasis.
+              {dashboardContent.hero.description}
             </Typography>
             <FeatureStrip>
               <MetricCard>

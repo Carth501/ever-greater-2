@@ -2,6 +2,7 @@ import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { useId } from "react";
+import { dashboardContent } from "./content";
 import { formatNumber, formatSignedValue } from "./helpers";
 import { AccentPanel, MetricCard, MetricsRow } from "./styles";
 
@@ -30,7 +31,7 @@ export function DashboardTicketPanel({
   return (
     <Box
       component="section"
-      aria-label="Ticket overview"
+      aria-label={dashboardContent.ticket.regionLabel}
       aria-describedby={descriptionId}
     >
       <AccentPanel elevation={0}>
@@ -41,7 +42,7 @@ export function DashboardTicketPanel({
               variant="subtitle2"
               color="primary.light"
             >
-              Ticket pool overview
+              {dashboardContent.ticket.heading}
             </Typography>
             <Typography variant="h2" fontWeight={700} sx={{ mt: 0.75 }}>
               {isTicketLoading && hasLiveUser
@@ -54,7 +55,8 @@ export function DashboardTicketPanel({
               color="text.secondary"
               sx={{ mt: 1 }}
             >
-              Tickets contributed: {formatNumber(ticketsContributed)}
+              {dashboardContent.ticket.contributedPrefix}{" "}
+              {formatNumber(ticketsContributed)}
             </Typography>
           </Box>
 

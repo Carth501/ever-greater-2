@@ -3,6 +3,7 @@ import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { useId } from "react";
+import { dashboardContent } from "./content";
 import { formatSignedValue } from "./helpers";
 import { InsightGrid, MetricCard, PanelCard } from "./styles";
 
@@ -25,7 +26,7 @@ export function DashboardInsightsPanel({
   return (
     <Box
       component="section"
-      aria-label="Insights"
+      aria-label={dashboardContent.insights.regionLabel}
       aria-describedby={descriptionId}
     >
       <PanelCard elevation={0}>
@@ -34,15 +35,14 @@ export function DashboardInsightsPanel({
             <InsightsIcon color="primary" />
             <Box>
               <Typography id={headingId} variant="h6" fontWeight={700}>
-                Secondary insights
+                {dashboardContent.insights.heading}
               </Typography>
               <Typography
                 id={descriptionId}
                 variant="body2"
                 color="text.secondary"
               >
-                Optional panels can provide guidance without overwhelming the
-                default layout.
+                {dashboardContent.insights.description}
               </Typography>
             </Box>
           </Stack>

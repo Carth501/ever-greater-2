@@ -5,6 +5,7 @@ import Chip from "@mui/material/Chip";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { useId } from "react";
+import { dashboardContent } from "./content";
 import { formatNumber } from "./helpers";
 import { AccentPanel, PanelCard, PrintZone } from "./styles";
 
@@ -43,7 +44,7 @@ export function DashboardPrintPanel({
   return (
     <Box
       component="section"
-      aria-label="Print controls"
+      aria-label={dashboardContent.print.regionLabel}
       aria-describedby={descriptionId}
     >
       <PanelCard elevation={0}>
@@ -56,21 +57,24 @@ export function DashboardPrintPanel({
           >
             <Box>
               <Typography id={headingId} variant="h5" fontWeight={700}>
-                Print controls
+                {dashboardContent.print.heading}
               </Typography>
               <Typography
                 id={descriptionId}
                 variant="body2"
                 color="text.secondary"
               >
-                The primary action stays obvious even when more panels are
-                enabled.
+                {dashboardContent.print.description}
               </Typography>
             </Box>
             <Box role="status" aria-live="polite" aria-atomic="true">
               <Chip
                 icon={<BoltIcon />}
-                label={hasLiveUser ? "Live action" : "Preview only"}
+                label={
+                  hasLiveUser
+                    ? dashboardContent.print.liveChipLabel
+                    : dashboardContent.print.previewChipLabel
+                }
                 color="primary"
               />
             </Box>

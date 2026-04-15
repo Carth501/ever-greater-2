@@ -3,6 +3,7 @@ import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { useId } from "react";
+import { dashboardContent } from "./content";
 import { AccentPanel } from "./styles";
 
 export function DashboardSummaryPanel() {
@@ -12,7 +13,7 @@ export function DashboardSummaryPanel() {
   return (
     <Box
       component="section"
-      aria-label="Dashboard summary"
+      aria-label={dashboardContent.summary.regionLabel}
       aria-describedby={descriptionId}
     >
       <AccentPanel elevation={0}>
@@ -20,14 +21,11 @@ export function DashboardSummaryPanel() {
           <Stack direction="row" spacing={1.25} alignItems="center">
             <TrendingUpIcon color="primary" />
             <Typography id={headingId} variant="h6" fontWeight={700}>
-              Why this dashboard works
+              {dashboardContent.summary.heading}
             </Typography>
           </Stack>
           <Typography id={descriptionId} variant="body2" color="text.secondary">
-            The interface feels more intentional because the main action,
-            supporting metrics, and optional panels each have distinct visual
-            weight. The user can simplify the surface without losing the core
-            workflow.
+            {dashboardContent.summary.description}
           </Typography>
         </Stack>
       </AccentPanel>
