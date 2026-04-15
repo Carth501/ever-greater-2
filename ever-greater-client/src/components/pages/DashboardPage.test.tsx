@@ -14,46 +14,72 @@ import { useRealtime } from "../../hooks/useRealtime";
 const mockedUseAuth = vi.mocked(useAuth);
 const mockedUseGame = vi.mocked(useGame);
 const mockedUseRealtime = vi.mocked(useRealtime);
-let printTicketSpy: ReturnType<typeof vi.fn>;
+
+type AuthHookValue = ReturnType<typeof useAuth>;
+type GameHookValue = ReturnType<typeof useGame>;
+type RealtimeHookValue = ReturnType<typeof useRealtime>;
+
+let printTicketSpy: GameHookValue["printTicket"];
+
+function createAuthMockValue(
+  overrides: Partial<AuthHookValue> = {},
+): AuthHookValue {
+  return {
+    user: mockUser({
+      email: "operator@example.com",
+      printer_supplies: 24,
+      tickets_contributed: 1000,
+      tickets_withdrawn: 100,
+      auto_buy_supplies_purchased: true,
+      auto_buy_supplies_active: true,
+    }),
+    isCheckingAuth: false,
+    isLoading: false,
+    error: null,
+    errorCode: null,
+    errorDetail: null,
+    login: vi.fn<(email: string, password: string) => void>(),
+    logout: vi.fn<() => void>(),
+    signup: vi.fn<(email: string, password: string) => void>(),
+    ...overrides,
+  };
+}
+
+function createGameMockValue(
+  overrides: Partial<GameHookValue> = {},
+): GameHookValue {
+  return {
+    count: 321,
+    error: null,
+    isLoading: false,
+    supplies: 24,
+    isPrintDisabled: false,
+    printTicket: printTicketSpy,
+    ...overrides,
+  };
+}
+
+function createRealtimeMockValue(
+  overrides: Partial<RealtimeHookValue> = {},
+): RealtimeHookValue {
+  return {
+    isConnected: true,
+    isReconnecting: false,
+    lastUpdateAt: Date.now(),
+    ...overrides,
+  };
+}
 
 describe("DashboardPage", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-04-14T12:00:00Z"));
 
-    printTicketSpy = vi.fn();
+    printTicketSpy = vi.fn<() => void>();
 
-    mockedUseAuth.mockReturnValue({
-      user: mockUser({
-        email: "operator@example.com",
-        printer_supplies: 24,
-        tickets_contributed: 1000,
-        tickets_withdrawn: 100,
-        auto_buy_supplies_purchased: true,
-        auto_buy_supplies_active: true,
-      }),
-      isCheckingAuth: false,
-      isLoading: false,
-      error: null,
-      login: vi.fn(),
-      logout: vi.fn(),
-      signup: vi.fn(),
-    });
-
-    mockedUseGame.mockReturnValue({
-      count: 321,
-      error: null,
-      isLoading: false,
-      supplies: 24,
-      isPrintDisabled: false,
-      printTicket: printTicketSpy,
-    });
-
-    mockedUseRealtime.mockReturnValue({
-      isConnected: true,
-      isReconnecting: false,
-      lastUpdateAt: Date.now(),
-    });
+    mockedUseAuth.mockReturnValue(createAuthMockValue());
+    mockedUseGame.mockReturnValue(createGameMockValue());
+    mockedUseRealtime.mockReturnValue(createRealtimeMockValue());
   });
 
   it("renders live dashboard state and delegates print actions", () => {
@@ -61,6 +87,18 @@ describe("DashboardPage", () => {
 
     expect(screen.getByText("operator@example.com")).toBeTruthy();
     expect(screen.getAllByText(/Realtime healthy/i).length).toBeGreaterThan(0);
+    expect(
+      screen.getByRole("region", { name: /signed in account/i }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("region", { name: /realtime health/i }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("region", { name: /secondary insights/i }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("region", { name: /why this dashboard works/i }),
+    ).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: /print a ticket/i }));
 
@@ -80,11 +118,9 @@ describe("DashboardPage", () => {
   });
 
   it("renders delayed realtime status when updates go stale", () => {
-    mockedUseRealtime.mockReturnValue({
-      isConnected: true,
-      isReconnecting: false,
-      lastUpdateAt: Date.now() - 8_000,
-    });
+    mockedUseRealtime.mockReturnValue(
+      createRealtimeMockValue({ lastUpdateAt: Date.now() - 8_000 }),
+    );
 
     render(<DashboardPage showControls={false} />);
 
@@ -92,15 +128,7 @@ describe("DashboardPage", () => {
   });
 
   it("falls back to preview mode when no live user exists", () => {
-    mockedUseAuth.mockReturnValue({
-      user: null,
-      isCheckingAuth: false,
-      isLoading: false,
-      error: null,
-      login: vi.fn(),
-      logout: vi.fn(),
-      signup: vi.fn(),
-    });
+    mockedUseAuth.mockReturnValue(createAuthMockValue({ user: null }));
 
     render(<DashboardPage showControls={false} />);
 
