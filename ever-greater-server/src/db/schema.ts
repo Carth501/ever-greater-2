@@ -1,103 +1,71 @@
 import { RESOURCE_DB_FIELDS } from "ever-greater-shared";
 import type { PoolClient } from "pg";
-import { STARTING_PRINTER_SUPPLIES, withPoolClient } from "./core.js";
+import { withPoolClient } from "./core.js";
+import {
+  databaseMigrations,
+  type DatabaseMigration,
+} from "./migrations/index.js";
 
-const SCHEMA_STATEMENTS = [
-  `
-    CREATE TABLE IF NOT EXISTS global_state (
+const MIGRATIONS_TABLE_NAME = "schema_migrations";
+
+async function ensureMigrationsTable(client: PoolClient): Promise<void> {
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS ${MIGRATIONS_TABLE_NAME} (
       id INTEGER PRIMARY KEY,
-      count INTEGER NOT NULL DEFAULT 0,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      name VARCHAR(255) NOT NULL,
+      applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
-  `,
-  `
-    CREATE TABLE IF NOT EXISTS users (
-      id SERIAL PRIMARY KEY,
-      email VARCHAR(255) UNIQUE NOT NULL,
-      password_hash VARCHAR(255) NOT NULL,
-      tickets_contributed INTEGER NOT NULL DEFAULT 0,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-  `,
-  `
-    CREATE TABLE IF NOT EXISTS session (
-      sid VARCHAR NOT NULL COLLATE "default" PRIMARY KEY,
-      sess JSON NOT NULL,
-      expire TIMESTAMP(6) NOT NULL
-    )
-  `,
-  `
-    CREATE INDEX IF NOT EXISTS idx_session_expire ON session (expire)
-  `,
-  `
-    CREATE TABLE IF NOT EXISTS ticket_withdrawals (
-      id SERIAL PRIMARY KEY,
-      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      amount INTEGER NOT NULL,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-  `,
-  `
-    ALTER TABLE ticket_withdrawals
-    ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-  `,
-  `
-    CREATE INDEX IF NOT EXISTS idx_ticket_withdrawals_user_created ON ticket_withdrawals (user_id, created_at)
-  `,
-  `
-    ALTER TABLE users
-    ADD COLUMN IF NOT EXISTS printer_supplies INTEGER NOT NULL DEFAULT ${STARTING_PRINTER_SUPPLIES}
-  `,
-  `
-    ALTER TABLE users
-    ALTER COLUMN printer_supplies SET DEFAULT ${STARTING_PRINTER_SUPPLIES}
-  `,
-  `
-    UPDATE users
-    SET printer_supplies = ${STARTING_PRINTER_SUPPLIES}
-    WHERE printer_supplies IS NULL OR printer_supplies = 0
-  `,
-  `
-    ALTER TABLE users
-    ADD COLUMN IF NOT EXISTS money INTEGER NOT NULL DEFAULT 0
-  `,
-  `
-    ALTER TABLE users
-    ADD COLUMN IF NOT EXISTS gold INTEGER NOT NULL DEFAULT 0
-  `,
-  `
-    ALTER TABLE users
-    ADD COLUMN IF NOT EXISTS autoprinters INTEGER NOT NULL DEFAULT 0
-  `,
-  `
-    ALTER TABLE users
-    ADD COLUMN IF NOT EXISTS credit_value NUMERIC(10, 2) NOT NULL DEFAULT 0
-  `,
-  `
-    ALTER TABLE users
-    ALTER COLUMN credit_value SET DATA TYPE NUMERIC(10, 2) USING credit_value::NUMERIC(10, 2)
-  `,
-  `
-    ALTER TABLE users
-    ADD COLUMN IF NOT EXISTS credit_generation_level INTEGER NOT NULL DEFAULT 0
-  `,
-  `
-    ALTER TABLE users
-    ADD COLUMN IF NOT EXISTS credit_capacity_level INTEGER NOT NULL DEFAULT 0
-  `,
-  `
-    ALTER TABLE users
-    ADD COLUMN IF NOT EXISTS auto_buy_supplies_purchased BOOLEAN NOT NULL DEFAULT FALSE
-  `,
-  `
-    ALTER TABLE users
-    ADD COLUMN IF NOT EXISTS auto_buy_supplies_active BOOLEAN NOT NULL DEFAULT FALSE
-  `,
-  `
-    ALTER TABLE users
-    ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-  `,
-] as const;
+  `);
+}
+
+async function getAppliedMigrationIds(
+  client: PoolClient,
+): Promise<Set<number>> {
+  const result = await client.query(
+    `SELECT id FROM ${MIGRATIONS_TABLE_NAME} ORDER BY id ASC`,
+  );
+
+  return new Set(
+    result.rows.map((row: { id: number | string }) => Number(row.id)),
+  );
+}
+
+async function applyMigration(
+  client: PoolClient,
+  migration: DatabaseMigration,
+): Promise<void> {
+  await client.query("BEGIN");
+  try {
+    for (const statement of migration.statements) {
+      await client.query(statement);
+    }
+
+    await client.query(
+      `
+        INSERT INTO ${MIGRATIONS_TABLE_NAME} (id, name)
+        VALUES ($1, $2)
+      `,
+      [migration.id, migration.name],
+    );
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => undefined);
+    throw error;
+  }
+}
+
+async function runPendingMigrations(client: PoolClient): Promise<void> {
+  await ensureMigrationsTable(client);
+  const appliedMigrationIds = await getAppliedMigrationIds(client);
+
+  for (const migration of databaseMigrations) {
+    if (appliedMigrationIds.has(migration.id)) {
+      continue;
+    }
+
+    await applyMigration(client, migration);
+  }
+}
 
 async function validateResourceMappings(client: PoolClient): Promise<void> {
   const columnsResult = await client.query(
@@ -130,10 +98,7 @@ async function ensureGlobalStateSeed(client: PoolClient): Promise<void> {
 
 export async function initializeDatabase(): Promise<void> {
   return withPoolClient(async (client) => {
-    for (const statement of SCHEMA_STATEMENTS) {
-      await client.query(statement);
-    }
-
+    await runPendingMigrations(client);
     await validateResourceMappings(client);
     await ensureGlobalStateSeed(client);
   });

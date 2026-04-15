@@ -49,6 +49,10 @@ describe('Database Functions', () => {
   describe('initializeDatabase', () => {
     it('should create tables and insert initial data', async () => {
       mockClient.query.mockImplementation(async (query) => {
+        if (query.includes('SELECT id FROM schema_migrations')) {
+          return { rows: [] };
+        }
+
         if (query.includes('information_schema.columns')) {
           return {
             rows: [
@@ -76,13 +80,24 @@ describe('Database Functions', () => {
 
       // Should have called query multiple times
       expect(mockClient.query).toHaveBeenCalledWith(
+        expect.stringContaining('CREATE TABLE IF NOT EXISTS schema_migrations')
+      );
+      expect(mockClient.query).toHaveBeenCalledWith(
         expect.stringContaining('CREATE TABLE IF NOT EXISTS global_state')
       );
+      const migrationInsertCalls = mockClient.query.mock.calls.filter((call) =>
+        call[0].includes('INSERT INTO schema_migrations')
+      );
+      expect(migrationInsertCalls).toHaveLength(4);
       expect(mockClient.release).toHaveBeenCalled();
     });
 
     it('should skip inserting initial data if table is already populated', async () => {
       mockClient.query.mockImplementation(async (query) => {
+        if (query.includes('SELECT id FROM schema_migrations')) {
+          return { rows: [] };
+        }
+
         if (query.includes('information_schema.columns')) {
           return {
             rows: [
@@ -121,6 +136,10 @@ describe('Database Functions', () => {
 
     it('should convert credit_value column to NUMERIC to support decimal values', async () => {
       mockClient.query.mockImplementation(async (query) => {
+        if (query.includes('SELECT id FROM schema_migrations')) {
+          return { rows: [] };
+        }
+
         if (query.includes('information_schema.columns')) {
           return {
             rows: [
@@ -153,6 +172,41 @@ describe('Database Functions', () => {
 
       expect(alterTableCalls.length).toBeGreaterThan(0);
       expect(alterTableCalls[0][0]).toContain('NUMERIC(10, 2)');
+    });
+
+    it('should skip migrations that are already recorded', async () => {
+      mockClient.query.mockImplementation(async (query) => {
+        if (query.includes('SELECT id FROM schema_migrations')) {
+          return { rows: [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }] };
+        }
+
+        if (query.includes('information_schema.columns')) {
+          return {
+            rows: [
+              { column_name: 'tickets_contributed' },
+              { column_name: 'printer_supplies' },
+              { column_name: 'money' },
+              { column_name: 'gold' },
+              { column_name: 'autoprinters' },
+              { column_name: 'credit_value' },
+              { column_name: 'credit_generation_level' },
+              { column_name: 'credit_capacity_level' },
+            ],
+          };
+        }
+
+        if (query.includes('SELECT COUNT(*) FROM global_state')) {
+          return { rows: [{ count: 1 }] };
+        }
+
+        return { rows: [] };
+      });
+
+      await db.initializeDatabase();
+
+      expect(mockClient.query).not.toHaveBeenCalledWith(
+        expect.stringContaining('CREATE TABLE IF NOT EXISTS global_state')
+      );
     });
   });
 
