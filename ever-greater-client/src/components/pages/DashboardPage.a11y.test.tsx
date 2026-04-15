@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockUser } from "../../tests/fixtures";
 import { dashboardContent } from "./dashboard/content";
@@ -19,6 +20,8 @@ const mockedUseRealtime = vi.mocked(useRealtime);
 type AuthHookValue = ReturnType<typeof useAuth>;
 type GameHookValue = ReturnType<typeof useGame>;
 type RealtimeHookValue = ReturnType<typeof useRealtime>;
+
+let printTicketSpy: GameHookValue["printTicket"];
 
 function createAuthMockValue(
   overrides: Partial<AuthHookValue> = {},
@@ -53,7 +56,7 @@ function createGameMockValue(
     isLoading: false,
     supplies: 24,
     isPrintDisabled: false,
-    printTicket: vi.fn<() => void>(),
+    printTicket: printTicketSpy,
     ...overrides,
   };
 }
@@ -71,6 +74,7 @@ function createRealtimeMockValue(
 
 describe("DashboardPage accessibility gate", () => {
   beforeEach(() => {
+    printTicketSpy = vi.fn<() => void>();
     mockedUseAuth.mockReturnValue(createAuthMockValue());
     mockedUseGame.mockReturnValue(createGameMockValue());
     mockedUseRealtime.mockReturnValue(createRealtimeMockValue());
@@ -141,5 +145,28 @@ describe("DashboardPage accessibility gate", () => {
     expect(
       screen.getByRole("checkbox", { name: /insights visibility/i }),
     ).toBeTruthy();
+  });
+
+  it("supports keyboard-only toggles and print activation", async () => {
+    render(<DashboardPage />);
+
+    const accountToggle = screen.getByRole("checkbox", {
+      name: /account visibility/i,
+    });
+
+    accountToggle.focus();
+    await userEvent.keyboard("[Space]");
+
+    expect(
+      screen.queryByRole("region", {
+        name: dashboardContent.account.regionLabel,
+      }),
+    ).toBeNull();
+
+    const printButton = screen.getByRole("button", { name: /print a ticket/i });
+    printButton.focus();
+    await userEvent.keyboard("[Enter]");
+
+    expect(printTicketSpy).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,5 +1,4 @@
 import Box from "@mui/material/Box";
-import {} from "ever-greater-shared";
 import { useEffect, useMemo, useState, type JSX } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { useGame } from "../../hooks/useGame";
