@@ -1,10 +1,15 @@
-import { createAsyncThunk, createSlice, isAnyOf } from "@reduxjs/toolkit";
+import { createSlice, isAnyOf } from "@reduxjs/toolkit";
+import { type ApiErrorCode, type ApiErrorInfo } from "../../api/client";
 import {
-  getApiErrorInfo,
-  type ApiErrorCode,
-  type ApiErrorInfo,
-} from "../../api/client";
-import * as operationsApi from "../../api/operations";
+  buyAutoBuySuppliesThunk,
+  buyAutoprinterThunk,
+  buyGoldThunk,
+  buySuppliesThunk,
+  increaseCreditCapacityThunk,
+  increaseCreditGenerationThunk,
+  increaseSuppliesBatchThunk,
+  toggleAutoBuySuppliesThunk,
+} from "../gameOperationThunks";
 
 export interface OperationsState {
   isLoading: boolean;
@@ -54,114 +59,6 @@ const applyOperationError = (
   state.errorCode = payload?.code ?? null;
   state.errorDetail = payload?.detail ?? null;
 };
-
-export const buySuppliesThunk = createAsyncThunk(
-  "operations/buySupplies",
-  async (_, { rejectWithValue }) => {
-    try {
-      const user = await operationsApi.buySupplies();
-      return user;
-    } catch (error) {
-      return rejectWithValue(getApiErrorInfo(error, "Failed to buy supplies"));
-    }
-  },
-);
-
-export const buyGoldThunk = createAsyncThunk(
-  "operations/buyGold",
-  async (quantity: number, { rejectWithValue }) => {
-    try {
-      const user = await operationsApi.buyGold(quantity);
-      return user;
-    } catch (error) {
-      return rejectWithValue(getApiErrorInfo(error, "Failed to buy gold"));
-    }
-  },
-);
-
-export const buyAutoBuySuppliesThunk = createAsyncThunk(
-  "operations/buyAutoBuySupplies",
-  async (_, { rejectWithValue }) => {
-    try {
-      const user = await operationsApi.buyAutoBuySupplies();
-      return user;
-    } catch (error) {
-      return rejectWithValue(
-        getApiErrorInfo(error, "Failed to unlock auto-buy supplies"),
-      );
-    }
-  },
-);
-
-export const buyAutoprinterThunk = createAsyncThunk(
-  "operations/buyAutoprinter",
-  async (_, { rejectWithValue }) => {
-    try {
-      const user = await operationsApi.buyAutoprinter();
-      return user;
-    } catch (error) {
-      return rejectWithValue(
-        getApiErrorInfo(error, "Failed to buy autoprinter"),
-      );
-    }
-  },
-);
-
-export const increaseCreditGenerationThunk = createAsyncThunk(
-  "operations/increaseCreditGeneration",
-  async (_, { rejectWithValue }) => {
-    try {
-      const user = await operationsApi.increaseCreditGeneration();
-      return user;
-    } catch (error) {
-      return rejectWithValue(
-        getApiErrorInfo(error, "Failed to increase credit generation"),
-      );
-    }
-  },
-);
-
-export const increaseSuppliesBatchThunk = createAsyncThunk(
-  "operations/increaseSuppliesBatch",
-  async (_, { rejectWithValue }) => {
-    try {
-      const user = await operationsApi.increaseSuppliesBatch();
-      return user;
-    } catch (error) {
-      return rejectWithValue(
-        getApiErrorInfo(error, "Failed to increase supplies batch size"),
-      );
-    }
-  },
-);
-
-export const increaseCreditCapacityThunk = createAsyncThunk(
-  "operations/increaseCreditCapacity",
-  async (_, { rejectWithValue }) => {
-    try {
-      const user = await operationsApi.increaseCreditCapacity();
-      return user;
-    } catch (error) {
-      return rejectWithValue(
-        getApiErrorInfo(error, "Failed to increase credit capacity"),
-      );
-    }
-  },
-);
-
-export const toggleAutoBuySuppliesThunk = createAsyncThunk(
-  "operations/toggleAutoBuySupplies",
-  async (active: boolean, { rejectWithValue }) => {
-    try {
-      const user = await operationsApi.toggleAutoBuySupplies(active);
-      return user;
-    } catch (error) {
-      return rejectWithValue(
-        getApiErrorInfo(error, "Failed to toggle auto-buy supplies"),
-      );
-    }
-  },
-);
 
 const operationsSlice = createSlice({
   name: "operations",
@@ -230,4 +127,14 @@ const operationsSlice = createSlice({
 });
 
 export const { clearError } = operationsSlice.actions;
+export {
+  buyAutoBuySuppliesThunk,
+  buyAutoprinterThunk,
+  buyGoldThunk,
+  buySuppliesThunk,
+  increaseCreditCapacityThunk,
+  increaseCreditGenerationThunk,
+  increaseSuppliesBatchThunk,
+  toggleAutoBuySuppliesThunk,
+} from "../gameOperationThunks";
 export default operationsSlice.reducer;

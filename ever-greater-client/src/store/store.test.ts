@@ -10,6 +10,7 @@ import {
   mockWsUserUpdate,
 } from "../tests/fixtures";
 import { createTestStore } from "../tests/utils/testStore";
+import { printTicketThunk } from "./gameOperationThunks";
 import {
   applyUserUpdate,
   AuthState,
@@ -28,7 +29,6 @@ import {
 import {
   clearError as clearTicketError,
   fetchCountThunk,
-  incrementCountThunk,
   TicketState,
   updateCount,
 } from "./slices/ticketSlice";
@@ -153,7 +153,7 @@ describe("Redux Store Integration", () => {
       let state = store.getState();
       expect(state.ticket.count).toBe(50);
 
-      await store.dispatch(incrementCountThunk() as any);
+      await store.dispatch(printTicketThunk() as any);
 
       state = store.getState();
       // Count should remain unchanged - it's updated via WebSocket
@@ -532,7 +532,7 @@ describe("Redux Store Integration", () => {
         new Error(errorMessage),
       );
 
-      await store.dispatch(incrementCountThunk() as any);
+      await store.dispatch(printTicketThunk() as any);
 
       const state = store.getState();
       expect(state.ticket.error).toBe(errorMessage);
@@ -569,7 +569,7 @@ describe("Redux Store Integration", () => {
         new Error("GLOBAL_TICKET_LIMIT"),
       );
 
-      await store.dispatch(incrementCountThunk() as any);
+      await store.dispatch(printTicketThunk() as any);
 
       const state = store.getState();
       expect(state.ticket.error).toBe("GLOBAL_TICKET_LIMIT");

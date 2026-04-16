@@ -1,5 +1,5 @@
+import { printTicketThunk } from "../store/gameOperationThunks";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
-import { incrementCountThunk } from "../store/slices/ticketSlice";
 
 export function useGame() {
   const dispatch = useAppDispatch();
@@ -12,7 +12,7 @@ export function useGame() {
   const isPrintDisabled = supplies === 0 && !autoBuyCanPrint;
 
   const printTicket = () => {
-    dispatch(incrementCountThunk());
+    dispatch(printTicketThunk());
   };
 
   return { count, error, isLoading, supplies, isPrintDisabled, printTicket };

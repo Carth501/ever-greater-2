@@ -14,9 +14,9 @@ import {
   increaseCreditCapacityThunk,
   increaseCreditGenerationThunk,
   increaseSuppliesBatchThunk,
+  printTicketThunk,
   toggleAutoBuySuppliesThunk,
-} from "./operationsSlice";
-import { incrementCountThunk } from "./ticketSlice";
+} from "../gameOperationThunks";
 
 type UserUpdatePayload = Partial<
   Pick<
@@ -268,7 +268,7 @@ const authSlice = createSlice({
         increaseSuppliesBatchThunk.fulfilled,
         increaseCreditCapacityThunk.fulfilled,
         toggleAutoBuySuppliesThunk.fulfilled,
-        incrementCountThunk.fulfilled,
+        printTicketThunk.fulfilled,
       ),
       (state, action) => {
         mergeUserUpdate(state, action.payload);
