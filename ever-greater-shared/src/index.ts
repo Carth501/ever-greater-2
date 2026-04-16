@@ -15,10 +15,16 @@ export {
   applyTransaction,
   canAfford,
   evaluateResourceAmount,
+  getBuySuppliesGainForGold,
+  getBuySuppliesSpend,
+  getMaxSuppliesPurchaseGold,
   getOperationCost,
   getOperationGain,
+  getSuppliesBatchLevel,
   OperationId,
   operations,
+  SUPPLIES_BATCH_UPGRADE_COST,
+  SUPPLIES_PER_GOLD,
   validateOperation,
 } from "./operations.js";
 

@@ -1,5 +1,4 @@
 import { createAsyncThunk, createSlice, isAnyOf } from "@reduxjs/toolkit";
-import * as authApi from "../../api/auth";
 import {
   getApiErrorInfo,
   type ApiErrorCode,
@@ -122,6 +121,20 @@ export const increaseCreditGenerationThunk = createAsyncThunk(
   },
 );
 
+export const increaseSuppliesBatchThunk = createAsyncThunk(
+  "operations/increaseSuppliesBatch",
+  async (_, { rejectWithValue }) => {
+    try {
+      const user = await operationsApi.increaseSuppliesBatch();
+      return user;
+    } catch (error) {
+      return rejectWithValue(
+        getApiErrorInfo(error, "Failed to increase supplies batch size"),
+      );
+    }
+  },
+);
+
 export const increaseCreditCapacityThunk = createAsyncThunk(
   "operations/increaseCreditCapacity",
   async (_, { rejectWithValue }) => {
@@ -140,7 +153,7 @@ export const toggleAutoBuySuppliesThunk = createAsyncThunk(
   "operations/toggleAutoBuySupplies",
   async (active: boolean, { rejectWithValue }) => {
     try {
-      const user = await authApi.setAutoBuySuppliesActive(active);
+      const user = await operationsApi.toggleAutoBuySupplies(active);
       return user;
     } catch (error) {
       return rejectWithValue(
@@ -166,6 +179,7 @@ const operationsSlice = createSlice({
         buyAutoBuySuppliesThunk.pending,
         buyAutoprinterThunk.pending,
         increaseCreditGenerationThunk.pending,
+        increaseSuppliesBatchThunk.pending,
         increaseCreditCapacityThunk.pending,
         toggleAutoBuySuppliesThunk.pending,
       ),
@@ -182,6 +196,7 @@ const operationsSlice = createSlice({
         buyAutoBuySuppliesThunk.fulfilled,
         buyAutoprinterThunk.fulfilled,
         increaseCreditGenerationThunk.fulfilled,
+        increaseSuppliesBatchThunk.fulfilled,
         increaseCreditCapacityThunk.fulfilled,
         toggleAutoBuySuppliesThunk.fulfilled,
       ),
@@ -198,6 +213,7 @@ const operationsSlice = createSlice({
         buyAutoBuySuppliesThunk.rejected,
         buyAutoprinterThunk.rejected,
         increaseCreditGenerationThunk.rejected,
+        increaseSuppliesBatchThunk.rejected,
         increaseCreditCapacityThunk.rejected,
         toggleAutoBuySuppliesThunk.rejected,
       ),

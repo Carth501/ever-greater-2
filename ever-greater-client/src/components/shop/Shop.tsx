@@ -7,7 +7,10 @@ import {
   OperationId,
   ResourceType,
   canAfford,
+  getBuySuppliesGainForGold,
+  getMaxSuppliesPurchaseGold,
   getOperationCost,
+  getOperationGain,
   operations,
 } from "ever-greater-shared";
 import { JSX } from "react";
@@ -54,8 +57,12 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
   const buyGoldOperation = operations[OperationId.BUY_GOLD];
 
   const suppliesCost = getOperationCost(buySuppliesOperation, operationContext);
+  const suppliesGain = getOperationGain(buySuppliesOperation, operationContext);
   const suppliesCostInGold = suppliesCost[ResourceType.GOLD] ?? 0;
-  const canAffordSupplies = canAfford(currentUser, suppliesCost);
+  const suppliesAmount = suppliesGain[ResourceType.PRINTER_SUPPLIES] ?? 0;
+  const maxSuppliesCostInGold = getMaxSuppliesPurchaseGold(currentUser);
+  const maxSuppliesAmount = getBuySuppliesGainForGold(maxSuppliesCostInGold);
+  const canAffordSupplies = gold > 0;
 
   const goldCostPerUnit =
     getOperationCost(buyGoldOperation, {
@@ -113,6 +120,9 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
 
           <ShopSuppliesGroup
             gold={gold}
+            maxSuppliesAmount={maxSuppliesAmount}
+            maxSuppliesCostInGold={maxSuppliesCostInGold}
+            suppliesAmount={suppliesAmount}
             suppliesCostInGold={suppliesCostInGold}
             canAffordSupplies={canAffordSupplies}
             onBuySupplies={buySupplies}

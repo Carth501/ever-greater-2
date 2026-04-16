@@ -1,7 +1,8 @@
-import { addCreditAndAutoBuyColumnsMigration } from "./004-add-credit-and-auto-buy-columns.js";
+import { createCoreTablesMigration } from "./001-create-core-tables.js";
 import { addTicketWithdrawalsMigration } from "./002-add-ticket-withdrawals.js";
 import { addUserEconomyColumnsMigration } from "./003-add-user-economy-columns.js";
-import { createCoreTablesMigration } from "./001-create-core-tables.js";
+import { addCreditAndAutoBuyColumnsMigration } from "./004-add-credit-and-auto-buy-columns.js";
+import { addSuppliesBatchLevelMigration } from "./005-add-supplies-batch-level.js";
 
 export { type DatabaseMigration } from "./types.js";
 
@@ -10,4 +11,5 @@ export const databaseMigrations = [
   addTicketWithdrawalsMigration,
   addUserEconomyColumnsMigration,
   addCreditAndAutoBuyColumnsMigration,
+  addSuppliesBatchLevelMigration,
 ] as const;

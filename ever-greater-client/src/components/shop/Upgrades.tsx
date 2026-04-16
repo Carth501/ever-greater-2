@@ -7,6 +7,8 @@ import {
   OperationId,
   ResourceType,
   canAfford,
+  getBuySuppliesGainForGold,
+  getMaxSuppliesPurchaseGold,
   getOperationCost,
   operations,
 } from "ever-greater-shared";
@@ -48,6 +50,7 @@ function Upgrades({ onPurchaseError }: UpgradesProps): JSX.Element {
     buyAutoBuySupplies,
     toggleAutoBuySupplies,
     increaseCreditGeneration,
+    increaseSuppliesBatch,
     increaseCreditCapacity,
   } = useOperations(onPurchaseError);
 
@@ -61,6 +64,8 @@ function Upgrades({ onPurchaseError }: UpgradesProps): JSX.Element {
 
   const autoBuySuppliesOperation = operations[OperationId.AUTO_BUY_SUPPLIES];
   const buyAutoprinterOperation = operations[OperationId.BUY_AUTOPRINTER];
+  const increaseSuppliesBatchOperation =
+    operations[OperationId.INCREASE_SUPPLIES_BATCH];
   const increaseCreditGenerationOperation =
     operations[OperationId.INCREASE_CREDIT_GENERATION];
   const increaseCreditCapacityOperation =
@@ -73,6 +78,23 @@ function Upgrades({ onPurchaseError }: UpgradesProps): JSX.Element {
   const canAffordAutoBuySupplies = canAfford(currentUser, {
     [ResourceType.GOLD]: autoBuySuppliesCost,
   });
+
+  const suppliesBatchCost =
+    getOperationCost(increaseSuppliesBatchOperation, operationContext)[
+      ResourceType.GOLD
+    ] ?? 0;
+  const canAffordSuppliesBatch = canAfford(currentUser, {
+    [ResourceType.GOLD]: suppliesBatchCost,
+  });
+  const suppliesBatchLevel = currentUser.supplies_batch_level ?? 0;
+  const currentSuppliesBatchGold = getMaxSuppliesPurchaseGold(currentUser);
+  const currentSuppliesBatchAmount = getBuySuppliesGainForGold(
+    currentSuppliesBatchGold,
+  );
+  const nextSuppliesBatchGold = currentSuppliesBatchGold * 2;
+  const nextSuppliesBatchAmount = getBuySuppliesGainForGold(
+    nextSuppliesBatchGold,
+  );
 
   const creditGenerationCost =
     getOperationCost(increaseCreditGenerationOperation, operationContext)[
@@ -127,9 +149,17 @@ function Upgrades({ onPurchaseError }: UpgradesProps): JSX.Element {
             canAffordAutoBuyUnlock={canAffordAutoBuySupplies}
             creditGenerationCost={creditGenerationCost}
             canAffordCreditGeneration={canAffordCreditGeneration}
+            suppliesBatchCost={suppliesBatchCost}
+            suppliesBatchLevel={suppliesBatchLevel}
+            currentSuppliesBatchAmount={currentSuppliesBatchAmount}
+            currentSuppliesBatchGold={currentSuppliesBatchGold}
+            nextSuppliesBatchAmount={nextSuppliesBatchAmount}
+            nextSuppliesBatchGold={nextSuppliesBatchGold}
+            canAffordSuppliesBatch={canAffordSuppliesBatch}
             onBuyAutoBuySupplies={buyAutoBuySupplies}
             onToggleAutoBuySupplies={toggleAutoBuySupplies}
             onIncreaseCreditGeneration={increaseCreditGeneration}
+            onIncreaseSuppliesBatch={increaseSuppliesBatch}
           />
 
           {currentUser.tickets_contributed > 500 && (

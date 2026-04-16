@@ -6,6 +6,9 @@ import { ShopGroup, ShopRow } from "./ShopGroupLayout";
 
 type ShopSuppliesGroupProps = {
   gold: number;
+  maxSuppliesAmount: number;
+  maxSuppliesCostInGold: number;
+  suppliesAmount: number;
   suppliesCostInGold: number;
   canAffordSupplies: boolean;
   onBuySupplies: () => void;
@@ -13,6 +16,9 @@ type ShopSuppliesGroupProps = {
 
 function ShopSuppliesGroup({
   gold,
+  maxSuppliesAmount,
+  maxSuppliesCostInGold,
+  suppliesAmount,
   suppliesCostInGold,
   canAffordSupplies,
   onBuySupplies,
@@ -26,13 +32,16 @@ function ShopSuppliesGroup({
       <ShopRow>
         <Box>
           <Typography variant="subtitle1" fontWeight={600}>
-            200 Supplies
+            Up to {maxSuppliesAmount} Supplies
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Cost: {suppliesCostInGold}g
+            {suppliesCostInGold > 0
+              ? `Current purchase: ${suppliesAmount} supplies for ${suppliesCostInGold}g`
+              : `Batch limit: ${maxSuppliesAmount} supplies for ${maxSuppliesCostInGold}g`}
           </Typography>
           <Typography variant="caption" color="text.secondary" display="block">
-            Consumable printer stock for manual and automated ticket runs.
+            Keeps the 200 supplies per gold ratio even when you cannot afford
+            the full batch.
           </Typography>
         </Box>
         <Button

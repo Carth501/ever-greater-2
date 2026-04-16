@@ -65,6 +65,7 @@ type UserUpdatePayload = Partial<{
   credit_value: number;
   credit_generation_level: number;
   credit_capacity_level: number;
+  supplies_batch_level: number;
   auto_buy_supplies_purchased: boolean;
   auto_buy_supplies_active: boolean;
 }>;
@@ -82,6 +83,7 @@ function toPeriodicUserSnapshot(
     credit_value: user.credit_value || 0,
     credit_generation_level: user.credit_generation_level || 0,
     credit_capacity_level: user.credit_capacity_level || 0,
+    supplies_batch_level: user.supplies_batch_level || 0,
     auto_buy_supplies_purchased: user.auto_buy_supplies_purchased || false,
     auto_buy_supplies_active: user.auto_buy_supplies_active || false,
   };
@@ -126,6 +128,13 @@ function buildPeriodicUserUpdatePayload(
 
   if (
     !previous ||
+    previous.supplies_batch_level !== current.supplies_batch_level
+  ) {
+    payload.supplies_batch_level = current.supplies_batch_level;
+  }
+
+  if (
+    !previous ||
     previous.auto_buy_supplies_purchased !== current.auto_buy_supplies_purchased
   ) {
     payload.auto_buy_supplies_purchased = current.auto_buy_supplies_purchased;
@@ -158,6 +167,7 @@ function toClientUser(user: Awaited<ReturnType<typeof getUserById>>) {
     credit_value: user.credit_value || 0,
     credit_generation_level: user.credit_generation_level || 0,
     credit_capacity_level: user.credit_capacity_level || 0,
+    supplies_batch_level: user.supplies_batch_level || 0,
     auto_buy_supplies_purchased: user.auto_buy_supplies_purchased || false,
     auto_buy_supplies_active: user.auto_buy_supplies_active || false,
   };
@@ -221,13 +231,7 @@ const credentialsSchema = z.object({
   password: z.string(),
 });
 
-const toggleAutoBuySuppliesSchema = z.object({
-  active: z.boolean(),
-});
-
-const operationRequestSchema = z.object({
-  quantity: z.number().int().positive().optional(),
-});
+const operationRequestSchema = z.object({}).passthrough();
 
 function broadcastCount(count: number): void {
   if (!wss) return;
@@ -523,63 +527,6 @@ function createApp(): Express {
     }
   });
 
-  app.post("/api/auth/auto-buy-supplies/toggle", async (req, res) => {
-    try {
-      if (!req.session.userId) {
-        return sendError(res, 401, {
-          error: "Not authenticated",
-          code: "AUTH_REQUIRED",
-        });
-      }
-
-      const toggleResult = toggleAutoBuySuppliesSchema.safeParse(req.body);
-      if (!toggleResult.success) {
-        return sendError(res, 400, {
-          error: "'active' boolean is required",
-          code: "INVALID_REQUEST",
-          detail: "Request body must include an 'active' boolean",
-        });
-      }
-
-      const { active } = toggleResult.data;
-
-      const existingUser = await getUserById(req.session.userId);
-      if (!existingUser) {
-        return sendError(res, 404, {
-          error: "User not found",
-          code: "USER_NOT_FOUND",
-        });
-      }
-
-      if (!existingUser.auto_buy_supplies_purchased) {
-        return sendError(res, 403, {
-          error: "Auto-buy supplies not unlocked",
-          code: "AUTO_BUY_SUPPLIES_NOT_UNLOCKED",
-        });
-      }
-
-      const updatedUser = await setAutoBuySuppliesActive(
-        req.session.userId,
-        active,
-      );
-
-      await sendUserUpdate(req.session.userId, {
-        auto_buy_supplies_purchased: updatedUser.auto_buy_supplies_purchased,
-        auto_buy_supplies_active: updatedUser.auto_buy_supplies_active,
-      });
-
-      return res.json({ user: toClientUser(updatedUser) });
-    } catch (error) {
-      logRouteError(req, error, "Error toggling auto-buy supplies");
-      return sendError(res, 500, {
-        error: "Failed to toggle auto-buy supplies",
-        code: "AUTO_BUY_SUPPLIES_TOGGLE_FAILED",
-        detail: getErrorMessage(error),
-      });
-    }
-  });
-
-  // NEW GENERIC OPERATION ENDPOINT
   app.post("/api/operations/:operationId", async (req, res) => {
     try {
       if (!req.session.userId) {
@@ -607,7 +554,7 @@ function createApp(): Express {
         return sendError(res, 400, {
           error: "INVALID_REQUEST",
           code: "INVALID_REQUEST",
-          detail: "quantity must be a positive integer",
+          detail: "Request body must be a JSON object",
         });
       }
 
@@ -689,6 +636,29 @@ function createApp(): Express {
           });
         }
 
+        if (validation.error === "Auto-buy supplies not unlocked") {
+          return sendError(res, 403, {
+            error: validation.error,
+            code: "AUTO_BUY_SUPPLIES_NOT_UNLOCKED",
+            cost: validation.cost,
+            gain: validation.gain,
+          });
+        }
+
+        if (
+          validation.error === "Quantity must be a positive integer" ||
+          validation.error === "'active' boolean is required"
+        ) {
+          return sendError(res, 400, {
+            error: "INVALID_REQUEST",
+            code: "INVALID_REQUEST",
+            detail:
+              validation.error === "Quantity must be a positive integer"
+                ? "quantity must be a positive integer"
+                : validation.error,
+          });
+        }
+
         return sendError(res, 400, {
           error: validation.error || "Invalid operation parameters",
           code: "INVALID_OPERATION",
@@ -704,6 +674,11 @@ function createApp(): Express {
               req.session.userId,
               validation.cost[ResourceType.GOLD] ?? 0,
             )
+          : operationId === OperationId.TOGGLE_AUTO_BUY_SUPPLIES
+            ? await setAutoBuySuppliesActive(
+                req.session.userId,
+                requestBody.active as boolean,
+              )
           : await executeResourceTransaction(
               req.session.userId,
               validation.cost,
@@ -745,6 +720,7 @@ function createApp(): Express {
         credit_value: updatedUser.credit_value,
         credit_generation_level: updatedUser.credit_generation_level,
         credit_capacity_level: updatedUser.credit_capacity_level,
+        supplies_batch_level: updatedUser.supplies_batch_level,
         auto_buy_supplies_purchased: updatedUser.auto_buy_supplies_purchased,
         auto_buy_supplies_active: updatedUser.auto_buy_supplies_active,
       });

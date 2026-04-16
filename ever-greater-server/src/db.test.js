@@ -65,6 +65,7 @@ describe('Database Functions', () => {
               { column_name: 'credit_value' },
               { column_name: 'credit_generation_level' },
               { column_name: 'credit_capacity_level' },
+              { column_name: 'supplies_batch_level' },
             ],
           };
         }
@@ -88,7 +89,7 @@ describe('Database Functions', () => {
       const migrationInsertCalls = mockClient.query.mock.calls.filter((call) =>
         call[0].includes('INSERT INTO schema_migrations')
       );
-      expect(migrationInsertCalls).toHaveLength(4);
+      expect(migrationInsertCalls).toHaveLength(5);
       expect(mockClient.release).toHaveBeenCalled();
     });
 
@@ -110,6 +111,7 @@ describe('Database Functions', () => {
               { column_name: 'credit_value' },
               { column_name: 'credit_generation_level' },
               { column_name: 'credit_capacity_level' },
+              { column_name: 'supplies_batch_level' },
             ],
           };
         }
@@ -152,6 +154,7 @@ describe('Database Functions', () => {
               { column_name: 'credit_value' },
               { column_name: 'credit_generation_level' },
               { column_name: 'credit_capacity_level' },
+              { column_name: 'supplies_batch_level' },
             ],
           };
         }
@@ -177,7 +180,9 @@ describe('Database Functions', () => {
     it('should skip migrations that are already recorded', async () => {
       mockClient.query.mockImplementation(async (query) => {
         if (query.includes('SELECT id FROM schema_migrations')) {
-          return { rows: [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }] };
+          return {
+            rows: [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }, { id: 5 }],
+          };
         }
 
         if (query.includes('information_schema.columns')) {
@@ -191,6 +196,7 @@ describe('Database Functions', () => {
               { column_name: 'credit_value' },
               { column_name: 'credit_generation_level' },
               { column_name: 'credit_capacity_level' },
+              { column_name: 'supplies_batch_level' },
             ],
           };
         }
@@ -252,7 +258,9 @@ describe('Database Functions', () => {
         }
 
         if (query.includes('SELECT id FROM schema_migrations')) {
-          return { rows: [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }] };
+          return {
+            rows: [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }, { id: 5 }],
+          };
         }
 
         if (query.includes("information_schema.columns WHERE table_name = 'users'")) {
@@ -266,6 +274,7 @@ describe('Database Functions', () => {
               { column_name: 'credit_value' },
               { column_name: 'credit_generation_level' },
               { column_name: 'credit_capacity_level' },
+              { column_name: 'supplies_batch_level' },
             ],
           };
         }
@@ -386,6 +395,7 @@ describe('Database Functions', () => {
         credit_value: 0,
         credit_generation_level: 0,
         credit_capacity_level: 0,
+        supplies_batch_level: 0,
         auto_buy_supplies_purchased: false,
         auto_buy_supplies_active: false,
       };
@@ -401,6 +411,7 @@ describe('Database Functions', () => {
           'newuser@example.com',
           'hashed_password',
           expectedStartingSupplies,
+          0,
           0,
           0,
           0,

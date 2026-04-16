@@ -70,6 +70,7 @@ describe("Shop", () => {
       buyAutoBuySupplies: vi.fn<() => void>(),
       toggleAutoBuySupplies: vi.fn<(active: boolean) => void>(),
       increaseCreditGeneration: vi.fn<() => void>(),
+      increaseSuppliesBatch: vi.fn<() => void>(),
       increaseCreditCapacity: vi.fn<() => void>(),
     };
 
@@ -87,7 +88,7 @@ describe("Shop", () => {
 
     expect(screen.getByRole("heading", { name: "Shop" })).toBeTruthy();
     expect(screen.getByText("Gold", { exact: true })).toBeTruthy();
-    expect(screen.getByText("200 Supplies")).toBeTruthy();
+    expect(screen.getByText("Up to 200 Supplies")).toBeTruthy();
     expect(screen.queryByText("Auto-Buy Supplies")).toBeNull();
     expect(screen.queryByText("Increase Credit Generation")).toBeNull();
     expect(screen.queryByText("Increase Credit Capacity")).toBeNull();
@@ -100,6 +101,17 @@ describe("Shop", () => {
     render(<Shop />);
 
     expect(screen.queryByText("Gold", { exact: true })).toBeNull();
-    expect(screen.getByText("200 Supplies")).toBeTruthy();
+    expect(screen.getByText("Up to 200 Supplies")).toBeTruthy();
+  });
+
+  it("shows partial supplies purchases when gold is below the upgraded batch cap", () => {
+    mockDependencies({ gold: 3, supplies_batch_level: 2 });
+
+    render(<Shop />);
+
+    expect(screen.getByText("Up to 800 Supplies")).toBeTruthy();
+    expect(
+      screen.getByText("Current purchase: 600 supplies for 3g"),
+    ).toBeTruthy();
   });
 });

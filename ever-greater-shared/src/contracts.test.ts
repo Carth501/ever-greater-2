@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   applyTransaction,
   canAfford,
+  getBuySuppliesGainForGold,
+  getMaxSuppliesPurchaseGold,
   getOperationCost,
   getOperationGain,
   isUserResourceFields,
@@ -29,6 +31,7 @@ function makeUser(overrides: Partial<User> = {}): User {
     credit_value: 100,
     credit_generation_level: 5,
     credit_capacity_level: 100,
+    supplies_batch_level: 0,
     auto_buy_supplies_purchased: false,
     auto_buy_supplies_active: false,
     ...overrides,
@@ -54,10 +57,18 @@ describe("shared operation contracts", () => {
   it.each(Object.values(OperationId))(
     "validates and applies %s",
     (operationId) => {
-      const user = makeUser();
+      const user = makeUser(
+        operationId === OperationId.TOGGLE_AUTO_BUY_SUPPLIES
+          ? { auto_buy_supplies_purchased: true }
+          : {},
+      );
       const operation = operations[operationId];
       const params =
-        operationId === OperationId.BUY_GOLD ? { quantity: 3 } : undefined;
+        operationId === OperationId.BUY_GOLD
+          ? { quantity: 3 }
+          : operationId === OperationId.TOGGLE_AUTO_BUY_SUPPLIES
+            ? { active: false }
+            : undefined;
       const globalTicketCount =
         operationId === OperationId.INCREASE_CREDIT_CAPACITY ? 1000 : undefined;
 
@@ -139,6 +150,87 @@ describe("shared operation contracts", () => {
 
     expect(validation.valid).toBe(false);
     expect(validation.error).toBe("Auto-buy supplies already unlocked");
+  });
+
+  it("validates the auto-buy toggle as an operation", () => {
+    const lockedUser = makeUser({ auto_buy_supplies_purchased: false });
+    const unlockedUser = makeUser({ auto_buy_supplies_purchased: true });
+
+    expect(
+      validateOperation(
+        lockedUser,
+        operations[OperationId.TOGGLE_AUTO_BUY_SUPPLIES],
+        { active: true },
+      ),
+    ).toMatchObject({
+      valid: false,
+      error: "Auto-buy supplies not unlocked",
+    });
+
+    expect(
+      validateOperation(
+        unlockedUser,
+        operations[OperationId.TOGGLE_AUTO_BUY_SUPPLIES],
+        { active: "yes" },
+      ),
+    ).toMatchObject({
+      valid: false,
+      error: "'active' boolean is required",
+    });
+
+    expect(
+      validateOperation(
+        unlockedUser,
+        operations[OperationId.TOGGLE_AUTO_BUY_SUPPLIES],
+        { active: false },
+      ),
+    ).toMatchObject({
+      valid: true,
+      cost: {},
+      gain: {},
+    });
+  });
+
+  it("scales supplies purchases with batch upgrades", () => {
+    const oneUpgradeUser = makeUser({ supplies_batch_level: 1, gold: 10 });
+    const twoUpgradeUser = makeUser({ supplies_batch_level: 2, gold: 10 });
+    const partialGoldUser = makeUser({ supplies_batch_level: 2, gold: 3 });
+
+    expect(getMaxSuppliesPurchaseGold(oneUpgradeUser)).toBe(2);
+    expect(
+      getOperationCost(operations[OperationId.BUY_SUPPLIES], {
+        user: oneUpgradeUser,
+      }),
+    ).toEqual({ [ResourceType.GOLD]: 2 });
+    expect(
+      getOperationGain(operations[OperationId.BUY_SUPPLIES], {
+        user: oneUpgradeUser,
+      }),
+    ).toEqual({ [ResourceType.PRINTER_SUPPLIES]: 400 });
+
+    expect(getMaxSuppliesPurchaseGold(twoUpgradeUser)).toBe(4);
+    expect(
+      getOperationCost(operations[OperationId.BUY_SUPPLIES], {
+        user: twoUpgradeUser,
+      }),
+    ).toEqual({ [ResourceType.GOLD]: 4 });
+    expect(
+      getOperationGain(operations[OperationId.BUY_SUPPLIES], {
+        user: twoUpgradeUser,
+      }),
+    ).toEqual({ [ResourceType.PRINTER_SUPPLIES]: 800 });
+
+    expect(
+      getOperationCost(operations[OperationId.BUY_SUPPLIES], {
+        user: partialGoldUser,
+      }),
+    ).toEqual({ [ResourceType.GOLD]: 3 });
+    expect(
+      getOperationGain(operations[OperationId.BUY_SUPPLIES], {
+        user: partialGoldUser,
+      }),
+    ).toEqual({ [ResourceType.PRINTER_SUPPLIES]: 600 });
+    expect(getBuySuppliesGainForGold(3)).toBe(600);
   });
 
   it("rejects credit capacity when global tickets are insufficient", () => {
@@ -231,6 +323,8 @@ function resourceField(resourceType: ResourceType): keyof User | null {
       return "credit_generation_level";
     case ResourceType.CREDIT_CAPACITY_LEVEL:
       return "credit_capacity_level";
+    case ResourceType.SUPPLIES_BATCH_LEVEL:
+      return "supplies_batch_level";
     case ResourceType.GLOBAL_TICKETS:
       return null;
   }

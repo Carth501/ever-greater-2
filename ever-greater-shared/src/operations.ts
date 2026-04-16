@@ -37,11 +37,36 @@ export interface Operation {
 export enum OperationId {
   BUY_SUPPLIES = "BUY_SUPPLIES",
   AUTO_BUY_SUPPLIES = "AUTO_BUY_SUPPLIES",
+  TOGGLE_AUTO_BUY_SUPPLIES = "TOGGLE_AUTO_BUY_SUPPLIES",
   BUY_GOLD = "BUY_GOLD",
   BUY_AUTOPRINTER = "BUY_AUTOPRINTER",
   PRINT_TICKET = "PRINT_TICKET",
+  INCREASE_SUPPLIES_BATCH = "INCREASE_SUPPLIES_BATCH",
   INCREASE_CREDIT_GENERATION = "INCREASE_CREDIT_GENERATION",
   INCREASE_CREDIT_CAPACITY = "INCREASE_CREDIT_CAPACITY",
+}
+
+export const SUPPLIES_PER_GOLD = 200;
+export const SUPPLIES_BATCH_UPGRADE_COST = 1;
+
+export function getSuppliesBatchLevel(user: User): number {
+  return Math.max(0, user.supplies_batch_level ?? 0);
+}
+
+export function getMaxSuppliesPurchaseGold(user: User): number {
+  return 2 ** getSuppliesBatchLevel(user);
+}
+
+export function getBuySuppliesSpend(user: User): number {
+  if (user.gold <= 0) {
+    return 0;
+  }
+
+  return Math.min(user.gold, getMaxSuppliesPurchaseGold(user));
+}
+
+export function getBuySuppliesGainForGold(spendGold: number): number {
+  return spendGold * SUPPLIES_PER_GOLD;
 }
 
 /**
@@ -53,11 +78,17 @@ export const operations: Record<OperationId, Operation> = {
     id: OperationId.BUY_SUPPLIES,
     name: "Buy Supplies",
     description: "Purchase printer supplies with gold",
-    cost: {
-      [ResourceType.GOLD]: 1,
+    cost: (ctx: OperationContext) => {
+      const spendGold = getBuySuppliesSpend(ctx.user);
+      return {
+        [ResourceType.GOLD]: spendGold,
+      };
     },
-    gain: {
-      [ResourceType.PRINTER_SUPPLIES]: 200,
+    gain: (ctx: OperationContext) => {
+      const spendGold = getBuySuppliesSpend(ctx.user);
+      return {
+        [ResourceType.PRINTER_SUPPLIES]: getBuySuppliesGainForGold(spendGold),
+      };
     },
   },
 
@@ -68,6 +99,14 @@ export const operations: Record<OperationId, Operation> = {
     cost: {
       [ResourceType.GOLD]: 10,
     },
+    gain: {},
+  },
+
+  [OperationId.TOGGLE_AUTO_BUY_SUPPLIES]: {
+    id: OperationId.TOGGLE_AUTO_BUY_SUPPLIES,
+    name: "Toggle Auto-Buy Supplies",
+    description: "Enable or disable automatic supplies purchasing",
+    cost: {},
     gain: {},
   },
 
@@ -115,6 +154,18 @@ export const operations: Record<OperationId, Operation> = {
     gain: {
       [ResourceType.MONEY]: 1,
       [ResourceType.TICKETS_CONTRIBUTED]: 1,
+    },
+  },
+
+  [OperationId.INCREASE_SUPPLIES_BATCH]: {
+    id: OperationId.INCREASE_SUPPLIES_BATCH,
+    name: "Increase Supplies Batch",
+    description: "Double the max supplies you can buy at once",
+    cost: {
+      [ResourceType.GOLD]: SUPPLIES_BATCH_UPGRADE_COST,
+    },
+    gain: {
+      [ResourceType.SUPPLIES_BATCH_LEVEL]: 1,
     },
   },
 
@@ -271,6 +322,26 @@ export function validateOperation(
     }
   }
 
+  if (operation.id === OperationId.TOGGLE_AUTO_BUY_SUPPLIES) {
+    if (typeof params?.active !== "boolean") {
+      return {
+        valid: false,
+        error: "'active' boolean is required",
+        cost,
+        gain,
+      };
+    }
+
+    if (!user.auto_buy_supplies_purchased) {
+      return {
+        valid: false,
+        error: "Auto-buy supplies not unlocked",
+        cost,
+        gain,
+      };
+    }
+  }
+
   if (
     operation.id === OperationId.AUTO_BUY_SUPPLIES &&
     user.auto_buy_supplies_purchased
@@ -280,6 +351,23 @@ export function validateOperation(
       error: "Auto-buy supplies already unlocked",
       cost,
       gain,
+    };
+  }
+
+  if (
+    operation.id === OperationId.BUY_SUPPLIES &&
+    (cost[ResourceType.GOLD] ?? 0) < 1
+  ) {
+    return {
+      valid: false,
+      error: "Insufficient resources",
+      cost: {
+        [ResourceType.GOLD]: 1,
+      },
+      gain: {
+        [ResourceType.PRINTER_SUPPLIES]: SUPPLIES_PER_GOLD,
+      },
+      insufficientResources: [ResourceType.GOLD],
     };
   }
 

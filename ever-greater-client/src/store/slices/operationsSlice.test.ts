@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import * as authApi from "../../api/auth";
 import { DomainError } from "../../api/client";
 import * as operationsApi from "../../api/operations";
 import { mockUser } from "../../tests/fixtures";
@@ -12,10 +11,8 @@ import operationsReducer, {
   toggleAutoBuySuppliesThunk,
 } from "./operationsSlice";
 
-vi.mock("../../api/auth");
 vi.mock("../../api/operations");
 
-const mockAuthApi = authApi as any;
 const mockOperationsApi = operationsApi as any;
 
 describe("operationsSlice", () => {
@@ -95,7 +92,7 @@ describe("operationsSlice", () => {
             setTimeout(() => resolve(mockUser()), 25);
           }),
       );
-      mockAuthApi.setAutoBuySuppliesActive.mockImplementation(
+      mockOperationsApi.toggleAutoBuySupplies.mockImplementation(
         () =>
           new Promise((resolve) => {
             setTimeout(

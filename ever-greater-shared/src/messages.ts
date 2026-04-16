@@ -13,6 +13,7 @@ const USER_RESOURCE_FIELD_TYPES = {
   credit_value: "number",
   credit_generation_level: "number",
   credit_capacity_level: "number",
+  supplies_batch_level: "number",
   auto_buy_supplies_purchased: "boolean",
   auto_buy_supplies_active: "boolean",
 } as const;
@@ -27,6 +28,7 @@ export type UserResourceFields = Partial<{
   credit_value: number;
   credit_generation_level: number;
   credit_capacity_level: number;
+  supplies_batch_level: number;
   auto_buy_supplies_purchased: boolean;
   auto_buy_supplies_active: boolean;
 }>;

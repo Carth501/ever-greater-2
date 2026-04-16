@@ -14,9 +14,17 @@ type UpgradeGoldGroupProps = {
   canAffordAutoBuyUnlock: boolean;
   creditGenerationCost: number;
   canAffordCreditGeneration: boolean;
+  suppliesBatchCost: number;
+  suppliesBatchLevel: number;
+  currentSuppliesBatchAmount: number;
+  currentSuppliesBatchGold: number;
+  nextSuppliesBatchAmount: number;
+  nextSuppliesBatchGold: number;
+  canAffordSuppliesBatch: boolean;
   onBuyAutoBuySupplies: () => void;
   onToggleAutoBuySupplies: (active: boolean) => void;
   onIncreaseCreditGeneration: () => void;
+  onIncreaseSuppliesBatch: () => void;
 };
 
 function UpgradeGoldGroup({
@@ -27,9 +35,17 @@ function UpgradeGoldGroup({
   canAffordAutoBuyUnlock,
   creditGenerationCost,
   canAffordCreditGeneration,
+  suppliesBatchCost,
+  suppliesBatchLevel,
+  currentSuppliesBatchAmount,
+  currentSuppliesBatchGold,
+  nextSuppliesBatchAmount,
+  nextSuppliesBatchGold,
+  canAffordSuppliesBatch,
   onBuyAutoBuySupplies,
   onToggleAutoBuySupplies,
   onIncreaseCreditGeneration,
+  onIncreaseSuppliesBatch,
 }: UpgradeGoldGroupProps): JSX.Element {
   return (
     <ShopGroup>
@@ -72,6 +88,29 @@ function UpgradeGoldGroup({
             Buy
           </Button>
         )}
+      </ShopRow>
+
+      <ShopRow>
+        <Box>
+          <Typography variant="subtitle1" fontWeight={600}>
+            Increase Supplies Batch
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Cost: {suppliesBatchCost}g · Lvl {suppliesBatchLevel}
+          </Typography>
+          <Typography variant="caption" color="text.secondary" display="block">
+            Doubles your max refill from {currentSuppliesBatchAmount} supplies
+            for {currentSuppliesBatchGold}g to {nextSuppliesBatchAmount}{" "}
+            supplies for {nextSuppliesBatchGold}g.
+          </Typography>
+        </Box>
+        <Button
+          onClick={onIncreaseSuppliesBatch}
+          variant="contained"
+          disabled={!canAffordSuppliesBatch}
+        >
+          Buy
+        </Button>
       </ShopRow>
 
       <ShopRow>

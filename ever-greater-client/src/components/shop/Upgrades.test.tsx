@@ -70,6 +70,7 @@ describe("Upgrades", () => {
       buyAutoBuySupplies: vi.fn<() => void>(),
       toggleAutoBuySupplies: vi.fn<(active: boolean) => void>(),
       increaseCreditGeneration: vi.fn<() => void>(),
+      increaseSuppliesBatch: vi.fn<() => void>(),
       increaseCreditCapacity: vi.fn<() => void>(),
     };
 
@@ -87,6 +88,7 @@ describe("Upgrades", () => {
 
     expect(screen.getByRole("heading", { name: "Upgrades" })).toBeTruthy();
     expect(screen.getByText("Auto-Buy Supplies")).toBeTruthy();
+    expect(screen.getByText("Increase Supplies Batch")).toBeTruthy();
     expect(screen.getByText("Increase Credit Generation")).toBeTruthy();
     expect(screen.getByText("Increase Credit Capacity")).toBeTruthy();
     expect(screen.getByText("Autoprinter")).toBeTruthy();
@@ -101,6 +103,7 @@ describe("Upgrades", () => {
 
     expect(screen.queryByText("Autoprinter")).toBeNull();
     expect(screen.getByText("Auto-Buy Supplies")).toBeTruthy();
+    expect(screen.getByText("Increase Supplies Batch")).toBeTruthy();
     expect(screen.getByText("Increase Credit Capacity")).toBeTruthy();
   });
 });

@@ -55,6 +55,13 @@ export async function buyAutoBuySupplies(): Promise<User> {
 }
 
 /**
+ * Enable or disable automatic supplies purchasing.
+ */
+export async function toggleAutoBuySupplies(active: boolean): Promise<User> {
+  return executeOperation(OperationId.TOGGLE_AUTO_BUY_SUPPLIES, { active });
+}
+
+/**
  * Buy gold with money (uses generic operation endpoint)
  * @param quantity Amount of gold to purchase
  */
@@ -81,6 +88,13 @@ export async function printTicket(): Promise<User> {
  */
 export async function increaseCreditGeneration(): Promise<User> {
   return executeOperation(OperationId.INCREASE_CREDIT_GENERATION);
+}
+
+/**
+ * Increase the maximum supplies purchase batch size.
+ */
+export async function increaseSuppliesBatch(): Promise<User> {
+  return executeOperation(OperationId.INCREASE_SUPPLIES_BATCH);
 }
 
 /**

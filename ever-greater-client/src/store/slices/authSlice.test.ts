@@ -18,6 +18,7 @@ import {
   buyAutoBuySuppliesThunk,
   buyGoldThunk,
   buySuppliesThunk,
+  increaseSuppliesBatchThunk,
   toggleAutoBuySuppliesThunk,
 } from "./operationsSlice";
 
@@ -303,7 +304,7 @@ describe("authSlice", () => {
         preloadedState: { auth: stateWithUser },
       });
 
-      mockAuthApi.setAutoBuySuppliesActive.mockResolvedValueOnce({
+      mockOperationsApi.toggleAutoBuySupplies.mockResolvedValueOnce({
         ...defaultUser,
         auto_buy_supplies_purchased: true,
         auto_buy_supplies_active: false,
@@ -314,6 +315,36 @@ describe("authSlice", () => {
       const state = (store.getState() as { auth: AuthState }).auth;
       expect(state.user?.auto_buy_supplies_purchased).toBe(true);
       expect(state.user?.auto_buy_supplies_active).toBe(false);
+    });
+
+    it("should update supplies batch level via increaseSuppliesBatchThunk", async () => {
+      const stateWithUser: AuthState = {
+        user: {
+          ...defaultUser,
+          gold: 5,
+          supplies_batch_level: 0,
+        },
+        isCheckingAuth: false,
+        isLoading: false,
+        pendingRequestCount: 0,
+        error: null,
+      };
+
+      store = createTestStore({
+        preloadedState: { auth: stateWithUser },
+      });
+
+      mockOperationsApi.increaseSuppliesBatch.mockResolvedValueOnce({
+        ...defaultUser,
+        gold: 4,
+        supplies_batch_level: 1,
+      } as User);
+
+      await store.dispatch(increaseSuppliesBatchThunk() as any);
+
+      const state = (store.getState() as { auth: AuthState }).auth;
+      expect(state.user?.gold).toBe(4);
+      expect(state.user?.supplies_batch_level).toBe(1);
     });
   });
 

@@ -364,6 +364,7 @@ describe('Express API Endpoints', () => {
       db.incrementGlobalCount.mockResolvedValue(101);
       db.executeResourceTransaction.mockResolvedValue(testUser);
       db.purchaseAutoBuySupplies.mockResolvedValue(testUser);
+      db.setAutoBuySuppliesActive.mockResolvedValue(testUser);
 
       await agent
         .post('/api/auth/login')
@@ -372,7 +373,11 @@ describe('Express API Endpoints', () => {
 
       for (const operationId of Object.values(OperationId)) {
         const payload =
-          operationId === OperationId.BUY_GOLD ? { quantity: 1 } : {};
+          operationId === OperationId.BUY_GOLD
+            ? { quantity: 1 }
+            : operationId === OperationId.TOGGLE_AUTO_BUY_SUPPLIES
+              ? { active: false }
+              : {};
 
         const response = await agent
           .post(`/api/operations/${operationId}`)
@@ -425,6 +430,57 @@ describe('Express API Endpoints', () => {
       expect(response.body.user.auto_buy_supplies_purchased).toBe(true);
       expect(response.body.user.auto_buy_supplies_active).toBe(true);
       expect(db.purchaseAutoBuySupplies).toHaveBeenCalledWith(1, 10);
+    });
+
+    it('should partially buy supplies using the upgraded batch ratio when gold is below the batch cap', async () => {
+      const testUser = {
+        id: 1,
+        email: 'test@example.com',
+        password_hash: await bcrypt.hash('password123', 10),
+        printer_supplies: 100,
+        money: 0,
+        gold: 3,
+        autoprinters: 0,
+        tickets_contributed: 0,
+        tickets_withdrawn: 0,
+        credit_value: 0,
+        credit_generation_level: 0,
+        credit_capacity_level: 0,
+        supplies_batch_level: 2,
+        auto_buy_supplies_purchased: false,
+        auto_buy_supplies_active: false,
+      };
+
+      const updatedUser = {
+        ...testUser,
+        printer_supplies: 700,
+        gold: 0,
+      };
+
+      db.getUserByEmail.mockResolvedValue(testUser);
+      db.getUserById.mockResolvedValue(testUser);
+      db.executeResourceTransaction.mockResolvedValue(updatedUser);
+      db.getGlobalCount.mockResolvedValue(100);
+
+      await agent
+        .post('/api/auth/login')
+        .send({ email: 'test@example.com', password: 'password123' })
+        .expect(200);
+
+      const response = await agent
+        .post('/api/operations/BUY_SUPPLIES')
+        .send({})
+        .expect(200);
+
+      expect(db.executeResourceTransaction).toHaveBeenCalledWith(
+        1,
+        { [ResourceType.GOLD]: 3 },
+        { [ResourceType.PRINTER_SUPPLIES]: 600 },
+      );
+      expect(response.body.cost).toEqual({ [ResourceType.GOLD]: 3 });
+      expect(response.body.gain).toEqual({ [ResourceType.PRINTER_SUPPLIES]: 600 });
+      expect(response.body.user.printer_supplies).toBe(700);
+      expect(response.body.user.gold).toBe(0);
     });
 
     it('should include credit level updates in operation response', async () => {
@@ -788,7 +844,7 @@ describe('Express API Endpoints', () => {
     });
   });
 
-  describe('POST /api/auth/auto-buy-supplies/toggle', () => {
+  describe('POST /api/operations/TOGGLE_AUTO_BUY_SUPPLIES', () => {
     it('should toggle active state when unlocked', async () => {
       const testUser = {
         id: 1,
@@ -820,11 +876,14 @@ describe('Express API Endpoints', () => {
         .expect(200);
 
       const response = await agent
-        .post('/api/auth/auto-buy-supplies/toggle')
+        .post('/api/operations/TOGGLE_AUTO_BUY_SUPPLIES')
         .send({ active: false })
         .expect(200);
 
       expect(db.setAutoBuySuppliesActive).toHaveBeenCalledWith(1, false);
+      expect(response.body.operationId).toBe(OperationId.TOGGLE_AUTO_BUY_SUPPLIES);
+      expect(response.body.cost).toEqual({});
+      expect(response.body.gain).toEqual({});
       expect(response.body.user.auto_buy_supplies_purchased).toBe(true);
       expect(response.body.user.auto_buy_supplies_active).toBe(false);
     });
@@ -856,7 +915,7 @@ describe('Express API Endpoints', () => {
         .expect(200);
 
       const response = await agent
-        .post('/api/auth/auto-buy-supplies/toggle')
+        .post('/api/operations/TOGGLE_AUTO_BUY_SUPPLIES')
         .send({ active: true })
         .expect(403);
 
@@ -890,13 +949,13 @@ describe('Express API Endpoints', () => {
         .expect(200);
 
       const response = await agent
-        .post('/api/auth/auto-buy-supplies/toggle')
+        .post('/api/operations/TOGGLE_AUTO_BUY_SUPPLIES')
         .send({ active: 'yes' })
         .expect(400);
 
-      expect(response.body.error).toBe("'active' boolean is required");
+      expect(response.body.error).toBe('INVALID_REQUEST');
       expect(response.body.code).toBe('INVALID_REQUEST');
-      expect(response.body.detail).toContain('active');
+      expect(response.body.detail).toBe("'active' boolean is required");
     });
   });
 });
