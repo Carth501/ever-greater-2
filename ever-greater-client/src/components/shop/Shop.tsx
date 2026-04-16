@@ -3,21 +3,10 @@ import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { alpha, styled } from "@mui/material/styles";
-import {
-  OperationId,
-  ResourceType,
-  canAfford,
-  getBuySuppliesGainForGold,
-  getMaxSuppliesPurchaseGold,
-  getOperationCost,
-  getOperationGain,
-  operations,
-} from "ever-greater-shared";
 import { JSX } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { useOperations } from "../../hooks/useOperations";
-import ShopMoneyGroup from "./shop-groups/ShopMoneyGroup";
-import ShopSuppliesGroup from "./shop-groups/ShopSuppliesGroup";
+import { getShopOperationGroups } from "./operationRegistry";
 
 type ShopProps = {
   onPurchaseError?: (error: string) => void;
@@ -43,52 +32,14 @@ const ShopCard = styled(Paper)(({ theme }) => ({
 
 function Shop({ onPurchaseError }: ShopProps): JSX.Element {
   const { user: currentUser } = useAuth();
-  const { buySupplies, buyGold } = useOperations(onPurchaseError);
+  const operationHandlers = useOperations(onPurchaseError);
 
   if (!currentUser) {
     return <Typography>Loading...</Typography>;
   }
-
-  const money = currentUser.money ?? 0;
-  const gold = currentUser.gold ?? 0;
-  const operationContext = { user: currentUser };
-
-  const buySuppliesOperation = operations[OperationId.BUY_SUPPLIES];
-  const buyGoldOperation = operations[OperationId.BUY_GOLD];
-
-  const suppliesCost = getOperationCost(buySuppliesOperation, operationContext);
-  const suppliesGain = getOperationGain(buySuppliesOperation, operationContext);
-  const suppliesCostInGold = suppliesCost[ResourceType.GOLD] ?? 0;
-  const suppliesAmount = suppliesGain[ResourceType.PRINTER_SUPPLIES] ?? 0;
-  const maxSuppliesCostInGold = getMaxSuppliesPurchaseGold(currentUser);
-  const maxSuppliesAmount = getBuySuppliesGainForGold(maxSuppliesCostInGold);
-  const canAffordSupplies = gold > 0;
-
-  const goldCostPerUnit =
-    getOperationCost(buyGoldOperation, {
-      user: currentUser,
-      params: { quantity: 1 },
-    })[ResourceType.MONEY] ?? 0;
-  const canAffordGold1 = canAfford(currentUser, {
-    [ResourceType.MONEY]:
-      getOperationCost(buyGoldOperation, {
-        user: currentUser,
-        params: { quantity: 1 },
-      })[ResourceType.MONEY] ?? 0,
-  });
-  const canAffordGold10 = canAfford(currentUser, {
-    [ResourceType.MONEY]:
-      getOperationCost(buyGoldOperation, {
-        user: currentUser,
-        params: { quantity: 10 },
-      })[ResourceType.MONEY] ?? 0,
-  });
-  const canAffordGold100 = canAfford(currentUser, {
-    [ResourceType.MONEY]:
-      getOperationCost(buyGoldOperation, {
-        user: currentUser,
-        params: { quantity: 100 },
-      })[ResourceType.MONEY] ?? 0,
+  const shopGroups = getShopOperationGroups({
+    user: currentUser,
+    handlers: operationHandlers,
   });
 
   return (
@@ -107,26 +58,9 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
         </Box>
 
         <ShopGroups>
-          {currentUser.tickets_contributed > 200 && (
-            <ShopMoneyGroup
-              money={money}
-              goldCostPerUnit={goldCostPerUnit}
-              canAffordGold1={canAffordGold1}
-              canAffordGold10={canAffordGold10}
-              canAffordGold100={canAffordGold100}
-              onBuyGold={buyGold}
-            />
-          )}
-
-          <ShopSuppliesGroup
-            gold={gold}
-            maxSuppliesAmount={maxSuppliesAmount}
-            maxSuppliesCostInGold={maxSuppliesCostInGold}
-            suppliesAmount={suppliesAmount}
-            suppliesCostInGold={suppliesCostInGold}
-            canAffordSupplies={canAffordSupplies}
-            onBuySupplies={buySupplies}
-          />
+          {shopGroups.map((group) => (
+            <Box key={group.key}>{group.element}</Box>
+          ))}
         </ShopGroups>
       </Stack>
     </ShopCard>

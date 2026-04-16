@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   applyTransaction,
   canAfford,
+  clientOperationIds,
   getBuySuppliesGainForGold,
+  getCreditGenerationAmount,
   getMaxSuppliesPurchaseGold,
   getOperationCost,
   getOperationGain,
@@ -60,15 +62,19 @@ describe("shared operation contracts", () => {
       const user = makeUser(
         operationId === OperationId.TOGGLE_AUTO_BUY_SUPPLIES
           ? { auto_buy_supplies_purchased: true }
-          : {},
+          : operationId === OperationId.GENERATE_CREDIT
+            ? { credit_value: 99, credit_capacity_level: 100 }
+            : {},
       );
       const operation = operations[operationId];
       const params =
         operationId === OperationId.BUY_GOLD
           ? { quantity: 3 }
-          : operationId === OperationId.TOGGLE_AUTO_BUY_SUPPLIES
-            ? { active: false }
-            : undefined;
+          : operationId === OperationId.PRINT_TICKET
+            ? { quantity: 3 }
+            : operationId === OperationId.TOGGLE_AUTO_BUY_SUPPLIES
+              ? { active: false }
+              : undefined;
       const globalTicketCount =
         operationId === OperationId.INCREASE_CREDIT_CAPACITY ? 1000 : undefined;
 
@@ -231,6 +237,56 @@ describe("shared operation contracts", () => {
       }),
     ).toEqual({ [ResourceType.PRINTER_SUPPLIES]: 600 });
     expect(getBuySuppliesGainForGold(3)).toBe(600);
+  });
+
+  it("scales ticket printing by quantity", () => {
+    const user = makeUser({
+      printer_supplies: 20,
+      money: 0,
+      tickets_contributed: 0,
+    });
+
+    expect(
+      getOperationCost(operations[OperationId.PRINT_TICKET], {
+        user,
+        params: { quantity: 4 },
+      }),
+    ).toEqual({ [ResourceType.PRINTER_SUPPLIES]: 4 });
+    expect(
+      getOperationGain(operations[OperationId.PRINT_TICKET], {
+        user,
+        params: { quantity: 4 },
+      }),
+    ).toEqual({
+      [ResourceType.MONEY]: 4,
+      [ResourceType.TICKETS_CONTRIBUTED]: 4,
+    });
+  });
+
+  it("marks internal-only credit generation operations as non-client", () => {
+    expect(clientOperationIds).not.toContain(OperationId.GENERATE_CREDIT);
+  });
+
+  it("calculates periodic credit generation from current value and capacity", () => {
+    expect(
+      getCreditGenerationAmount(
+        makeUser({
+          credit_value: 1.5,
+          credit_generation_level: 4,
+          credit_capacity_level: 5,
+        }),
+      ),
+    ).toBe(0.4);
+
+    expect(
+      getCreditGenerationAmount(
+        makeUser({
+          credit_value: 4.9,
+          credit_generation_level: 4,
+          credit_capacity_level: 5,
+        }),
+      ),
+    ).toBeCloseTo(0.1);
   });
 
   it("rejects credit capacity when global tickets are insufficient", () => {

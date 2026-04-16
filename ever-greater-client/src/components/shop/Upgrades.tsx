@@ -3,22 +3,11 @@ import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { alpha, styled } from "@mui/material/styles";
-import {
-  OperationId,
-  ResourceType,
-  canAfford,
-  getBuySuppliesGainForGold,
-  getMaxSuppliesPurchaseGold,
-  getOperationCost,
-  operations,
-} from "ever-greater-shared";
 import { JSX } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { useGame } from "../../hooks/useGame";
 import { useOperations } from "../../hooks/useOperations";
-import ShopCreditGroup from "./shop-groups/ShopCreditGroup";
-import ShopGlobalTicketsGroup from "./shop-groups/ShopGlobalTicketsGroup";
-import UpgradeGoldGroup from "./shop-groups/UpgradeGoldGroup";
+import { getUpgradeOperationGroups } from "./operationRegistry";
 
 type UpgradesProps = {
   onPurchaseError?: (error: string) => void;
@@ -45,85 +34,16 @@ const UpgradesCard = styled(Paper)(({ theme }) => ({
 function Upgrades({ onPurchaseError }: UpgradesProps): JSX.Element {
   const { user: currentUser } = useAuth();
   const { count: globalTicketCount } = useGame();
-  const {
-    buyAutoprinter,
-    buyAutoBuySupplies,
-    toggleAutoBuySupplies,
-    increaseCreditGeneration,
-    increaseSuppliesBatch,
-    increaseCreditCapacity,
-  } = useOperations(onPurchaseError);
+  const operationHandlers = useOperations(onPurchaseError);
 
   if (!currentUser) {
     return <Typography>Loading...</Typography>;
   }
-
-  const gold = currentUser.gold ?? 0;
-  const autoprinters = currentUser.autoprinters ?? 0;
-  const operationContext = { user: currentUser };
-
-  const autoBuySuppliesOperation = operations[OperationId.AUTO_BUY_SUPPLIES];
-  const buyAutoprinterOperation = operations[OperationId.BUY_AUTOPRINTER];
-  const increaseSuppliesBatchOperation =
-    operations[OperationId.INCREASE_SUPPLIES_BATCH];
-  const increaseCreditGenerationOperation =
-    operations[OperationId.INCREASE_CREDIT_GENERATION];
-  const increaseCreditCapacityOperation =
-    operations[OperationId.INCREASE_CREDIT_CAPACITY];
-
-  const autoBuySuppliesCost =
-    getOperationCost(autoBuySuppliesOperation, operationContext)[
-      ResourceType.GOLD
-    ] ?? 0;
-  const canAffordAutoBuySupplies = canAfford(currentUser, {
-    [ResourceType.GOLD]: autoBuySuppliesCost,
+  const upgradeGroups = getUpgradeOperationGroups({
+    user: currentUser,
+    globalTicketCount,
+    handlers: operationHandlers,
   });
-
-  const suppliesBatchCost =
-    getOperationCost(increaseSuppliesBatchOperation, operationContext)[
-      ResourceType.GOLD
-    ] ?? 0;
-  const canAffordSuppliesBatch = canAfford(currentUser, {
-    [ResourceType.GOLD]: suppliesBatchCost,
-  });
-  const suppliesBatchLevel = currentUser.supplies_batch_level ?? 0;
-  const currentSuppliesBatchGold = getMaxSuppliesPurchaseGold(currentUser);
-  const currentSuppliesBatchAmount = getBuySuppliesGainForGold(
-    currentSuppliesBatchGold,
-  );
-  const nextSuppliesBatchGold = currentSuppliesBatchGold * 2;
-  const nextSuppliesBatchAmount = getBuySuppliesGainForGold(
-    nextSuppliesBatchGold,
-  );
-
-  const creditGenerationCost =
-    getOperationCost(increaseCreditGenerationOperation, operationContext)[
-      ResourceType.GOLD
-    ] ?? 0;
-  const canAffordCreditGeneration = canAfford(currentUser, {
-    [ResourceType.GOLD]: creditGenerationCost,
-  });
-
-  const autoprinterCost =
-    getOperationCost(buyAutoprinterOperation, operationContext)[
-      ResourceType.CREDIT
-    ] ?? 0;
-  const canAffordAutoprinter = canAfford(currentUser, {
-    [ResourceType.CREDIT]: autoprinterCost,
-  });
-
-  const ticketsContributed = currentUser.tickets_contributed ?? 0;
-  const ticketsWithdrawn = currentUser.tickets_withdrawn ?? 0;
-  const remainingCapacity = Math.max(0, ticketsContributed - ticketsWithdrawn);
-
-  const creditCapacityCost =
-    getOperationCost(increaseCreditCapacityOperation, operationContext)[
-      ResourceType.GLOBAL_TICKETS
-    ] ?? 0;
-  const canAffordCreditCapacity =
-    canAfford(currentUser, {
-      [ResourceType.GLOBAL_TICKETS]: creditCapacityCost,
-    }) && remainingCapacity >= creditCapacityCost;
 
   return (
     <UpgradesCard elevation={0}>
@@ -141,44 +61,9 @@ function Upgrades({ onPurchaseError }: UpgradesProps): JSX.Element {
         </Box>
 
         <UpgradeGroups>
-          <UpgradeGoldGroup
-            gold={gold}
-            autoBuyCost={autoBuySuppliesCost}
-            autoBuyPurchased={currentUser.auto_buy_supplies_purchased}
-            autoBuyActive={currentUser.auto_buy_supplies_active}
-            canAffordAutoBuyUnlock={canAffordAutoBuySupplies}
-            creditGenerationCost={creditGenerationCost}
-            canAffordCreditGeneration={canAffordCreditGeneration}
-            suppliesBatchCost={suppliesBatchCost}
-            suppliesBatchLevel={suppliesBatchLevel}
-            currentSuppliesBatchAmount={currentSuppliesBatchAmount}
-            currentSuppliesBatchGold={currentSuppliesBatchGold}
-            nextSuppliesBatchAmount={nextSuppliesBatchAmount}
-            nextSuppliesBatchGold={nextSuppliesBatchGold}
-            canAffordSuppliesBatch={canAffordSuppliesBatch}
-            onBuyAutoBuySupplies={buyAutoBuySupplies}
-            onToggleAutoBuySupplies={toggleAutoBuySupplies}
-            onIncreaseCreditGeneration={increaseCreditGeneration}
-            onIncreaseSuppliesBatch={increaseSuppliesBatch}
-          />
-
-          {currentUser.tickets_contributed > 500 && (
-            <ShopCreditGroup
-              user={currentUser}
-              autoprinters={autoprinters}
-              autoprinterCost={autoprinterCost}
-              canAffordAutoprinter={canAffordAutoprinter}
-              onBuyAutoprinter={buyAutoprinter}
-            />
-          )}
-
-          <ShopGlobalTicketsGroup
-            globalTicketCount={globalTicketCount}
-            remainingCapacity={remainingCapacity}
-            creditCapacityCost={creditCapacityCost}
-            canAffordCreditCapacity={canAffordCreditCapacity}
-            onIncreaseCreditCapacity={increaseCreditCapacity}
-          />
+          {upgradeGroups.map((group) => (
+            <Box key={group.key}>{group.element}</Box>
+          ))}
         </UpgradeGroups>
       </Stack>
     </UpgradesCard>

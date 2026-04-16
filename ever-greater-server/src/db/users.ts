@@ -12,20 +12,28 @@ import {
 
 type QueryClient = PoolClient | typeof pool;
 
-export async function getGlobalCount(): Promise<number> {
-  const result = await pool.query(
+export async function getGlobalCount(client?: PoolClient): Promise<number> {
+  const dbClient: QueryClient = client ?? pool;
+  const result = await dbClient.query(
     "SELECT count FROM global_state WHERE id = 1",
   );
   return result.rows[0].count;
 }
 
-export async function incrementGlobalCount(): Promise<number> {
-  const result = await pool.query(`
+export async function incrementGlobalCount(
+  amount = 1,
+  client?: PoolClient,
+): Promise<number> {
+  const dbClient: QueryClient = client ?? pool;
+  const result = await dbClient.query(
+    `
     UPDATE global_state
-    SET count = count + 1, updated_at = CURRENT_TIMESTAMP
+    SET count = count + $1, updated_at = CURRENT_TIMESTAMP
     WHERE id = 1
     RETURNING count
-  `);
+  `,
+    [amount],
+  );
   return result.rows[0].count;
 }
 
@@ -117,8 +125,12 @@ export async function createUser(
   return hydrateUserWithWithdrawals(result.rows[0] as User);
 }
 
-export async function getUserById(userId: number): Promise<User | null> {
-  const result = await pool.query(
+export async function getUserById(
+  userId: number,
+  client?: PoolClient,
+): Promise<User | null> {
+  const dbClient: QueryClient = client ?? pool;
+  const result = await dbClient.query(
     `SELECT ${USER_SELECT_COLUMNS} FROM users WHERE id = $1`,
     [userId],
   );
@@ -127,14 +139,16 @@ export async function getUserById(userId: number): Promise<User | null> {
     return null;
   }
 
-  return hydrateUserWithWithdrawals(result.rows[0] as User);
+  return hydrateUserWithWithdrawals(result.rows[0] as User, client);
 }
 
 export async function purchaseAutoBuySupplies(
   userId: number,
   goldCost: number,
+  client?: PoolClient,
 ): Promise<User> {
-  const result = await pool.query(
+  const dbClient: QueryClient = client ?? pool;
+  const result = await dbClient.query(
     `
       UPDATE users
       SET
@@ -153,14 +167,16 @@ export async function purchaseAutoBuySupplies(
     throw new Error("Auto-buy supplies already unlocked or insufficient gold");
   }
 
-  return hydrateUserWithWithdrawals(result.rows[0] as User);
+  return hydrateUserWithWithdrawals(result.rows[0] as User, client);
 }
 
 export async function setAutoBuySuppliesActive(
   userId: number,
   active: boolean,
+  client?: PoolClient,
 ): Promise<User> {
-  const result = await pool.query(
+  const dbClient: QueryClient = client ?? pool;
+  const result = await dbClient.query(
     `
       UPDATE users
       SET auto_buy_supplies_active = $1
@@ -174,5 +190,5 @@ export async function setAutoBuySuppliesActive(
     throw new Error("Auto-buy supplies not unlocked");
   }
 
-  return hydrateUserWithWithdrawals(result.rows[0] as User);
+  return hydrateUserWithWithdrawals(result.rows[0] as User, client);
 }

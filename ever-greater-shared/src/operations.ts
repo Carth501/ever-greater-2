@@ -19,6 +19,8 @@ export interface OperationContext {
  */
 export type ResourceCalculator = (ctx: OperationContext) => ResourceAmount;
 
+export type OperationScope = "client" | "internal";
+
 /**
  * Operation definition with static or dynamic costs and gains.
  */
@@ -26,6 +28,7 @@ export interface Operation {
   id: string;
   name: string;
   description?: string;
+  scope?: OperationScope;
   cost: ResourceAmount | ResourceCalculator;
   gain: ResourceAmount | ResourceCalculator;
 }
@@ -44,10 +47,19 @@ export enum OperationId {
   INCREASE_SUPPLIES_BATCH = "INCREASE_SUPPLIES_BATCH",
   INCREASE_CREDIT_GENERATION = "INCREASE_CREDIT_GENERATION",
   INCREASE_CREDIT_CAPACITY = "INCREASE_CREDIT_CAPACITY",
+  GENERATE_CREDIT = "GENERATE_CREDIT",
 }
 
 export const SUPPLIES_PER_GOLD = 200;
 export const SUPPLIES_BATCH_UPGRADE_COST = 1;
+
+function getOperationQuantity(params?: any): number {
+  if (!Number.isInteger(params?.quantity) || params.quantity < 1) {
+    return 1;
+  }
+
+  return params.quantity;
+}
 
 export function getSuppliesBatchLevel(user: User): number {
   return Math.max(0, user.supplies_batch_level ?? 0);
@@ -67,6 +79,16 @@ export function getBuySuppliesSpend(user: User): number {
 
 export function getBuySuppliesGainForGold(spendGold: number): number {
   return spendGold * SUPPLIES_PER_GOLD;
+}
+
+export function getCreditGenerationAmount(user: User): number {
+  const generatedCredit = Math.max(0, user.credit_generation_level ?? 0) / 10;
+  const remainingCapacity = Math.max(
+    0,
+    (user.credit_capacity_level ?? 0) - (user.credit_value ?? 0),
+  );
+
+  return Math.min(generatedCredit, remainingCapacity);
 }
 
 /**
@@ -115,13 +137,13 @@ export const operations: Record<OperationId, Operation> = {
     name: "Buy Gold",
     description: "Purchase gold with money",
     cost: (ctx: OperationContext) => {
-      const quantity = ctx.params?.quantity ?? 1;
+      const quantity = getOperationQuantity(ctx.params);
       return {
         [ResourceType.MONEY]: 100 * quantity,
       };
     },
     gain: (ctx: OperationContext) => {
-      const quantity = ctx.params?.quantity ?? 1;
+      const quantity = getOperationQuantity(ctx.params);
       return {
         [ResourceType.GOLD]: quantity,
       };
@@ -148,12 +170,18 @@ export const operations: Record<OperationId, Operation> = {
     id: OperationId.PRINT_TICKET,
     name: "Print Ticket",
     description: "Print a ticket using supplies",
-    cost: {
-      [ResourceType.PRINTER_SUPPLIES]: 1,
+    cost: (ctx: OperationContext) => {
+      const quantity = getOperationQuantity(ctx.params);
+      return {
+        [ResourceType.PRINTER_SUPPLIES]: quantity,
+      };
     },
-    gain: {
-      [ResourceType.MONEY]: 1,
-      [ResourceType.TICKETS_CONTRIBUTED]: 1,
+    gain: (ctx: OperationContext) => {
+      const quantity = getOperationQuantity(ctx.params);
+      return {
+        [ResourceType.MONEY]: quantity,
+        [ResourceType.TICKETS_CONTRIBUTED]: quantity,
+      };
     },
   },
 
@@ -192,7 +220,32 @@ export const operations: Record<OperationId, Operation> = {
       [ResourceType.CREDIT_CAPACITY_LEVEL]: 1,
     },
   },
+
+  [OperationId.GENERATE_CREDIT]: {
+    id: OperationId.GENERATE_CREDIT,
+    name: "Generate Credit",
+    description: "Internal periodic credit generation",
+    scope: "internal",
+    cost: {},
+    gain: (ctx: OperationContext) => {
+      const generatedCredit = getCreditGenerationAmount(ctx.user);
+
+      return generatedCredit > 0
+        ? {
+            [ResourceType.CREDIT]: generatedCredit,
+          }
+        : {};
+    },
+  },
 };
+
+export const clientOperationIds = (
+  Object.values(OperationId) as OperationId[]
+).filter((operationId) => operations[operationId].scope !== "internal");
+
+export function isClientOperationId(operationId: OperationId): boolean {
+  return operations[operationId].scope !== "internal";
+}
 
 /**
  * Evaluates a cost or gain, returning a concrete ResourceAmount.
@@ -349,6 +402,18 @@ export function validateOperation(
     return {
       valid: false,
       error: "Auto-buy supplies already unlocked",
+      cost,
+      gain,
+    };
+  }
+
+  if (
+    operation.id === OperationId.GENERATE_CREDIT &&
+    (gain[ResourceType.CREDIT] ?? 0) <= 0
+  ) {
+    return {
+      valid: false,
+      error: "No credit generated",
       cost,
       gain,
     };

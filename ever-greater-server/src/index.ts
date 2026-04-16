@@ -4,10 +4,8 @@ import cors from "cors";
 import { randomUUID } from "crypto";
 import "dotenv/config";
 import {
+  isClientOperationId,
   OperationId,
-  operations,
-  ResourceType,
-  validateOperation,
   type GlobalCountUpdate,
   type UserResourceUpdate,
 } from "ever-greater-shared";
@@ -24,18 +22,19 @@ import {
   cleanupOldTicketWithdrawals,
   closePool,
   createUser,
-  executeResourceTransaction,
   getGlobalCount,
   getUserByEmail,
   getUserById,
-  incrementGlobalCount,
   pool,
   prepareDatabaseForRuntime,
   processAutoprinters,
-  purchaseAutoBuySupplies,
-  setAutoBuySuppliesActive,
   updateAllUsersCreditValues,
 } from "./db.js";
+import {
+  executeOperationForUser,
+  OperationUserNotFoundError,
+  OperationValidationError,
+} from "./operations/execution.js";
 
 declare module "express-session" {
   interface SessionData {
@@ -224,6 +223,53 @@ function sendError(
   payload: ApiErrorPayload,
 ): Response {
   return res.status(status).json(payload);
+}
+
+function sendOperationValidationError(
+  res: Response,
+  error: OperationValidationError,
+): Response {
+  const { validation } = error;
+
+  if (validation.error === "Insufficient resources") {
+    return sendError(res, 403, {
+      error: validation.error,
+      code: "INSUFFICIENT_RESOURCES",
+      insufficientResources: validation.insufficientResources,
+      cost: validation.cost,
+      gain: validation.gain,
+    });
+  }
+
+  if (validation.error === "Auto-buy supplies not unlocked") {
+    return sendError(res, 403, {
+      error: validation.error,
+      code: "AUTO_BUY_SUPPLIES_NOT_UNLOCKED",
+      cost: validation.cost,
+      gain: validation.gain,
+    });
+  }
+
+  if (
+    validation.error === "Quantity must be a positive integer" ||
+    validation.error === "'active' boolean is required"
+  ) {
+    return sendError(res, 400, {
+      error: "INVALID_REQUEST",
+      code: "INVALID_REQUEST",
+      detail:
+        validation.error === "Quantity must be a positive integer"
+          ? "quantity must be a positive integer"
+          : validation.error,
+    });
+  }
+
+  return sendError(res, 400, {
+    error: validation.error || "Invalid operation parameters",
+    code: "INVALID_OPERATION",
+    cost: validation.cost,
+    gain: validation.gain,
+  });
 }
 
 const credentialsSchema = z.object({
@@ -561,178 +607,58 @@ function createApp(): Express {
       const requestBody = requestBodyResult.data;
 
       const operationId = operationIdResult.data;
-      const operation = operations[operationId];
-
-      const user = await getUserById(req.session.userId);
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
-
-      // Get global ticket count for validation
-      const globalTicketCount = await getGlobalCount();
-
-      let userForValidation = user;
-
-      // Auto-buy fallback: if print is requested with insufficient supplies and
-      // auto-buy is active, try to purchase supplies before validating print again.
-      if (
-        operationId === OperationId.PRINT_TICKET &&
-        user.auto_buy_supplies_active
-      ) {
-        const initialPrintValidation = validateOperation(
-          user,
-          operation,
-          requestBody,
-          globalTicketCount,
-        );
-
-        const missingPrinterSupplies =
-          !initialPrintValidation.valid &&
-          initialPrintValidation.error === "Insufficient resources" &&
-          initialPrintValidation.insufficientResources?.includes(
-            ResourceType.PRINTER_SUPPLIES,
-          );
-
-        if (missingPrinterSupplies) {
-          const buySuppliesOperation = operations[OperationId.BUY_SUPPLIES];
-          const buySuppliesValidation = validateOperation(
-            user,
-            buySuppliesOperation,
-            undefined,
-            globalTicketCount,
-          );
-
-          if (buySuppliesValidation.valid) {
-            try {
-              userForValidation = await executeResourceTransaction(
-                req.session.userId,
-                buySuppliesValidation.cost,
-                buySuppliesValidation.gain,
-              );
-            } catch {
-              // Preserve existing error semantics for print: if fallback buy cannot
-              // complete due races or resources, print validation below reports
-              // insufficient printer supplies.
-            }
-          }
-        }
-      }
-
-      // Validate operation
-      const validation = validateOperation(
-        userForValidation,
-        operation,
-        requestBody,
-        globalTicketCount,
-      );
-      if (!validation.valid) {
-        if (validation.error === "Insufficient resources") {
-          return sendError(res, 403, {
-            error: validation.error,
-            code: "INSUFFICIENT_RESOURCES",
-            insufficientResources: validation.insufficientResources,
-            cost: validation.cost,
-            gain: validation.gain,
-          });
-        }
-
-        if (validation.error === "Auto-buy supplies not unlocked") {
-          return sendError(res, 403, {
-            error: validation.error,
-            code: "AUTO_BUY_SUPPLIES_NOT_UNLOCKED",
-            cost: validation.cost,
-            gain: validation.gain,
-          });
-        }
-
-        if (
-          validation.error === "Quantity must be a positive integer" ||
-          validation.error === "'active' boolean is required"
-        ) {
-          return sendError(res, 400, {
-            error: "INVALID_REQUEST",
-            code: "INVALID_REQUEST",
-            detail:
-              validation.error === "Quantity must be a positive integer"
-                ? "quantity must be a positive integer"
-                : validation.error,
-          });
-        }
-
+      if (!isClientOperationId(operationId)) {
         return sendError(res, 400, {
-          error: validation.error || "Invalid operation parameters",
-          code: "INVALID_OPERATION",
-          cost: validation.cost,
-          gain: validation.gain,
+          error: "INVALID_REQUEST",
+          code: "INVALID_REQUEST",
+          detail: `Unknown operationId: ${req.params.operationId}`,
         });
       }
 
-      // Execute the transaction.
-      const updatedUser =
-        operationId === OperationId.AUTO_BUY_SUPPLIES
-          ? await purchaseAutoBuySupplies(
-              req.session.userId,
-              validation.cost[ResourceType.GOLD] ?? 0,
-            )
-          : operationId === OperationId.TOGGLE_AUTO_BUY_SUPPLIES
-            ? await setAutoBuySuppliesActive(
-                req.session.userId,
-                requestBody.active as boolean,
-              )
-          : await executeResourceTransaction(
-              req.session.userId,
-              validation.cost,
-              validation.gain,
-            );
+      const result = await executeOperationForUser(
+        req.session.userId,
+        operationId,
+        requestBody,
+        { allowPrintAutoBuyFallback: true },
+      );
 
-      // Handle ticket printing if applicable
-      const gainedTickets =
-        validation.gain[ResourceType.TICKETS_CONTRIBUTED] ?? 0;
-      let newCount: number | null = null;
-
-      if (gainedTickets > 0) {
-        for (let i = 0; i < gainedTickets; i += 1) {
-          newCount = await incrementGlobalCount();
-        }
-
-        if (newCount !== null) {
-          broadcastCount(newCount);
-        }
-      }
-
-      // Handle global ticket cost and broadcast updated count
-      const globalTicketCost =
-        validation.cost[ResourceType.GLOBAL_TICKETS] ?? 0;
-      if (globalTicketCost > 0) {
-        // Fetch and broadcast the new global count
-        newCount = await getGlobalCount();
-        broadcastCount(newCount);
+      if (result.count !== null) {
+        broadcastCount(result.count);
       }
 
       // Broadcast user updates
       await sendUserUpdate(req.session.userId, {
-        printer_supplies: updatedUser.printer_supplies,
-        money: updatedUser.money,
-        gold: updatedUser.gold,
-        autoprinters: updatedUser.autoprinters,
-        tickets_contributed: updatedUser.tickets_contributed,
-        tickets_withdrawn: updatedUser.tickets_withdrawn,
-        credit_value: updatedUser.credit_value,
-        credit_generation_level: updatedUser.credit_generation_level,
-        credit_capacity_level: updatedUser.credit_capacity_level,
-        supplies_batch_level: updatedUser.supplies_batch_level,
-        auto_buy_supplies_purchased: updatedUser.auto_buy_supplies_purchased,
-        auto_buy_supplies_active: updatedUser.auto_buy_supplies_active,
+        printer_supplies: result.user.printer_supplies,
+        money: result.user.money,
+        gold: result.user.gold,
+        autoprinters: result.user.autoprinters,
+        tickets_contributed: result.user.tickets_contributed,
+        tickets_withdrawn: result.user.tickets_withdrawn,
+        credit_value: result.user.credit_value,
+        credit_generation_level: result.user.credit_generation_level,
+        credit_capacity_level: result.user.credit_capacity_level,
+        supplies_batch_level: result.user.supplies_batch_level,
+        auto_buy_supplies_purchased: result.user.auto_buy_supplies_purchased,
+        auto_buy_supplies_active: result.user.auto_buy_supplies_active,
       });
 
       return res.json({
-        operationId,
-        cost: validation.cost,
-        gain: validation.gain,
-        count: newCount,
-        user: toClientUser(updatedUser),
+        operationId: result.operationId,
+        cost: result.cost,
+        gain: result.gain,
+        count: result.count,
+        user: toClientUser(result.user),
       });
     } catch (error) {
+      if (error instanceof OperationValidationError) {
+        return sendOperationValidationError(res, error);
+      }
+      if (error instanceof OperationUserNotFoundError) {
+        return sendError(res, 404, {
+          error: "User not found",
+          code: "USER_NOT_FOUND",
+        });
+      }
       if (
         error instanceof Error &&
         error.name === "GlobalTicketLimitExceeded"

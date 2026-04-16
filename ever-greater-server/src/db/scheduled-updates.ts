@@ -1,46 +1,97 @@
-import { withPoolClient, withTransaction } from "./core.js";
+import { OperationId, ResourceType, type User } from "ever-greater-shared";
+import {
+  executeOperationForUser,
+  OperationValidationError,
+} from "../operations/execution.js";
+import {
+  coerceUserRowNumbersInPlace,
+  USER_SELECT_COLUMNS,
+  withPoolClient,
+  withTransaction,
+} from "./core.js";
+
+async function selectScheduledUsers(
+  whereClause: string,
+  client: Parameters<typeof withPoolClient>[0] extends (
+    arg: infer T,
+  ) => Promise<unknown>
+    ? T
+    : never,
+): Promise<User[]> {
+  const result = await client.query(
+    `SELECT ${USER_SELECT_COLUMNS}, 0 AS tickets_withdrawn FROM users WHERE ${whereClause}`,
+  );
+
+  return result.rows.map((row) => {
+    const userRow = row as User;
+    coerceUserRowNumbersInPlace(userRow);
+    userRow.tickets_withdrawn = Number(userRow.tickets_withdrawn ?? 0);
+    return userRow;
+  });
+}
 
 export async function processAutoprinters(): Promise<{
   totalTickets: number;
   newGlobalCount: number | null;
 }> {
   return withTransaction(async (client) => {
-    await client.query(`
-      UPDATE users
-      SET
-        gold = gold - 1,
-        printer_supplies = printer_supplies + 200
-      WHERE
-        auto_buy_supplies_active = TRUE
-        AND auto_buy_supplies_purchased = TRUE
-        AND printer_supplies < autoprinters
-        AND autoprinters > 0
-        AND gold >= 1
-    `);
+    const users = await selectScheduledUsers("autoprinters > 0", client);
 
-    const usersResult = await client.query(`
-      UPDATE users
-      SET
-        printer_supplies = printer_supplies - LEAST(autoprinters, printer_supplies),
-        money = money + LEAST(autoprinters, printer_supplies),
-        tickets_contributed = tickets_contributed + LEAST(autoprinters, printer_supplies)
-      WHERE autoprinters > 0 AND printer_supplies > 0
-      RETURNING LEAST(autoprinters, printer_supplies) as tickets_printed
-    `);
-
-    const totalTickets = usersResult.rows.reduce(
-      (sum: number, row: { tickets_printed: number }) =>
-        sum + row.tickets_printed,
-      0,
-    );
-
+    let totalTickets = 0;
     let newGlobalCount: number | null = null;
-    if (totalTickets > 0) {
-      const globalResult = await client.query(
-        "UPDATE global_state SET count = count + $1, updated_at = CURRENT_TIMESTAMP WHERE id = 1 RETURNING count",
-        [totalTickets],
+
+    for (const user of users) {
+      let currentUser = user;
+
+      const needsAutoBuyRefill =
+        currentUser.auto_buy_supplies_active &&
+        currentUser.auto_buy_supplies_purchased &&
+        currentUser.printer_supplies < currentUser.autoprinters;
+
+      if (needsAutoBuyRefill) {
+        try {
+          const refillResult = await executeOperationForUser(
+            currentUser.id,
+            OperationId.BUY_SUPPLIES,
+            undefined,
+            {
+              client,
+              currentUser,
+              globalTicketCount: 0,
+              allowPrintAutoBuyFallback: false,
+            },
+          );
+          currentUser = refillResult.user;
+        } catch (error) {
+          if (!(error instanceof OperationValidationError)) {
+            throw error;
+          }
+        }
+      }
+
+      const printQuantity = Math.min(
+        currentUser.autoprinters ?? 0,
+        currentUser.printer_supplies ?? 0,
       );
-      newGlobalCount = globalResult.rows[0].count;
+
+      if (printQuantity < 1) {
+        continue;
+      }
+
+      const printResult = await executeOperationForUser(
+        currentUser.id,
+        OperationId.PRINT_TICKET,
+        { quantity: printQuantity },
+        {
+          client,
+          currentUser,
+          globalTicketCount: 0,
+          allowPrintAutoBuyFallback: false,
+        },
+      );
+
+      totalTickets += printResult.gain[ResourceType.TICKETS_CONTRIBUTED] ?? 0;
+      newGlobalCount = printResult.count;
     }
 
     return { totalTickets, newGlobalCount };
@@ -49,14 +100,31 @@ export async function processAutoprinters(): Promise<{
 
 export async function updateAllUsersCreditValues(): Promise<number> {
   return withPoolClient(async (client) => {
-    const result = await client.query(`
-      UPDATE users
-      SET credit_value = LEAST(
-        credit_value + credit_generation_level / 10.0,
-        credit_capacity_level
-      )
-      WHERE credit_generation_level > 0 OR credit_value < credit_capacity_level
-    `);
-    return result.rowCount || 0;
+    const users = await selectScheduledUsers(
+      "credit_generation_level > 0 AND credit_value < credit_capacity_level",
+      client,
+    );
+
+    let updatedUsers = 0;
+
+    for (const user of users) {
+      const result = await executeOperationForUser(
+        user.id,
+        OperationId.GENERATE_CREDIT,
+        undefined,
+        {
+          client,
+          currentUser: user,
+          globalTicketCount: 0,
+          allowPrintAutoBuyFallback: false,
+        },
+      );
+
+      if ((result.gain[ResourceType.CREDIT] ?? 0) > 0) {
+        updatedUsers += 1;
+      }
+    }
+
+    return updatedUsers;
   });
 }

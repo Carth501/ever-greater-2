@@ -1,9 +1,10 @@
 import bcrypt from 'bcryptjs';
-import { OperationId, ResourceType } from 'ever-greater-shared';
+import { clientOperationIds, OperationId, ResourceType } from 'ever-greater-shared';
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as db from './db.ts';
 import { buildPeriodicUserUpdatePayload, createApp } from './index.ts';
+import * as operationDb from './operations/db-access.ts';
 
 // Mock database BEFORE importing the app
 vi.mock('./db.ts', () => ({
@@ -27,15 +28,44 @@ vi.mock('./db.ts', () => ({
   },
 }));
 
+vi.mock('./operations/db-access.ts', () => ({
+  executeResourceTransaction: vi.fn(),
+  getGlobalCount: vi.fn(),
+  getUserById: vi.fn(),
+  incrementGlobalCount: vi.fn(),
+  purchaseAutoBuySupplies: vi.fn(),
+  setAutoBuySuppliesActive: vi.fn(),
+}));
+
 describe('Express API Endpoints', () => {
   let app;
   let agent;
   let consoleErrorSpy;
+  const mockOperationDb = operationDb;
 
   beforeEach(() => {
     // Clear all mocks
     vi.clearAllMocks();
     consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    mockOperationDb.executeResourceTransaction.mockImplementation((...args) =>
+      db.executeResourceTransaction(...args),
+    );
+    mockOperationDb.getGlobalCount.mockImplementation((...args) =>
+      db.getGlobalCount(...args),
+    );
+    mockOperationDb.getUserById.mockImplementation((...args) =>
+      db.getUserById(...args),
+    );
+    mockOperationDb.incrementGlobalCount.mockImplementation((...args) =>
+      db.incrementGlobalCount(...args),
+    );
+    mockOperationDb.purchaseAutoBuySupplies.mockImplementation((...args) =>
+      db.purchaseAutoBuySupplies(...args),
+    );
+    mockOperationDb.setAutoBuySuppliesActive.mockImplementation((...args) =>
+      db.setAutoBuySuppliesActive(...args),
+    );
 
     // Create a new app instance for each test
     app = createApp();
@@ -371,7 +401,7 @@ describe('Express API Endpoints', () => {
         .send({ email: 'test@example.com', password: 'password123' })
         .expect(200);
 
-      for (const operationId of Object.values(OperationId)) {
+      for (const operationId of clientOperationIds) {
         const payload =
           operationId === OperationId.BUY_GOLD
             ? { quantity: 1 }
@@ -429,7 +459,7 @@ describe('Express API Endpoints', () => {
 
       expect(response.body.user.auto_buy_supplies_purchased).toBe(true);
       expect(response.body.user.auto_buy_supplies_active).toBe(true);
-      expect(db.purchaseAutoBuySupplies).toHaveBeenCalledWith(1, 10);
+      expect(db.purchaseAutoBuySupplies).toHaveBeenCalledWith(1, 10, undefined);
     });
 
     it('should partially buy supplies using the upgraded batch ratio when gold is below the batch cap', async () => {
@@ -476,6 +506,7 @@ describe('Express API Endpoints', () => {
         1,
         { [ResourceType.GOLD]: 3 },
         { [ResourceType.PRINTER_SUPPLIES]: 600 },
+        undefined,
       );
       expect(response.body.cost).toEqual({ [ResourceType.GOLD]: 3 });
       expect(response.body.gain).toEqual({ [ResourceType.PRINTER_SUPPLIES]: 600 });
@@ -589,6 +620,7 @@ describe('Express API Endpoints', () => {
         1,
         { [ResourceType.GOLD]: 1 },
         { [ResourceType.PRINTER_SUPPLIES]: 200 },
+        undefined,
       );
       expect(db.executeResourceTransaction).toHaveBeenNthCalledWith(
         2,
@@ -598,6 +630,7 @@ describe('Express API Endpoints', () => {
           [ResourceType.MONEY]: 1,
           [ResourceType.TICKETS_CONTRIBUTED]: 1,
         },
+        undefined,
       );
       expect(response.body.user.printer_supplies).toBe(199);
       expect(response.body.user.gold).toBe(2);
@@ -880,7 +913,7 @@ describe('Express API Endpoints', () => {
         .send({ active: false })
         .expect(200);
 
-      expect(db.setAutoBuySuppliesActive).toHaveBeenCalledWith(1, false);
+      expect(db.setAutoBuySuppliesActive).toHaveBeenCalledWith(1, false, undefined);
       expect(response.body.operationId).toBe(OperationId.TOGGLE_AUTO_BUY_SUPPLIES);
       expect(response.body.cost).toEqual({});
       expect(response.body.gain).toEqual({});

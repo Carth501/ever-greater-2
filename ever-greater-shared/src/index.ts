@@ -14,18 +14,22 @@ export type { ResourceAmount, User } from "./resources.js";
 export {
   applyTransaction,
   canAfford,
+  clientOperationIds,
   evaluateResourceAmount,
   getBuySuppliesGainForGold,
   getBuySuppliesSpend,
+  getCreditGenerationAmount,
   getMaxSuppliesPurchaseGold,
   getOperationCost,
   getOperationGain,
   getSuppliesBatchLevel,
+  isClientOperationId,
   OperationId,
   operations,
   SUPPLIES_BATCH_UPGRADE_COST,
   SUPPLIES_PER_GOLD,
   validateOperation,
+  type OperationScope,
 } from "./operations.js";
 
 export type {

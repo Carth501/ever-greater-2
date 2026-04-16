@@ -1,4 +1,4 @@
-import { ResourceType } from 'ever-greater-shared';
+import { OperationId, ResourceType } from 'ever-greater-shared';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 describe('Database Functions', () => {
@@ -6,6 +6,15 @@ describe('Database Functions', () => {
   let mockClient;
   let db;
   let consoleErrorSpy;
+  let mockExecuteOperationForUser;
+
+  class MockOperationValidationError extends Error {
+    constructor(validation) {
+      super(validation?.error || 'Invalid operation');
+      this.name = 'OperationValidationError';
+      this.validation = validation;
+    }
+  }
 
   beforeEach(async () => {
     // Clear all mocks
@@ -34,6 +43,12 @@ describe('Database Functions', () => {
       Pool: vi.fn(function() {
         return mockPool;
       }),
+    }));
+
+    mockExecuteOperationForUser = vi.fn();
+    vi.doMock('./operations/execution.js', () => ({
+      executeOperationForUser: mockExecuteOperationForUser,
+      OperationValidationError: MockOperationValidationError,
     }));
 
     // Dynamically import db.js fresh with the mocked pg
@@ -323,7 +338,8 @@ describe('Database Functions', () => {
 
       expect(newCount).toBe(43);
       expect(mockPool.query).toHaveBeenCalledWith(
-        expect.stringContaining('UPDATE global_state')
+        expect.stringContaining('UPDATE global_state'),
+        [1],
       );
     });
 
@@ -471,39 +487,71 @@ describe('Database Functions', () => {
   });
 
   describe('updateAllUsersCreditValues', () => {
-    it('should increment credit values based on generation level and capacity', async () => {
-      // Mock the SQL query for credit updates
-      mockClient.query.mockResolvedValue({ rows: [], rowCount: 5 });
+    it('should route periodic credit generation through the internal operation executor', async () => {
+      mockClient.query.mockResolvedValue({
+        rows: [
+          {
+            id: 1,
+            email: 'one@example.com',
+            tickets_contributed: 10,
+            printer_supplies: 100,
+            money: 0,
+            gold: 0,
+            autoprinters: 0,
+            credit_value: 1,
+            credit_generation_level: 2,
+            credit_capacity_level: 5,
+            supplies_batch_level: 0,
+            auto_buy_supplies_purchased: false,
+            auto_buy_supplies_active: false,
+            tickets_withdrawn: 0,
+          },
+          {
+            id: 2,
+            email: 'two@example.com',
+            tickets_contributed: 20,
+            printer_supplies: 100,
+            money: 0,
+            gold: 0,
+            autoprinters: 0,
+            credit_value: 2,
+            credit_generation_level: 3,
+            credit_capacity_level: 5,
+            supplies_batch_level: 0,
+            auto_buy_supplies_purchased: false,
+            auto_buy_supplies_active: false,
+            tickets_withdrawn: 0,
+          },
+        ],
+      });
+      mockExecuteOperationForUser
+        .mockResolvedValueOnce({ gain: { [ResourceType.CREDIT]: 0.2 } })
+        .mockResolvedValueOnce({ gain: { [ResourceType.CREDIT]: 0.3 } });
 
       const result = await db.updateAllUsersCreditValues();
 
-      // Verify the query was called
-      expect(mockClient.query).toHaveBeenCalled();
-      
-      // Check that the SQL query contains the credit update logic
-      const queryCall = mockClient.query.mock.calls[0][0];
-      expect(queryCall).toContain('UPDATE users');
-      expect(queryCall).toContain('credit_value');
-      expect(queryCall).toContain('credit_generation_level');
-      expect(queryCall).toContain('credit_capacity_level');
-      
-      // Verify the formula: LEAST(credit_value + 0.1 * generation_level, credit_capacity_level)
-      expect(queryCall).toContain('LEAST');
-      
-      // Verify return value
-      expect(result).toBe(5);
+      expect(mockExecuteOperationForUser).toHaveBeenCalledTimes(2);
+      expect(mockExecuteOperationForUser).toHaveBeenNthCalledWith(
+        1,
+        1,
+        OperationId.GENERATE_CREDIT,
+        undefined,
+        expect.objectContaining({
+          client: mockClient,
+          globalTicketCount: 0,
+          allowPrintAutoBuyFallback: false,
+        }),
+      );
+      expect(result).toBe(2);
     });
 
-    it('should use floating point division to support fractional credit accumulation', async () => {
-      // Mock the SQL query for credit updates
-      mockClient.query.mockResolvedValue({ rows: [], rowCount: 3 });
+    it('should return zero when no users are eligible for periodic credit generation', async () => {
+      mockClient.query.mockResolvedValue({ rows: [] });
 
       const result = await db.updateAllUsersCreditValues();
 
-      // Check that the SQL query uses floating point division (10.0) not integer division (10)
-      const queryCall = mockClient.query.mock.calls[0][0];
-      expect(queryCall).toContain('credit_generation_level / 10.0');
-      expect(result).toBe(3);
+      expect(mockExecuteOperationForUser).not.toHaveBeenCalled();
+      expect(result).toBe(0);
     });
 
     it('should handle errors during credit update', async () => {
@@ -632,31 +680,123 @@ describe('Database Functions', () => {
   });
 
   describe('processAutoprinters', () => {
-    it('updates global count when autoprinters produce tickets', async () => {
+    it('routes auto-buy refills and printing through the operation executor', async () => {
       mockClient.query.mockImplementation(async (query) => {
         if (query === 'BEGIN' || query === 'COMMIT') {
           return { rows: [] };
         }
 
-        if (query.includes('UPDATE users') && query.includes('auto_buy_supplies_active')) {
-          return { rows: [], rowCount: 1 };
-        }
-
-        if (query.includes('RETURNING LEAST(autoprinters, printer_supplies) as tickets_printed')) {
-          return { rows: [{ tickets_printed: 2 }, { tickets_printed: 3 }] };
-        }
-
-        if (query.includes('UPDATE global_state SET count = count + $1')) {
-          return { rows: [{ count: 105 }] };
+        if (query.includes('FROM users WHERE autoprinters > 0')) {
+          return {
+            rows: [
+              {
+                id: 1,
+                email: 'auto@example.com',
+                tickets_contributed: 10,
+                printer_supplies: 0,
+                money: 0,
+                gold: 2,
+                autoprinters: 2,
+                credit_value: 0,
+                credit_generation_level: 0,
+                credit_capacity_level: 0,
+                supplies_batch_level: 0,
+                auto_buy_supplies_purchased: true,
+                auto_buy_supplies_active: true,
+                tickets_withdrawn: 0,
+              },
+              {
+                id: 2,
+                email: 'printer@example.com',
+                tickets_contributed: 20,
+                printer_supplies: 3,
+                money: 0,
+                gold: 0,
+                autoprinters: 3,
+                credit_value: 0,
+                credit_generation_level: 0,
+                credit_capacity_level: 0,
+                supplies_batch_level: 0,
+                auto_buy_supplies_purchased: false,
+                auto_buy_supplies_active: false,
+                tickets_withdrawn: 0,
+              },
+            ],
+          };
         }
 
         throw new Error(`Unexpected query: ${query}`);
       });
 
+      mockExecuteOperationForUser
+        .mockResolvedValueOnce({
+          gain: { [ResourceType.PRINTER_SUPPLIES]: 200 },
+          count: null,
+          user: {
+            id: 1,
+            email: 'auto@example.com',
+            tickets_contributed: 10,
+            tickets_withdrawn: 0,
+            printer_supplies: 200,
+            money: 0,
+            gold: 1,
+            autoprinters: 2,
+            credit_value: 0,
+            credit_generation_level: 0,
+            credit_capacity_level: 0,
+            supplies_batch_level: 0,
+            auto_buy_supplies_purchased: true,
+            auto_buy_supplies_active: true,
+          },
+        })
+        .mockResolvedValueOnce({
+          gain: { [ResourceType.TICKETS_CONTRIBUTED]: 2 },
+          count: 102,
+          user: {},
+        })
+        .mockResolvedValueOnce({
+          gain: { [ResourceType.TICKETS_CONTRIBUTED]: 3 },
+          count: 105,
+          user: {},
+        });
+
       await expect(db.processAutoprinters()).resolves.toEqual({
         totalTickets: 5,
         newGlobalCount: 105,
       });
+      expect(mockExecuteOperationForUser).toHaveBeenNthCalledWith(
+        1,
+        1,
+        OperationId.BUY_SUPPLIES,
+        undefined,
+        expect.objectContaining({
+          client: mockClient,
+          globalTicketCount: 0,
+          allowPrintAutoBuyFallback: false,
+        }),
+      );
+      expect(mockExecuteOperationForUser).toHaveBeenNthCalledWith(
+        2,
+        1,
+        OperationId.PRINT_TICKET,
+        { quantity: 2 },
+        expect.objectContaining({
+          client: mockClient,
+          globalTicketCount: 0,
+          allowPrintAutoBuyFallback: false,
+        }),
+      );
+      expect(mockExecuteOperationForUser).toHaveBeenNthCalledWith(
+        3,
+        2,
+        OperationId.PRINT_TICKET,
+        { quantity: 3 },
+        expect.objectContaining({
+          client: mockClient,
+          globalTicketCount: 0,
+          allowPrintAutoBuyFallback: false,
+        }),
+      );
       expect(mockClient.query).toHaveBeenCalledWith('COMMIT');
       expect(mockClient.release).toHaveBeenCalled();
     });
@@ -667,8 +807,27 @@ describe('Database Functions', () => {
           return { rows: [] };
         }
 
-        if (query.includes('auto_buy_supplies_active')) {
-          throw new Error('Autoprinter failure');
+        if (query.includes('FROM users WHERE autoprinters > 0')) {
+          return {
+            rows: [
+              {
+                id: 1,
+                email: 'auto@example.com',
+                tickets_contributed: 10,
+                printer_supplies: 1,
+                money: 0,
+                gold: 0,
+                autoprinters: 1,
+                credit_value: 0,
+                credit_generation_level: 0,
+                credit_capacity_level: 0,
+                supplies_batch_level: 0,
+                auto_buy_supplies_purchased: false,
+                auto_buy_supplies_active: false,
+                tickets_withdrawn: 0,
+              },
+            ],
+          };
         }
 
         if (query === 'ROLLBACK') {
@@ -677,6 +836,10 @@ describe('Database Functions', () => {
 
         throw new Error(`Unexpected query: ${query}`);
       });
+
+      mockExecuteOperationForUser.mockRejectedValueOnce(
+        new Error('Autoprinter failure'),
+      );
 
       await expect(db.processAutoprinters()).rejects.toThrow('Autoprinter failure');
       expect(mockClient.query).toHaveBeenCalledWith('ROLLBACK');
