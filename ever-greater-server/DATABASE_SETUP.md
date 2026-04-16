@@ -111,6 +111,18 @@ Database migrations applied successfully
 Database pool closed
 ```
 
+Additional local database utilities:
+
+```bash
+npm run db:reset -- --force
+npm run db:seed
+npm run db:backup
+```
+
+- `db:reset` drops and recreates the `public` schema, then reapplies tracked migrations.
+- `db:seed` creates or refreshes a deterministic local demo user at `demo@example.com` with password `demo1234`.
+- `db:backup` writes a SQL backup to `ever-greater-server/backups/` by default and accepts `--output <path>`.
+
 Once migrations are applied, normal server startup will log:
 
 ```
@@ -226,7 +238,13 @@ CREATE TABLE global_state (
 
 ### Backup
 
-To backup your database:
+To backup your database with the script wrapper:
+
+```bash
+npm run db:backup
+```
+
+To backup your database manually:
 
 ```bash
 pg_dump -U postgres ever_greater_db > backup.sql

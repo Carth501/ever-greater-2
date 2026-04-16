@@ -15,6 +15,12 @@ A full-stack application with a React client and Express WebSocket server for ma
 
 From the repository root, run `npm run server:migrate` after database schema changes and before starting the server for the first time. Then run `npm run dev` to start the Vite client and the server watch process together.
 
+Useful local database commands from the repository root:
+
+- `npm run server:db:reset -- --force` - drop and recreate the server database schema, then re-run migrations
+- `npm run server:db:seed` - create a deterministic demo user and baseline global count for local development
+- `npm run server:db:backup` - write a SQL backup under `ever-greater-server/backups/`
+
 ---
 
 ## Client Setup
@@ -124,6 +130,18 @@ The older query-based entry (`?concept=dashboard`) still works for compatibility
 
    The server now expects migrations to be applied before startup and will fail fast if the schema is behind.
 
+6. **Optional Local Database Utilities**
+
+   From the repository root:
+
+   ```bash
+   npm run server:db:seed
+   npm run server:db:backup
+   npm run server:db:reset -- --force
+   ```
+
+   `server:db:seed` creates or refreshes a local demo user at `demo@example.com` with password `demo1234`.
+
 ### Environment Variables
 
 | Variable                    | Description                            | Default                                                                                   | Required                                    |
@@ -141,6 +159,9 @@ The older query-based entry (`?concept=dashboard`) still works for compatibility
 - `npm start` - run the server
 - `npm run dev` - run the server in watch mode with TypeScript entrypoint reloads
 - `npm run server:migrate` - apply pending server database migrations from the repository root
+- `npm run server:db:reset -- --force` - rebuild the server database schema from scratch
+- `npm run server:db:seed` - seed local development data
+- `npm run server:db:backup` - create a local SQL backup using `pg_dump`
 
 ### API Endpoints
 
