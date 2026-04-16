@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockUser } from "../../tests/fixtures";
@@ -154,8 +154,12 @@ describe("DashboardPage accessibility gate", () => {
       name: /account visibility/i,
     });
 
-    accountToggle.focus();
-    await userEvent.keyboard("[Space]");
+    await act(async () => {
+      accountToggle.focus();
+    });
+    await act(async () => {
+      await userEvent.keyboard("[Space]");
+    });
 
     expect(
       screen.queryByRole("region", {
@@ -164,8 +168,12 @@ describe("DashboardPage accessibility gate", () => {
     ).toBeNull();
 
     const printButton = screen.getByRole("button", { name: /print a ticket/i });
-    printButton.focus();
-    await userEvent.keyboard("[Enter]");
+    await act(async () => {
+      printButton.focus();
+    });
+    await act(async () => {
+      await userEvent.keyboard("[Enter]");
+    });
 
     expect(printTicketSpy).toHaveBeenCalledTimes(1);
   });
