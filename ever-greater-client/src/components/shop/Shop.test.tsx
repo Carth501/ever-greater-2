@@ -71,6 +71,7 @@ describe("Shop", () => {
       buyAutoBuySupplies: vi.fn<() => void>(),
       toggleAutoBuySupplies: vi.fn<(active: boolean) => void>(),
       increaseCreditGeneration: vi.fn<() => void>(),
+      increaseTicketBatch: vi.fn<() => void>(),
       increaseManualPrintBatch: vi.fn<() => void>(),
       increaseSuppliesBatch: vi.fn<() => void>(),
       increaseCreditCapacity: vi.fn<() => void>(),

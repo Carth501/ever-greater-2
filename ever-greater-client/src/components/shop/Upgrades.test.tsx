@@ -71,6 +71,7 @@ describe("Upgrades", () => {
       buyAutoBuySupplies: vi.fn<() => void>(),
       toggleAutoBuySupplies: vi.fn<(active: boolean) => void>(),
       increaseCreditGeneration: vi.fn<() => void>(),
+      increaseTicketBatch: vi.fn<() => void>(),
       increaseManualPrintBatch: vi.fn<() => void>(),
       increaseSuppliesBatch: vi.fn<() => void>(),
       increaseCreditCapacity: vi.fn<() => void>(),
@@ -90,6 +91,7 @@ describe("Upgrades", () => {
 
     expect(screen.getByRole("heading", { name: "Upgrades" })).toBeTruthy();
     expect(screen.getByText("Auto-Buy Supplies")).toBeTruthy();
+    expect(screen.getByText("Increase Ticket Batch Scale")).toBeTruthy();
     expect(screen.getByText("Increase Manual Print Batch")).toBeTruthy();
     expect(screen.getByText("Increase Supplies Batch")).toBeTruthy();
     expect(screen.getByText("Increase Credit Generation")).toBeTruthy();
@@ -106,9 +108,23 @@ describe("Upgrades", () => {
 
     expect(screen.queryByText("Autoprinter")).toBeNull();
     expect(screen.getByText("Auto-Buy Supplies")).toBeTruthy();
+    expect(screen.getByText("Increase Ticket Batch Scale")).toBeTruthy();
     expect(screen.getByText("Increase Manual Print Batch")).toBeTruthy();
     expect(screen.getByText("Increase Supplies Batch")).toBeTruthy();
     expect(screen.getByText("Increase Credit Capacity")).toBeTruthy();
+  });
+
+  it("shows the scaled general ticket batch upgrade cost for the current level", () => {
+    mockDependencies({ ticket_batch_level: 2, autoprinters: 3, gold: 30 });
+
+    render(<Upgrades />);
+
+    expect(screen.getByText("Cost: 40g · Lvl 2")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Doubles all ticket printing. Manual presses go from 4 tickets to 8 tickets. Autoprinter cycles go from 12 tickets to 24 tickets.",
+      ),
+    ).toBeTruthy();
   });
 
   it("shows the scaled manual print batch upgrade cost for the current level", () => {

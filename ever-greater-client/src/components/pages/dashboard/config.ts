@@ -55,6 +55,7 @@ export const previewDashboardUser: User = {
   credit_value: 2400,
   credit_generation_level: 9,
   credit_capacity_level: 7,
+  ticket_batch_level: 0,
   manual_print_batch_level: 0,
   supplies_batch_level: 2,
   auto_buy_supplies_purchased: true,

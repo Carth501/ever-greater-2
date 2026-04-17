@@ -115,6 +115,14 @@ const gameOperationConfigs = {
     mergesIntoAuthUser: true,
     exposeInOperationsHook: true,
   }),
+  increaseTicketBatch: defineGameOperationConfig({
+    typePrefix: "operations/increaseTicketBatch",
+    execute: () => operationsApi.increaseTicketBatch(),
+    fallbackMessage: "Failed to increase ticket batch scale",
+    tracksOperationsState: true,
+    mergesIntoAuthUser: true,
+    exposeInOperationsHook: true,
+  }),
   increaseManualPrintBatch: defineGameOperationConfig({
     typePrefix: "operations/increaseManualPrintBatch",
     execute: () => operationsApi.increaseManualPrintBatch(),
@@ -189,6 +197,7 @@ export const buyAutoBuySuppliesThunk = gameOperationThunks.buyAutoBuySupplies;
 export const buyAutoprinterThunk = gameOperationThunks.buyAutoprinter;
 export const increaseCreditGenerationThunk =
   gameOperationThunks.increaseCreditGeneration;
+export const increaseTicketBatchThunk = gameOperationThunks.increaseTicketBatch;
 export const increaseManualPrintBatchThunk =
   gameOperationThunks.increaseManualPrintBatch;
 export const increaseSuppliesBatchThunk =

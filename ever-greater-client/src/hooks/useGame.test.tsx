@@ -33,6 +33,17 @@ describe("useGame", () => {
     expect(result.current.manualPrintQuantity).toBe(4);
   });
 
+  it("includes the general ticket batch scale in the manual print quantity", () => {
+    const { result } = renderHook(() => useGame(), {
+      wrapper: createWrapper({
+        ticket_batch_level: 1,
+        manual_print_batch_level: 2,
+      }),
+    });
+
+    expect(result.current.manualPrintQuantity).toBe(8);
+  });
+
   it("disables printing when supplies are below the manual batch and auto-buy is unavailable", () => {
     const { result } = renderHook(() => useGame(), {
       wrapper: createWrapper({

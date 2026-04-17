@@ -1,11 +1,11 @@
 import bcrypt from "bcryptjs";
+import { assertSeedCommandAllowed } from "./db-script-utils.js";
 import {
   closePool,
   initializeDatabase,
   pool,
   STARTING_PRINTER_SUPPLIES,
 } from "./db.js";
-import { assertSeedCommandAllowed } from "./db-script-utils.js";
 
 const DEMO_USER_EMAIL = "demo@example.com";
 const DEMO_USER_PASSWORD = "demo1234";
@@ -30,10 +30,11 @@ async function runSeedCommand(): Promise<void> {
           credit_value,
           credit_generation_level,
           credit_capacity_level,
+          ticket_batch_level,
           auto_buy_supplies_purchased,
           auto_buy_supplies_active
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
         ON CONFLICT (email)
         DO UPDATE SET
           password_hash = EXCLUDED.password_hash,
@@ -45,6 +46,7 @@ async function runSeedCommand(): Promise<void> {
           credit_value = EXCLUDED.credit_value,
           credit_generation_level = EXCLUDED.credit_generation_level,
           credit_capacity_level = EXCLUDED.credit_capacity_level,
+          ticket_batch_level = EXCLUDED.ticket_batch_level,
           auto_buy_supplies_purchased = EXCLUDED.auto_buy_supplies_purchased,
           auto_buy_supplies_active = EXCLUDED.auto_buy_supplies_active
         RETURNING id, email
@@ -60,6 +62,7 @@ async function runSeedCommand(): Promise<void> {
         6,
         8,
         12,
+        0,
         true,
         true,
       ],

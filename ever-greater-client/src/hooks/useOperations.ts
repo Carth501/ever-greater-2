@@ -9,6 +9,7 @@ type HookOperationHandlers = {
   buyAutoBuySupplies: () => void;
   toggleAutoBuySupplies: (active: boolean) => void;
   increaseCreditGeneration: () => void;
+  increaseTicketBatch: () => void;
   increaseManualPrintBatch: () => void;
   increaseSuppliesBatch: () => void;
   increaseCreditCapacity: () => void;

@@ -98,6 +98,7 @@ export {
   increaseCreditGenerationThunk,
   increaseManualPrintBatchThunk,
   increaseSuppliesBatchThunk,
+  increaseTicketBatchThunk,
   toggleAutoBuySuppliesThunk,
 } from "../gameOperationThunks";
 export default operationsSlice.reducer;

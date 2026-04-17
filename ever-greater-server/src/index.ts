@@ -79,13 +79,17 @@ function buildPeriodicUserUpdatePayload(
 ): UserUpdatePayload {
   const payload: UserUpdatePayload = {};
 
+  const applyFieldUpdate = (field: ClientUserStateField) => {
+    Object.assign(payload, { [field]: current[field] });
+  };
+
   for (const field of CLIENT_USER_STATE_FIELDS) {
     if (
       !previous ||
       ALWAYS_INCLUDED_PERIODIC_FIELDS.has(field) ||
       previous[field] !== current[field]
     ) {
-      payload[field] = current[field];
+      applyFieldUpdate(field);
     }
   }
 

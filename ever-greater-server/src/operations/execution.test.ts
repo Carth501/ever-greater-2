@@ -31,6 +31,7 @@ function makeUser(overrides: Partial<User> = {}): User {
     credit_value: 0,
     credit_generation_level: 0,
     credit_capacity_level: 0,
+    ticket_batch_level: 0,
     manual_print_batch_level: 0,
     supplies_batch_level: 0,
     auto_buy_supplies_purchased: false,
@@ -78,10 +79,15 @@ describe("executeOperationForUser", () => {
     expect(result.user).toEqual(updatedUser);
   });
 
-  it("uses the manual print batch level when no quantity is provided", async () => {
-    const user = makeUser({ manual_print_batch_level: 2, printer_supplies: 8 });
+  it("uses both ticket and manual print batch levels when no quantity is provided", async () => {
+    const user = makeUser({
+      ticket_batch_level: 1,
+      manual_print_batch_level: 1,
+      printer_supplies: 8,
+    });
     const updatedUser = makeUser({
-      manual_print_batch_level: 2,
+      ticket_batch_level: 1,
+      manual_print_batch_level: 1,
       printer_supplies: 4,
       money: 4,
       tickets_contributed: 14,

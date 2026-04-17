@@ -10,10 +10,7 @@ import { useOperations } from "./useOperations";
 
 vi.mock("../api/operations");
 
-const mockOperationsApi = operationsApi as Record<
-  string,
-  ReturnType<typeof vi.fn>
->;
+const mockOperationsApi = vi.mocked(operationsApi);
 
 function createWrapper() {
   const store = createTestStore();

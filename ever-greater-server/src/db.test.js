@@ -80,6 +80,7 @@ describe('Database Functions', () => {
               { column_name: 'credit_value' },
               { column_name: 'credit_generation_level' },
               { column_name: 'credit_capacity_level' },
+              { column_name: 'ticket_batch_level' },
               { column_name: 'manual_print_batch_level' },
               { column_name: 'supplies_batch_level' },
             ],
@@ -105,7 +106,7 @@ describe('Database Functions', () => {
       const migrationInsertCalls = mockClient.query.mock.calls.filter((call) =>
         call[0].includes('INSERT INTO schema_migrations')
       );
-      expect(migrationInsertCalls).toHaveLength(6);
+      expect(migrationInsertCalls).toHaveLength(7);
       expect(mockClient.release).toHaveBeenCalled();
     });
 
@@ -127,6 +128,7 @@ describe('Database Functions', () => {
               { column_name: 'credit_value' },
               { column_name: 'credit_generation_level' },
               { column_name: 'credit_capacity_level' },
+              { column_name: 'ticket_batch_level' },
               { column_name: 'manual_print_batch_level' },
               { column_name: 'supplies_batch_level' },
             ],
@@ -171,6 +173,7 @@ describe('Database Functions', () => {
               { column_name: 'credit_value' },
               { column_name: 'credit_generation_level' },
               { column_name: 'credit_capacity_level' },
+              { column_name: 'ticket_batch_level' },
               { column_name: 'manual_print_batch_level' },
               { column_name: 'supplies_batch_level' },
             ],
@@ -199,7 +202,7 @@ describe('Database Functions', () => {
       mockClient.query.mockImplementation(async (query) => {
         if (query.includes('SELECT id FROM schema_migrations')) {
           return {
-            rows: [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }, { id: 5 }, { id: 6 }],
+            rows: [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }, { id: 5 }, { id: 6 }, { id: 7 }],
           };
         }
 
@@ -214,6 +217,7 @@ describe('Database Functions', () => {
               { column_name: 'credit_value' },
               { column_name: 'credit_generation_level' },
               { column_name: 'credit_capacity_level' },
+              { column_name: 'ticket_batch_level' },
               { column_name: 'manual_print_batch_level' },
               { column_name: 'supplies_batch_level' },
             ],
@@ -278,7 +282,7 @@ describe('Database Functions', () => {
 
         if (query.includes('SELECT id FROM schema_migrations')) {
           return {
-            rows: [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }, { id: 5 }, { id: 6 }],
+            rows: [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }, { id: 5 }, { id: 6 }, { id: 7 }],
           };
         }
 
@@ -416,6 +420,7 @@ describe('Database Functions', () => {
         credit_value: 0,
         credit_generation_level: 0,
         credit_capacity_level: 0,
+        ticket_batch_level: 0,
         manual_print_batch_level: 0,
         supplies_batch_level: 0,
         auto_buy_supplies_purchased: false,
@@ -433,6 +438,7 @@ describe('Database Functions', () => {
           'newuser@example.com',
           'hashed_password',
           expectedStartingSupplies,
+          0,
           0,
           0,
           0,
@@ -508,6 +514,7 @@ describe('Database Functions', () => {
             credit_value: 1,
             credit_generation_level: 2,
             credit_capacity_level: 5,
+            ticket_batch_level: 0,
             supplies_batch_level: 0,
             auto_buy_supplies_purchased: false,
             auto_buy_supplies_active: false,
@@ -524,6 +531,7 @@ describe('Database Functions', () => {
             credit_value: 2,
             credit_generation_level: 3,
             credit_capacity_level: 5,
+            ticket_batch_level: 0,
             supplies_batch_level: 0,
             auto_buy_supplies_purchased: false,
             auto_buy_supplies_active: false,
@@ -707,6 +715,7 @@ describe('Database Functions', () => {
                 credit_value: 0,
                 credit_generation_level: 0,
                 credit_capacity_level: 0,
+                ticket_batch_level: 1,
                 supplies_batch_level: 0,
                 auto_buy_supplies_purchased: true,
                 auto_buy_supplies_active: true,
@@ -723,6 +732,7 @@ describe('Database Functions', () => {
                 credit_value: 0,
                 credit_generation_level: 0,
                 credit_capacity_level: 0,
+                ticket_batch_level: 0,
                 supplies_batch_level: 0,
                 auto_buy_supplies_purchased: false,
                 auto_buy_supplies_active: false,
@@ -751,25 +761,26 @@ describe('Database Functions', () => {
             credit_value: 0,
             credit_generation_level: 0,
             credit_capacity_level: 0,
+            ticket_batch_level: 1,
             supplies_batch_level: 0,
             auto_buy_supplies_purchased: true,
             auto_buy_supplies_active: true,
           },
         })
         .mockResolvedValueOnce({
-          gain: { [ResourceType.TICKETS_CONTRIBUTED]: 2 },
-          count: 102,
+          gain: { [ResourceType.TICKETS_CONTRIBUTED]: 4 },
+          count: 104,
           user: {},
         })
         .mockResolvedValueOnce({
           gain: { [ResourceType.TICKETS_CONTRIBUTED]: 3 },
-          count: 105,
+          count: 107,
           user: {},
         });
 
       await expect(db.processAutoprinters()).resolves.toEqual({
-        totalTickets: 5,
-        newGlobalCount: 105,
+        totalTickets: 7,
+        newGlobalCount: 107,
       });
       expect(mockExecuteOperationForUser).toHaveBeenNthCalledWith(
         1,
@@ -786,7 +797,7 @@ describe('Database Functions', () => {
         2,
         1,
         OperationId.PRINT_TICKET,
-        { quantity: 2 },
+        { quantity: 4 },
         expect.objectContaining({
           client: mockClient,
           globalTicketCount: 0,
@@ -828,6 +839,7 @@ describe('Database Functions', () => {
                 credit_value: 0,
                 credit_generation_level: 0,
                 credit_capacity_level: 0,
+                ticket_batch_level: 0,
                 supplies_batch_level: 0,
                 auto_buy_supplies_purchased: false,
                 auto_buy_supplies_active: false,

@@ -1,13 +1,14 @@
 import {
-  OperationId,
-  ResourceType,
   canAfford,
+  getAutoprinterPrintQuantity,
   getBuySuppliesGainForGold,
   getManualPrintQuantity,
   getMaxSuppliesPurchaseGold,
   getOperationCost,
   getOperationGain,
+  OperationId,
   operations,
+  ResourceType,
   type User,
 } from "ever-greater-shared";
 import type { JSX } from "react";
@@ -28,6 +29,7 @@ type OperationHandlers = Pick<
   | "buyAutoBuySupplies"
   | "toggleAutoBuySupplies"
   | "increaseCreditGeneration"
+  | "increaseTicketBatch"
   | "increaseManualPrintBatch"
   | "increaseSuppliesBatch"
   | "increaseCreditCapacity"
@@ -58,6 +60,10 @@ type GoldUpgradeDefinition = {
     context: Pick<RegistryContext, "user" | "handlers">,
   ) => UpgradeGoldRowItem;
 };
+
+function formatTicketCount(count: number): string {
+  return `${count} ticket${count === 1 ? "" : "s"}`;
+}
 
 const shopRegistry: RegistryEntry[] = [
   {
@@ -177,6 +183,38 @@ const goldUpgradeDefinitions: GoldUpgradeDefinition[] = [
     },
   },
   {
+    key: "increase-ticket-batch",
+    operationIds: [OperationId.INCREASE_TICKET_BATCH],
+    buildRow: ({ user, handlers }) => {
+      const ticketBatchCost =
+        getOperationCost(operations[OperationId.INCREASE_TICKET_BATCH], {
+          user,
+        })[ResourceType.GOLD] ?? 0;
+      const currentManualPrintQuantity = getManualPrintQuantity(user);
+      const nextManualPrintQuantity = currentManualPrintQuantity * 2;
+      const currentAutoprinterPrintQuantity = getAutoprinterPrintQuantity(user);
+      const nextAutoprinterPrintQuantity = currentAutoprinterPrintQuantity * 2;
+
+      return {
+        key: "increase-ticket-batch",
+        title: "Increase Ticket Batch Scale",
+        meta: `Cost: ${ticketBatchCost}g · Lvl ${user.ticket_batch_level ?? 0}`,
+        description:
+          currentAutoprinterPrintQuantity > 0
+            ? `Doubles all ticket printing. Manual presses go from ${formatTicketCount(currentManualPrintQuantity)} to ${formatTicketCount(nextManualPrintQuantity)}. Autoprinter cycles go from ${formatTicketCount(currentAutoprinterPrintQuantity)} to ${formatTicketCount(nextAutoprinterPrintQuantity)}.`
+            : `Doubles all ticket printing. Manual presses go from ${formatTicketCount(currentManualPrintQuantity)} to ${formatTicketCount(nextManualPrintQuantity)}. Future autoprinter cycles scale with it too.`,
+        action: {
+          kind: "button",
+          label: "Buy",
+          disabled: !canAfford(user, {
+            [ResourceType.GOLD]: ticketBatchCost,
+          }),
+          onClick: handlers.increaseTicketBatch,
+        },
+      };
+    },
+  },
+  {
     key: "increase-manual-print-batch",
     operationIds: [OperationId.INCREASE_MANUAL_PRINT_BATCH],
     buildRow: ({ user, handlers }) => {
@@ -191,11 +229,9 @@ const goldUpgradeDefinitions: GoldUpgradeDefinition[] = [
         key: "increase-manual-print-batch",
         title: "Increase Manual Print Batch",
         meta: `Cost: ${manualPrintBatchCost}g · Lvl ${user.manual_print_batch_level ?? 0}`,
-        description: `Doubles each manual print from ${currentManualPrintQuantity} ticket${
-          currentManualPrintQuantity === 1 ? "" : "s"
-        } to ${nextManualPrintQuantity} ticket${
-          nextManualPrintQuantity === 1 ? "" : "s"
-        } per press.`,
+        description: `Doubles each manual print from ${formatTicketCount(
+          currentManualPrintQuantity,
+        )} to ${formatTicketCount(nextManualPrintQuantity)} per press.`,
         action: {
           kind: "button",
           label: "Buy",

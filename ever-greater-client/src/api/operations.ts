@@ -91,6 +91,13 @@ export async function increaseCreditGeneration(): Promise<User> {
 }
 
 /**
+ * Increase the general ticket batch scale for all printing.
+ */
+export async function increaseTicketBatch(): Promise<User> {
+  return executeOperation(OperationId.INCREASE_TICKET_BATCH);
+}
+
+/**
  * Increase the manual ticket print batch size.
  */
 export async function increaseManualPrintBatch(): Promise<User> {

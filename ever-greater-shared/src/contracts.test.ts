@@ -11,6 +11,7 @@ import {
   getOperationCost,
   getOperationGain,
   getSuppliesBatchUpgradeCost,
+  getTicketBatchUpgradeCost,
   isUserResourceFields,
   isWebSocketMessage,
   OperationId,
@@ -36,6 +37,7 @@ function makeUser(overrides: Partial<User> = {}): User {
     credit_value: 100,
     credit_generation_level: 5,
     credit_capacity_level: 100,
+    ticket_batch_level: 0,
     manual_print_batch_level: 0,
     supplies_batch_level: 0,
     auto_buy_supplies_purchased: false,
@@ -259,27 +261,44 @@ describe("shared operation contracts", () => {
     ).toEqual({ [ResourceType.GOLD]: 40 });
   });
 
-  it("scales manual print quantity when quantity is omitted", () => {
+  it("scales the general ticket batch upgrade cost by current level", () => {
+    const baseLevelUser = makeUser({ ticket_batch_level: 0 });
+    const oneUpgradeUser = makeUser({ ticket_batch_level: 1 });
+    const twoUpgradeUser = makeUser({ ticket_batch_level: 2 });
+
+    expect(getTicketBatchUpgradeCost(baseLevelUser)).toBe(10);
+    expect(getTicketBatchUpgradeCost(oneUpgradeUser)).toBe(20);
+    expect(getTicketBatchUpgradeCost(twoUpgradeUser)).toBe(40);
+
+    expect(
+      getOperationCost(operations[OperationId.INCREASE_TICKET_BATCH], {
+        user: twoUpgradeUser,
+      }),
+    ).toEqual({ [ResourceType.GOLD]: 40 });
+  });
+
+  it("scales manual print quantity with both general and manual batch upgrades", () => {
     const user = makeUser({
+      ticket_batch_level: 1,
       manual_print_batch_level: 2,
       printer_supplies: 20,
       money: 0,
       tickets_contributed: 0,
     });
 
-    expect(getManualPrintQuantity(user)).toBe(4);
+    expect(getManualPrintQuantity(user)).toBe(8);
     expect(
       getOperationCost(operations[OperationId.PRINT_TICKET], {
         user,
       }),
-    ).toEqual({ [ResourceType.PRINTER_SUPPLIES]: 4 });
+    ).toEqual({ [ResourceType.PRINTER_SUPPLIES]: 8 });
     expect(
       getOperationGain(operations[OperationId.PRINT_TICKET], {
         user,
       }),
     ).toEqual({
-      [ResourceType.MONEY]: 4,
-      [ResourceType.TICKETS_CONTRIBUTED]: 4,
+      [ResourceType.MONEY]: 8,
+      [ResourceType.TICKETS_CONTRIBUTED]: 8,
     });
   });
 
@@ -301,6 +320,7 @@ describe("shared operation contracts", () => {
 
   it("scales ticket printing by quantity", () => {
     const user = makeUser({
+      ticket_batch_level: 2,
       printer_supplies: 20,
       money: 0,
       tickets_contributed: 0,
@@ -439,6 +459,8 @@ function resourceField(resourceType: ResourceType): keyof User | null {
       return "credit_generation_level";
     case ResourceType.CREDIT_CAPACITY_LEVEL:
       return "credit_capacity_level";
+    case ResourceType.TICKET_BATCH_LEVEL:
+      return "ticket_batch_level";
     case ResourceType.MANUAL_PRINT_BATCH_LEVEL:
       return "manual_print_batch_level";
     case ResourceType.SUPPLIES_BATCH_LEVEL:

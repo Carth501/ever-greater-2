@@ -20,6 +20,7 @@ import {
   buySuppliesThunk,
   increaseManualPrintBatchThunk,
   increaseSuppliesBatchThunk,
+  increaseTicketBatchThunk,
   toggleAutoBuySuppliesThunk,
 } from "./operationsSlice";
 
@@ -376,6 +377,36 @@ describe("authSlice", () => {
       const state = (store.getState() as { auth: AuthState }).auth;
       expect(state.user?.gold).toBe(4);
       expect(state.user?.manual_print_batch_level).toBe(1);
+    });
+
+    it("should update ticket batch level via increaseTicketBatchThunk", async () => {
+      const stateWithUser: AuthState = {
+        user: {
+          ...defaultUser,
+          gold: 5,
+          ticket_batch_level: 0,
+        },
+        isCheckingAuth: false,
+        isLoading: false,
+        pendingRequestCount: 0,
+        error: null,
+      };
+
+      store = createTestStore({
+        preloadedState: { auth: stateWithUser },
+      });
+
+      mockOperationsApi.increaseTicketBatch.mockResolvedValueOnce({
+        ...defaultUser,
+        gold: 4,
+        ticket_batch_level: 1,
+      } as User);
+
+      await store.dispatch(increaseTicketBatchThunk() as any);
+
+      const state = (store.getState() as { auth: AuthState }).auth;
+      expect(state.user?.gold).toBe(4);
+      expect(state.user?.ticket_batch_level).toBe(1);
     });
   });
 

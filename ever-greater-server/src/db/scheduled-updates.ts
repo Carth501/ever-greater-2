@@ -1,4 +1,9 @@
-import { OperationId, ResourceType, type User } from "ever-greater-shared";
+import {
+  getAutoprinterPrintQuantity,
+  OperationId,
+  ResourceType,
+  type User,
+} from "ever-greater-shared";
 import {
   executeOperationForUser,
   OperationValidationError,
@@ -42,11 +47,12 @@ export async function processAutoprinters(): Promise<{
 
     for (const user of users) {
       let currentUser = user;
+      const desiredPrintQuantity = getAutoprinterPrintQuantity(currentUser);
 
       const needsAutoBuyRefill =
         currentUser.auto_buy_supplies_active &&
         currentUser.auto_buy_supplies_purchased &&
-        currentUser.printer_supplies < currentUser.autoprinters;
+        currentUser.printer_supplies < desiredPrintQuantity;
 
       if (needsAutoBuyRefill) {
         try {
@@ -70,7 +76,7 @@ export async function processAutoprinters(): Promise<{
       }
 
       const printQuantity = Math.min(
-        currentUser.autoprinters ?? 0,
+        getAutoprinterPrintQuantity(currentUser),
         currentUser.printer_supplies ?? 0,
       );
 

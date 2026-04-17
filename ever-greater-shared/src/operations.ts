@@ -44,6 +44,7 @@ export enum OperationId {
   BUY_GOLD = "BUY_GOLD",
   BUY_AUTOPRINTER = "BUY_AUTOPRINTER",
   PRINT_TICKET = "PRINT_TICKET",
+  INCREASE_TICKET_BATCH = "INCREASE_TICKET_BATCH",
   INCREASE_MANUAL_PRINT_BATCH = "INCREASE_MANUAL_PRINT_BATCH",
   INCREASE_SUPPLIES_BATCH = "INCREASE_SUPPLIES_BATCH",
   INCREASE_CREDIT_GENERATION = "INCREASE_CREDIT_GENERATION",
@@ -52,6 +53,7 @@ export enum OperationId {
 }
 
 export const SUPPLIES_PER_GOLD = 200;
+export const TICKET_BATCH_UPGRADE_COST = 10;
 export const MANUAL_PRINT_BATCH_UPGRADE_COST = 10;
 export const SUPPLIES_BATCH_UPGRADE_COST = 10;
 
@@ -67,20 +69,63 @@ export function getSuppliesBatchLevel(user: User): number {
   return Math.max(0, user.supplies_batch_level ?? 0);
 }
 
+function getBatchMultiplier(level: number): number {
+  return 2 ** Math.max(0, level);
+}
+
+function getBatchUpgradeCost(level: number, baseCost: number): number {
+  return getBatchMultiplier(level) * baseCost;
+}
+
+export function getTicketBatchLevel(user: User): number {
+  return Math.max(0, user.ticket_batch_level ?? 0);
+}
+
+export function getTicketBatchScale(user: User): number {
+  return getBatchMultiplier(getTicketBatchLevel(user));
+}
+
 export function getManualPrintBatchLevel(user: User): number {
   return Math.max(0, user.manual_print_batch_level ?? 0);
 }
 
+export function getScaledTicketQuantity(
+  baseQuantity: number,
+  user: User,
+): number {
+  return Math.max(0, baseQuantity) * getTicketBatchScale(user);
+}
+
+export function getAutoprinterPrintQuantity(user: User): number {
+  return getScaledTicketQuantity(Math.max(0, user.autoprinters ?? 0), user);
+}
+
 export function getManualPrintQuantity(user: User): number {
-  return 2 ** getManualPrintBatchLevel(user);
+  return getScaledTicketQuantity(
+    getBatchMultiplier(getManualPrintBatchLevel(user)),
+    user,
+  );
+}
+
+export function getTicketBatchUpgradeCost(user: User): number {
+  return getBatchUpgradeCost(
+    getTicketBatchLevel(user),
+    TICKET_BATCH_UPGRADE_COST,
+  );
 }
 
 export function getManualPrintBatchUpgradeCost(user: User): number {
-  return 2 ** getManualPrintBatchLevel(user) * MANUAL_PRINT_BATCH_UPGRADE_COST;
+  return getBatchUpgradeCost(
+    getManualPrintBatchLevel(user),
+    MANUAL_PRINT_BATCH_UPGRADE_COST,
+  );
 }
 
 export function getSuppliesBatchUpgradeCost(user: User): number {
-  return 2 ** getSuppliesBatchLevel(user) * SUPPLIES_BATCH_UPGRADE_COST;
+  return getBatchUpgradeCost(
+    getSuppliesBatchLevel(user),
+    SUPPLIES_BATCH_UPGRADE_COST,
+  );
 }
 
 export function getMaxSuppliesPurchaseGold(user: User): number {
@@ -208,6 +253,18 @@ export const operations: Record<OperationId, Operation> = {
         [ResourceType.MONEY]: quantity,
         [ResourceType.TICKETS_CONTRIBUTED]: quantity,
       };
+    },
+  },
+
+  [OperationId.INCREASE_TICKET_BATCH]: {
+    id: OperationId.INCREASE_TICKET_BATCH,
+    name: "Increase Ticket Batch Scale",
+    description: "Double all ticket printing output",
+    cost: (ctx: OperationContext) => ({
+      [ResourceType.GOLD]: getTicketBatchUpgradeCost(ctx.user),
+    }),
+    gain: {
+      [ResourceType.TICKET_BATCH_LEVEL]: 1,
     },
   },
 

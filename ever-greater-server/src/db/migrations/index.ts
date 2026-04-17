@@ -4,6 +4,7 @@ import { addUserEconomyColumnsMigration } from "./003-add-user-economy-columns.j
 import { addCreditAndAutoBuyColumnsMigration } from "./004-add-credit-and-auto-buy-columns.js";
 import { addSuppliesBatchLevelMigration } from "./005-add-supplies-batch-level.js";
 import { addManualPrintBatchLevelMigration } from "./006-add-manual-print-batch-level.js";
+import { addTicketBatchLevelMigration } from "./007-add-ticket-batch-level.js";
 
 export { type DatabaseMigration } from "./types.js";
 
@@ -14,4 +15,5 @@ export const databaseMigrations = [
   addCreditAndAutoBuyColumnsMigration,
   addSuppliesBatchLevelMigration,
   addManualPrintBatchLevelMigration,
+  addTicketBatchLevelMigration,
 ] as const;

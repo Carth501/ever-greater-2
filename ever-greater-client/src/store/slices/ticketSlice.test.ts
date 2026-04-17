@@ -179,7 +179,9 @@ describe("ticketSlice", () => {
       const errorMessage = "Failed to increment";
       const state = ticketReducer(
         initialState,
-        printTicketThunk.rejected(null, "", undefined, errorMessage),
+        printTicketThunk.rejected(null, "", undefined, {
+          message: errorMessage,
+        }),
       );
       expect(state.isLoading).toBe(false);
       expect(state.error).toBe(errorMessage);
@@ -189,7 +191,7 @@ describe("ticketSlice", () => {
       const stateWithCount: TicketState = { ...initialState, count: 50 };
       const state = ticketReducer(
         stateWithCount,
-        printTicketThunk.rejected(null, "", undefined, "Error"),
+        printTicketThunk.rejected(null, "", undefined, { message: "Error" }),
       );
       expect(state.count).toBe(50);
     });

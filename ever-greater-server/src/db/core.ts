@@ -13,6 +13,7 @@ const USER_RESOURCE_COLUMNS = [
   "credit_value",
   "credit_generation_level",
   "credit_capacity_level",
+  "ticket_batch_level",
   "manual_print_batch_level",
   "supplies_batch_level",
   "auto_buy_supplies_purchased",
@@ -28,6 +29,7 @@ const USER_NUMERIC_FIELDS = [
   "credit_value",
   "credit_generation_level",
   "credit_capacity_level",
+  "ticket_batch_level",
   "manual_print_batch_level",
   "supplies_batch_level",
 ] as const;

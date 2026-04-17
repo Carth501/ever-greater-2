@@ -53,7 +53,10 @@ function isMissingPrinterSupplies(validation: ValidationResult): boolean {
   return (
     !validation.valid &&
     validation.error === "Insufficient resources" &&
-    validation.insufficientResources?.includes(ResourceType.PRINTER_SUPPLIES)
+    (validation.insufficientResources?.includes(
+      ResourceType.PRINTER_SUPPLIES,
+    ) ??
+      false)
   );
 }
 
