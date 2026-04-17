@@ -38,7 +38,7 @@ function ShopGlobalTicketsGroup({
             Cost: {creditCapacityCost} tickets
           </Typography>
           <Typography variant="caption" color="text.secondary" display="block">
-            Permanently increase maximum credit by{" "}
+            Increase capacity level by 1 and max credit by{" "}
             {CREDIT_CAPACITY_UPGRADE_AMOUNT}
           </Typography>
         </Box>

@@ -1,8 +1,8 @@
 import {
-	RESOURCE_DB_FIELDS,
-	ResourceAmount,
-	ResourceType,
-	User,
+  RESOURCE_DB_FIELDS,
+  ResourceAmount,
+  ResourceType,
+  User,
 } from "./resources.js";
 
 /**
@@ -164,6 +164,10 @@ export function getCreditCapacityUpgradeCost(user: User): number {
   return Math.floor(200 + Math.pow(level, 1.5) * 10);
 }
 
+export function getMaxCreditValue(user: User): number {
+  return getLevel(user.credit_capacity_level) * CREDIT_CAPACITY_UPGRADE_AMOUNT;
+}
+
 export function getMaxSuppliesPurchaseGold(user: User): number {
   return 2 ** getSuppliesBatchLevel(user);
 }
@@ -192,7 +196,7 @@ export function getCreditGenerationAmount(user: User): number {
   const generatedCredit = Math.max(0, user.credit_generation_level ?? 0) / 10;
   const remainingCapacity = Math.max(
     0,
-    (user.credit_capacity_level ?? 0) - (user.credit_value ?? 0),
+    getMaxCreditValue(user) - (user.credit_value ?? 0),
   );
 
   return Math.min(generatedCredit, remainingCapacity);
@@ -339,12 +343,12 @@ export const operations: Record<OperationId, Operation> = {
   [OperationId.INCREASE_CREDIT_CAPACITY]: {
     id: OperationId.INCREASE_CREDIT_CAPACITY,
     name: "Increase Credit Capacity",
-    description: `Increase your maximum credit by ${CREDIT_CAPACITY_UPGRADE_AMOUNT}`,
+    description: `Increase your capacity level by 1 (+${CREDIT_CAPACITY_UPGRADE_AMOUNT} max credit)`,
     cost: (ctx: OperationContext) => ({
       [ResourceType.GLOBAL_TICKETS]: getCreditCapacityUpgradeCost(ctx.user),
     }),
     gain: {
-      [ResourceType.CREDIT_CAPACITY_LEVEL]: CREDIT_CAPACITY_UPGRADE_AMOUNT,
+      [ResourceType.CREDIT_CAPACITY_LEVEL]: 1,
     },
   },
 

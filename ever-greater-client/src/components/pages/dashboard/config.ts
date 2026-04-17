@@ -52,7 +52,7 @@ export const previewDashboardUser: User = {
   money: 245000,
   gold: 164,
   autoprinters: 6,
-  credit_value: 2400,
+  credit_value: 112,
   credit_generation_level: 9,
   credit_capacity_level: 7,
   ticket_batch_level: 0,

@@ -1,31 +1,31 @@
 import { describe, expect, it } from "vitest";
 import {
-    applyTransaction,
-    canAfford,
-    clientOperationIds,
-    CREDIT_CAPACITY_UPGRADE_AMOUNT,
-    getAutoprinterCost,
-    getBuySuppliesGainForGold,
-    getCreditCapacityUpgradeCost,
-    getCreditGenerationAmount,
-    getCreditGenerationUpgradeCost,
-    getManualPrintBatchUpgradeCost,
-    getManualPrintQuantity,
-    getMaxSuppliesPurchaseGold,
-    getOperationCost,
-    getOperationGain,
-    getSuppliesBatchUpgradeCost,
-    getTicketBatchUpgradeCost,
-    isUserResourceFields,
-    isWebSocketMessage,
-    OperationId,
-    operations,
-    parseWebSocketMessage,
-    type ResourceAmount,
-    ResourceType,
-    type User,
-    validateOperation,
-    type WebSocketMessage,
+  applyTransaction,
+  canAfford,
+  clientOperationIds,
+  getAutoprinterCost,
+  getBuySuppliesGainForGold,
+  getCreditCapacityUpgradeCost,
+  getCreditGenerationAmount,
+  getCreditGenerationUpgradeCost,
+  getManualPrintBatchUpgradeCost,
+  getManualPrintQuantity,
+  getMaxCreditValue,
+  getMaxSuppliesPurchaseGold,
+  getOperationCost,
+  getOperationGain,
+  getSuppliesBatchUpgradeCost,
+  getTicketBatchUpgradeCost,
+  isUserResourceFields,
+  isWebSocketMessage,
+  OperationId,
+  operations,
+  parseWebSocketMessage,
+  type ResourceAmount,
+  ResourceType,
+  type User,
+  validateOperation,
+  type WebSocketMessage,
 } from "./index.js";
 
 function makeUser(overrides: Partial<User> = {}): User {
@@ -80,7 +80,7 @@ describe("shared operation contracts", () => {
               }
             : operationId === OperationId.BUY_AUTOPRINTER
               ? { credit_value: 1000 }
-            : {},
+              : {},
       );
       const operation = operations[operationId];
       const params =
@@ -399,6 +399,7 @@ describe("shared operation contracts", () => {
     expect(getCreditCapacityUpgradeCost(oneUpgradeUser)).toBe(210);
     expect(getCreditCapacityUpgradeCost(twoUpgradeUser)).toBe(228);
     expect(getCreditCapacityUpgradeCost(threeUpgradeUser)).toBe(251);
+    expect(getMaxCreditValue(threeUpgradeUser)).toBe(60);
 
     expect(
       getOperationCost(operations[OperationId.INCREASE_CREDIT_CAPACITY], {
@@ -411,8 +412,7 @@ describe("shared operation contracts", () => {
         user: threeUpgradeUser,
       }),
     ).toEqual({
-      [ResourceType.CREDIT_CAPACITY_LEVEL]:
-        CREDIT_CAPACITY_UPGRADE_AMOUNT,
+      [ResourceType.CREDIT_CAPACITY_LEVEL]: 1,
     });
   });
 
@@ -430,7 +430,17 @@ describe("shared operation contracts", () => {
     expect(
       getCreditGenerationAmount(
         makeUser({
-          credit_value: 4.9,
+          credit_value: 19.9,
+          credit_generation_level: 4,
+          credit_capacity_level: 1,
+        }),
+      ),
+    ).toBeCloseTo(0.1);
+
+    expect(
+      getCreditGenerationAmount(
+        makeUser({
+          credit_value: 99.9,
           credit_generation_level: 4,
           credit_capacity_level: 5,
         }),

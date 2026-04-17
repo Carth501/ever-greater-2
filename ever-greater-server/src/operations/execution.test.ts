@@ -2,9 +2,9 @@ import { OperationId, ResourceType, type User } from "ever-greater-shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as dbAccess from "./db-access.js";
 import {
-    executeOperationForUser,
-    OperationUserNotFoundError,
-    OperationValidationError,
+  executeOperationForUser,
+  OperationUserNotFoundError,
+  OperationValidationError,
 } from "./execution.js";
 
 vi.mock("./db-access.js", () => ({
@@ -217,7 +217,7 @@ describe("executeOperationForUser", () => {
     });
     const updatedUser = makeUser({
       tickets_contributed: 1000,
-      credit_capacity_level: 23,
+      credit_capacity_level: 4,
     });
 
     mockDbAccess.getUserById.mockResolvedValue(user);
@@ -234,7 +234,7 @@ describe("executeOperationForUser", () => {
     expect(mockDbAccess.executeResourceTransaction).toHaveBeenCalledWith(
       1,
       { [ResourceType.GLOBAL_TICKETS]: 251 },
-      { [ResourceType.CREDIT_CAPACITY_LEVEL]: 20 },
+      { [ResourceType.CREDIT_CAPACITY_LEVEL]: 1 },
       undefined,
     );
     expect(mockDbAccess.getGlobalCount).toHaveBeenCalledTimes(2);

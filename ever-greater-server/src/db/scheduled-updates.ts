@@ -1,4 +1,5 @@
 import {
+  CREDIT_CAPACITY_UPGRADE_AMOUNT,
   getAutoprinterPrintQuantity,
   OperationId,
   ResourceType,
@@ -107,7 +108,7 @@ export async function processAutoprinters(): Promise<{
 export async function updateAllUsersCreditValues(): Promise<number> {
   return withPoolClient(async (client) => {
     const users = await selectScheduledUsers(
-      "credit_generation_level > 0 AND credit_value < credit_capacity_level",
+      `credit_generation_level > 0 AND credit_value < (credit_capacity_level * ${CREDIT_CAPACITY_UPGRADE_AMOUNT})`,
       client,
     );
 
