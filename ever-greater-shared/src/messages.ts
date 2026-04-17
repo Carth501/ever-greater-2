@@ -3,37 +3,12 @@
  * Eliminates implicit field-name matching between server and client.
  */
 
-const USER_RESOURCE_FIELD_TYPES = {
-  printer_supplies: "number",
-  money: "number",
-  tickets_contributed: "number",
-  tickets_withdrawn: "number",
-  gold: "number",
-  autoprinters: "number",
-  credit_value: "number",
-  credit_generation_level: "number",
-  credit_capacity_level: "number",
-  manual_print_batch_level: "number",
-  supplies_batch_level: "number",
-  auto_buy_supplies_purchased: "boolean",
-  auto_buy_supplies_active: "boolean",
-} as const;
+import {
+  CLIENT_USER_STATE_FIELD_TYPES,
+  type ClientUserState,
+} from "./resources.js";
 
-export type UserResourceFields = Partial<{
-  printer_supplies: number;
-  money: number;
-  tickets_contributed: number;
-  tickets_withdrawn: number;
-  gold: number;
-  autoprinters: number;
-  credit_value: number;
-  credit_generation_level: number;
-  credit_capacity_level: number;
-  manual_print_batch_level: number;
-  supplies_batch_level: number;
-  auto_buy_supplies_purchased: boolean;
-  auto_buy_supplies_active: boolean;
-}>;
+export type UserResourceFields = Partial<ClientUserState>;
 
 export type GlobalCountUpdate = {
   type: "GLOBAL_COUNT_UPDATE";
@@ -60,7 +35,9 @@ export function isUserResourceFields(
 
   return Object.entries(value).every(([key, fieldValue]) => {
     const expectedType =
-      USER_RESOURCE_FIELD_TYPES[key as keyof typeof USER_RESOURCE_FIELD_TYPES];
+      CLIENT_USER_STATE_FIELD_TYPES[
+        key as keyof typeof CLIENT_USER_STATE_FIELD_TYPES
+      ];
 
     return expectedType !== undefined && typeof fieldValue === expectedType;
   });

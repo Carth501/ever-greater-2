@@ -16,7 +16,9 @@ import ShopCreditGroup from "./shop-groups/ShopCreditGroup";
 import ShopGlobalTicketsGroup from "./shop-groups/ShopGlobalTicketsGroup";
 import ShopMoneyGroup from "./shop-groups/ShopMoneyGroup";
 import ShopSuppliesGroup from "./shop-groups/ShopSuppliesGroup";
-import UpgradeGoldGroup from "./shop-groups/UpgradeGoldGroup";
+import UpgradeGoldGroup, {
+  type UpgradeGoldRowItem,
+} from "./shop-groups/UpgradeGoldGroup";
 
 type OperationHandlers = Pick<
   ReturnType<typeof useOperations>,
@@ -47,6 +49,14 @@ type RegistryEntry = {
   operationIds: OperationId[];
   isVisible: (context: RegistryContext) => boolean;
   render: (context: RegistryContext) => JSX.Element;
+};
+
+type GoldUpgradeDefinition = {
+  key: string;
+  operationIds: OperationId[];
+  buildRow: (
+    context: Pick<RegistryContext, "user" | "handlers">,
+  ) => UpgradeGoldRowItem;
 };
 
 const shopRegistry: RegistryEntry[] = [
@@ -125,80 +135,152 @@ const shopRegistry: RegistryEntry[] = [
   },
 ];
 
-const upgradeRegistry: RegistryEntry[] = [
+const goldUpgradeDefinitions: GoldUpgradeDefinition[] = [
   {
-    key: "gold-upgrades",
+    key: "auto-buy-supplies",
     operationIds: [
       OperationId.AUTO_BUY_SUPPLIES,
       OperationId.TOGGLE_AUTO_BUY_SUPPLIES,
-      OperationId.INCREASE_MANUAL_PRINT_BATCH,
-      OperationId.INCREASE_SUPPLIES_BATCH,
-      OperationId.INCREASE_CREDIT_GENERATION,
     ],
+    buildRow: ({ user, handlers }) => {
+      const autoBuyCost =
+        getOperationCost(operations[OperationId.AUTO_BUY_SUPPLIES], { user })[
+          ResourceType.GOLD
+        ] ?? 0;
+      const autoBuyPurchased = user.auto_buy_supplies_purchased;
+      const autoBuyActive = user.auto_buy_supplies_active;
+
+      return {
+        key: "auto-buy-supplies",
+        title: "Auto-Buy Supplies",
+        meta: autoBuyPurchased ? "Unlocked" : `Cost: ${autoBuyCost}g`,
+        description: autoBuyPurchased
+          ? "Toggle automatic supplies purchasing on and off"
+          : "One-time unlock. You keep access permanently.",
+        action: autoBuyPurchased
+          ? {
+              kind: "toggle",
+              checked: autoBuyActive,
+              activeLabel: "Active",
+              inactiveLabel: "Inactive",
+              onChange: handlers.toggleAutoBuySupplies,
+            }
+          : {
+              kind: "button",
+              label: "Buy",
+              disabled: !canAfford(user, {
+                [ResourceType.GOLD]: autoBuyCost,
+              }),
+              onClick: handlers.buyAutoBuySupplies,
+            },
+      };
+    },
+  },
+  {
+    key: "increase-manual-print-batch",
+    operationIds: [OperationId.INCREASE_MANUAL_PRINT_BATCH],
+    buildRow: ({ user, handlers }) => {
+      const manualPrintBatchCost =
+        getOperationCost(operations[OperationId.INCREASE_MANUAL_PRINT_BATCH], {
+          user,
+        })[ResourceType.GOLD] ?? 0;
+      const currentManualPrintQuantity = getManualPrintQuantity(user);
+      const nextManualPrintQuantity = currentManualPrintQuantity * 2;
+
+      return {
+        key: "increase-manual-print-batch",
+        title: "Increase Manual Print Batch",
+        meta: `Cost: ${manualPrintBatchCost}g · Lvl ${user.manual_print_batch_level ?? 0}`,
+        description: `Doubles each manual print from ${currentManualPrintQuantity} ticket${
+          currentManualPrintQuantity === 1 ? "" : "s"
+        } to ${nextManualPrintQuantity} ticket${
+          nextManualPrintQuantity === 1 ? "" : "s"
+        } per press.`,
+        action: {
+          kind: "button",
+          label: "Buy",
+          disabled: !canAfford(user, {
+            [ResourceType.GOLD]: manualPrintBatchCost,
+          }),
+          onClick: handlers.increaseManualPrintBatch,
+        },
+      };
+    },
+  },
+  {
+    key: "increase-supplies-batch",
+    operationIds: [OperationId.INCREASE_SUPPLIES_BATCH],
+    buildRow: ({ user, handlers }) => {
+      const suppliesBatchCost =
+        getOperationCost(operations[OperationId.INCREASE_SUPPLIES_BATCH], {
+          user,
+        })[ResourceType.GOLD] ?? 0;
+      const currentSuppliesBatchGold = getMaxSuppliesPurchaseGold(user);
+      const currentSuppliesBatchAmount = getBuySuppliesGainForGold(
+        currentSuppliesBatchGold,
+      );
+      const nextSuppliesBatchGold = currentSuppliesBatchGold * 2;
+      const nextSuppliesBatchAmount = getBuySuppliesGainForGold(
+        nextSuppliesBatchGold,
+      );
+
+      return {
+        key: "increase-supplies-batch",
+        title: "Increase Supplies Batch",
+        meta: `Cost: ${suppliesBatchCost}g · Lvl ${user.supplies_batch_level ?? 0}`,
+        description: `Doubles your max refill from ${currentSuppliesBatchAmount} supplies for ${currentSuppliesBatchGold}g to ${nextSuppliesBatchAmount} supplies for ${nextSuppliesBatchGold}g.`,
+        action: {
+          kind: "button",
+          label: "Buy",
+          disabled: !canAfford(user, {
+            [ResourceType.GOLD]: suppliesBatchCost,
+          }),
+          onClick: handlers.increaseSuppliesBatch,
+        },
+      };
+    },
+  },
+  {
+    key: "increase-credit-generation",
+    operationIds: [OperationId.INCREASE_CREDIT_GENERATION],
+    buildRow: ({ user, handlers }) => {
+      const creditGenerationCost =
+        getOperationCost(operations[OperationId.INCREASE_CREDIT_GENERATION], {
+          user,
+        })[ResourceType.GOLD] ?? 0;
+
+      return {
+        key: "increase-credit-generation",
+        title: "Increase Credit Generation",
+        meta: `Cost: ${creditGenerationCost}g`,
+        description: "Permanently increase credit generation by 0.1 per second",
+        action: {
+          kind: "button",
+          label: "Buy",
+          disabled: !canAfford(user, {
+            [ResourceType.GOLD]: creditGenerationCost,
+          }),
+          onClick: handlers.increaseCreditGeneration,
+        },
+      };
+    },
+  },
+];
+
+const upgradeRegistry: RegistryEntry[] = [
+  {
+    key: "gold-upgrades",
+    operationIds: goldUpgradeDefinitions.flatMap(
+      (definition) => definition.operationIds,
+    ),
     isVisible: () => true,
     render: ({ user, handlers }) => {
-      const operationContext = { user };
-      const autoBuySuppliesCost =
-        getOperationCost(
-          operations[OperationId.AUTO_BUY_SUPPLIES],
-          operationContext,
-        )[ResourceType.GOLD] ?? 0;
-      const suppliesBatchCost =
-        getOperationCost(
-          operations[OperationId.INCREASE_SUPPLIES_BATCH],
-          operationContext,
-        )[ResourceType.GOLD] ?? 0;
-      const manualPrintBatchCost =
-        getOperationCost(
-          operations[OperationId.INCREASE_MANUAL_PRINT_BATCH],
-          operationContext,
-        )[ResourceType.GOLD] ?? 0;
-      const creditGenerationCost =
-        getOperationCost(
-          operations[OperationId.INCREASE_CREDIT_GENERATION],
-          operationContext,
-        )[ResourceType.GOLD] ?? 0;
-      const currentManualPrintQuantity = getManualPrintQuantity(user);
-      const currentSuppliesBatchGold = getMaxSuppliesPurchaseGold(user);
-
       return (
         <UpgradeGoldGroup
           gold={user.gold ?? 0}
-          autoBuyCost={autoBuySuppliesCost}
-          autoBuyPurchased={user.auto_buy_supplies_purchased}
-          autoBuyActive={user.auto_buy_supplies_active}
-          canAffordAutoBuyUnlock={canAfford(user, {
-            [ResourceType.GOLD]: autoBuySuppliesCost,
-          })}
-          creditGenerationCost={creditGenerationCost}
-          canAffordCreditGeneration={canAfford(user, {
-            [ResourceType.GOLD]: creditGenerationCost,
-          })}
-          manualPrintBatchCost={manualPrintBatchCost}
-          manualPrintBatchLevel={user.manual_print_batch_level ?? 0}
-          currentManualPrintQuantity={currentManualPrintQuantity}
-          nextManualPrintQuantity={currentManualPrintQuantity * 2}
-          canAffordManualPrintBatch={canAfford(user, {
-            [ResourceType.GOLD]: manualPrintBatchCost,
-          })}
-          suppliesBatchCost={suppliesBatchCost}
-          suppliesBatchLevel={user.supplies_batch_level ?? 0}
-          currentSuppliesBatchAmount={getBuySuppliesGainForGold(
-            currentSuppliesBatchGold,
+          rows={goldUpgradeDefinitions.map((definition) =>
+            definition.buildRow({ user, handlers }),
           )}
-          currentSuppliesBatchGold={currentSuppliesBatchGold}
-          nextSuppliesBatchAmount={getBuySuppliesGainForGold(
-            currentSuppliesBatchGold * 2,
-          )}
-          nextSuppliesBatchGold={currentSuppliesBatchGold * 2}
-          canAffordSuppliesBatch={canAfford(user, {
-            [ResourceType.GOLD]: suppliesBatchCost,
-          })}
-          onBuyAutoBuySupplies={handlers.buyAutoBuySupplies}
-          onToggleAutoBuySupplies={handlers.toggleAutoBuySupplies}
-          onIncreaseCreditGeneration={handlers.increaseCreditGeneration}
-          onIncreaseManualPrintBatch={handlers.increaseManualPrintBatch}
-          onIncreaseSuppliesBatch={handlers.increaseSuppliesBatch}
         />
       );
     },

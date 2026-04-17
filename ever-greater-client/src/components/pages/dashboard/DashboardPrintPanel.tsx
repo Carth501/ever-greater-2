@@ -5,6 +5,7 @@ import Chip from "@mui/material/Chip";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { useId } from "react";
+import { buildPrintPresentation } from "../../../lib/printPresentation";
 import { dashboardContent } from "./content";
 import { formatNumber } from "./helpers";
 import { AccentPanel, PanelCard, PrintZone } from "./styles";
@@ -29,28 +30,16 @@ export function DashboardPrintPanel({
   const headingId = useId();
   const descriptionId = useId();
   const helperTextId = useId();
-  const isOutOfSupplies = visibleSupplies === 0;
-  const hasInsufficientSupplies = visibleSupplies < manualPrintQuantity;
-  const printButtonLabel =
-    manualPrintQuantity === 1
-      ? "Print a ticket"
-      : `Print ${manualPrintQuantity} tickets`;
-  const buttonHelperText = !hasLiveUser
-    ? "Printing is disabled in preview mode because no live account is connected."
-    : hasInsufficientSupplies
-      ? isOutOfSupplies
-        ? "Printing is disabled because supplies are depleted. Restore stock to continue."
-        : `Printing is disabled because the current batch needs ${manualPrintQuantity} supplies.`
-      : printButtonDisabled
-        ? "Printing is temporarily unavailable while the current action finishes."
-        : "Printing is available and ready from this panel.";
-  const suppliesStatusText = hasInsufficientSupplies
-    ? isOutOfSupplies
-      ? "No supplies available. Printing is blocked until stock is restored."
-      : `${formatNumber(visibleSupplies)} supplies available. ${formatNumber(manualPrintQuantity)} are required for the current batch.`
-    : isAutoBuyActive
-      ? "Auto-buy is active. Stock can recover without leaving the main workflow."
-      : "Supplies are live from the current user state. Enable automation to reduce refill interruptions.";
+  const { printButtonLabel, buttonHelperText, suppliesStatusText } =
+    buildPrintPresentation({
+      supplies: visibleSupplies,
+      printQuantity: manualPrintQuantity,
+      isActionDisabled: printButtonDisabled,
+      mode: "dashboard",
+      hasLiveUser,
+      isAutoBuyActive,
+      formatNumber,
+    });
 
   return (
     <Box

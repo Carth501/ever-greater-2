@@ -6,18 +6,7 @@ import {
   type ApiErrorCode,
   type ApiErrorInfo,
 } from "../../api/client";
-import {
-  buyAutoBuySuppliesThunk,
-  buyAutoprinterThunk,
-  buyGoldThunk,
-  buySuppliesThunk,
-  increaseCreditCapacityThunk,
-  increaseCreditGenerationThunk,
-  increaseManualPrintBatchThunk,
-  increaseSuppliesBatchThunk,
-  printTicketThunk,
-  toggleAutoBuySuppliesThunk,
-} from "../gameOperationThunks";
+import { userUpdateFulfilledActions } from "../gameOperationThunks";
 
 type UserUpdatePayload = Partial<
   Pick<
@@ -261,18 +250,7 @@ const authSlice = createSlice({
       });
 
     builder.addMatcher(
-      isAnyOf(
-        buySuppliesThunk.fulfilled,
-        buyGoldThunk.fulfilled,
-        buyAutoBuySuppliesThunk.fulfilled,
-        buyAutoprinterThunk.fulfilled,
-        increaseCreditGenerationThunk.fulfilled,
-        increaseManualPrintBatchThunk.fulfilled,
-        increaseSuppliesBatchThunk.fulfilled,
-        increaseCreditCapacityThunk.fulfilled,
-        toggleAutoBuySuppliesThunk.fulfilled,
-        printTicketThunk.fulfilled,
-      ),
+      isAnyOf(...userUpdateFulfilledActions),
       (state, action) => {
         mergeUserUpdate(state, action.payload);
       },

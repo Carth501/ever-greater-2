@@ -79,6 +79,48 @@ export interface User {
   auto_buy_supplies_active: boolean;
 }
 
+export const CLIENT_USER_STATE_DEFAULTS = {
+  printer_supplies: 0,
+  money: 0,
+  gold: 0,
+  autoprinters: 0,
+  tickets_contributed: 0,
+  tickets_withdrawn: 0,
+  credit_value: 0,
+  credit_generation_level: 0,
+  credit_capacity_level: 0,
+  manual_print_batch_level: 0,
+  supplies_batch_level: 0,
+  auto_buy_supplies_purchased: false,
+  auto_buy_supplies_active: false,
+} satisfies Omit<User, "id" | "email">;
+
+export type ClientUserStateField = keyof typeof CLIENT_USER_STATE_DEFAULTS;
+
+export type ClientUserState = Pick<User, ClientUserStateField>;
+
+export const CLIENT_USER_STATE_FIELDS = Object.keys(
+  CLIENT_USER_STATE_DEFAULTS,
+) as ClientUserStateField[];
+
+export const CLIENT_USER_STATE_FIELD_TYPES = Object.fromEntries(
+  Object.entries(CLIENT_USER_STATE_DEFAULTS).map(([field, value]) => [
+    field,
+    typeof value,
+  ]),
+) as Record<ClientUserStateField, "number" | "boolean">;
+
+export function toClientUserState(
+  user: Partial<ClientUserState>,
+): ClientUserState {
+  return Object.fromEntries(
+    CLIENT_USER_STATE_FIELDS.map((field) => [
+      field,
+      user[field] ?? CLIENT_USER_STATE_DEFAULTS[field],
+    ]),
+  ) as ClientUserState;
+}
+
 /**
  * Helper function to get a resource value from a user object.
  * Uses the RESOURCE_DB_FIELDS mapping to access the correct property.

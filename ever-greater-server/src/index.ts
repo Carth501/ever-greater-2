@@ -4,8 +4,12 @@ import cors from "cors";
 import { randomUUID } from "crypto";
 import "dotenv/config";
 import {
+  CLIENT_USER_STATE_FIELDS,
   isClientOperationId,
   OperationId,
+  toClientUserState,
+  type ClientUserState,
+  type ClientUserStateField,
   type GlobalCountUpdate,
   type UserResourceUpdate,
 } from "ever-greater-shared";
@@ -50,109 +54,39 @@ let server: Server | undefined;
 let autoprinterInterval: NodeJS.Timeout | undefined;
 let ticketCleanupInterval: NodeJS.Timeout | undefined;
 const socketUserMap = new Map<WebSocket, number>();
-const userPeriodicSnapshotMap = new Map<number, Required<UserUpdatePayload>>();
+const userPeriodicSnapshotMap = new Map<number, ClientUserState>();
 
 const PgSession = connectPgSimple(session);
 
-type UserUpdatePayload = Partial<{
-  printer_supplies: number;
-  money: number;
-  gold: number;
-  autoprinters: number;
-  tickets_contributed: number;
-  tickets_withdrawn: number;
-  credit_value: number;
-  credit_generation_level: number;
-  credit_capacity_level: number;
-  manual_print_batch_level: number;
-  supplies_batch_level: number;
-  auto_buy_supplies_purchased: boolean;
-  auto_buy_supplies_active: boolean;
-}>;
+type UserUpdatePayload = Partial<ClientUserState>;
+
+const ALWAYS_INCLUDED_PERIODIC_FIELDS = new Set<ClientUserStateField>([
+  "printer_supplies",
+  "tickets_contributed",
+  "tickets_withdrawn",
+  "credit_value",
+]);
 
 function toPeriodicUserSnapshot(
   user: NonNullable<Awaited<ReturnType<typeof getUserById>>>,
-): Required<UserUpdatePayload> {
-  return {
-    printer_supplies: user.printer_supplies,
-    money: user.money,
-    gold: user.gold,
-    autoprinters: user.autoprinters || 0,
-    tickets_contributed: user.tickets_contributed,
-    tickets_withdrawn: user.tickets_withdrawn || 0,
-    credit_value: user.credit_value || 0,
-    credit_generation_level: user.credit_generation_level || 0,
-    credit_capacity_level: user.credit_capacity_level || 0,
-    manual_print_batch_level: user.manual_print_batch_level || 0,
-    supplies_batch_level: user.supplies_batch_level || 0,
-    auto_buy_supplies_purchased: user.auto_buy_supplies_purchased || false,
-    auto_buy_supplies_active: user.auto_buy_supplies_active || false,
-  };
+): ClientUserState {
+  return toClientUserState(user);
 }
 
 function buildPeriodicUserUpdatePayload(
-  current: Required<UserUpdatePayload>,
-  previous: Required<UserUpdatePayload> | undefined,
+  current: ClientUserState,
+  previous: ClientUserState | undefined,
 ): UserUpdatePayload {
-  const payload: UserUpdatePayload = {
-    printer_supplies: current.printer_supplies,
-    tickets_contributed: current.tickets_contributed,
-    tickets_withdrawn: current.tickets_withdrawn,
-    credit_value: current.credit_value,
-  };
+  const payload: UserUpdatePayload = {};
 
-  if (!previous || previous.money !== current.money) {
-    payload.money = current.money;
-  }
-
-  if (!previous || previous.gold !== current.gold) {
-    payload.gold = current.gold;
-  }
-
-  if (!previous || previous.autoprinters !== current.autoprinters) {
-    payload.autoprinters = current.autoprinters;
-  }
-
-  if (
-    !previous ||
-    previous.credit_generation_level !== current.credit_generation_level
-  ) {
-    payload.credit_generation_level = current.credit_generation_level;
-  }
-
-  if (
-    !previous ||
-    previous.credit_capacity_level !== current.credit_capacity_level
-  ) {
-    payload.credit_capacity_level = current.credit_capacity_level;
-  }
-
-  if (
-    !previous ||
-    previous.manual_print_batch_level !== current.manual_print_batch_level
-  ) {
-    payload.manual_print_batch_level = current.manual_print_batch_level;
-  }
-
-  if (
-    !previous ||
-    previous.supplies_batch_level !== current.supplies_batch_level
-  ) {
-    payload.supplies_batch_level = current.supplies_batch_level;
-  }
-
-  if (
-    !previous ||
-    previous.auto_buy_supplies_purchased !== current.auto_buy_supplies_purchased
-  ) {
-    payload.auto_buy_supplies_purchased = current.auto_buy_supplies_purchased;
-  }
-
-  if (
-    !previous ||
-    previous.auto_buy_supplies_active !== current.auto_buy_supplies_active
-  ) {
-    payload.auto_buy_supplies_active = current.auto_buy_supplies_active;
+  for (const field of CLIENT_USER_STATE_FIELDS) {
+    if (
+      !previous ||
+      ALWAYS_INCLUDED_PERIODIC_FIELDS.has(field) ||
+      previous[field] !== current[field]
+    ) {
+      payload[field] = current[field];
+    }
   }
 
   return payload;
@@ -166,19 +100,7 @@ function toClientUser(user: Awaited<ReturnType<typeof getUserById>>) {
   return {
     id: user.id,
     email: user.email,
-    tickets_contributed: user.tickets_contributed,
-    tickets_withdrawn: user.tickets_withdrawn || 0,
-    printer_supplies: user.printer_supplies,
-    money: user.money,
-    gold: user.gold,
-    autoprinters: user.autoprinters || 0,
-    credit_value: user.credit_value || 0,
-    credit_generation_level: user.credit_generation_level || 0,
-    credit_capacity_level: user.credit_capacity_level || 0,
-    manual_print_batch_level: user.manual_print_batch_level || 0,
-    supplies_batch_level: user.supplies_batch_level || 0,
-    auto_buy_supplies_purchased: user.auto_buy_supplies_purchased || false,
-    auto_buy_supplies_active: user.auto_buy_supplies_active || false,
+    ...toClientUserState(user),
   };
 }
 

@@ -6,6 +6,7 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { alpha, styled } from "@mui/material/styles";
 import { JSX, useId } from "react";
+import { buildPrintPresentation } from "../../lib/printPresentation";
 
 type PrintControlsProps = {
   supplies: number;
@@ -68,22 +69,17 @@ function PrintControls({
   onPrintClick,
 }: PrintControlsProps): JSX.Element {
   const helperTextId = useId();
-  const hasInsufficientSupplies = supplies < printQuantity;
-  const isOutOfSupplies = supplies === 0;
-  const printButtonLabel =
-    printQuantity === 1 ? "Print a ticket" : `Print ${printQuantity} tickets`;
-  const buttonHelperText = hasInsufficientSupplies
-    ? isOutOfSupplies
-      ? "Printing is disabled because supplies are depleted. Refill stock to resume ticket printing."
-      : `Printing is disabled because the current batch needs ${printQuantity} supplies.`
-    : isDisabled
-      ? "Printing is temporarily unavailable while the current action finishes."
-      : "Printing is available and ready from this panel.";
-  const suppliesStatusText = hasInsufficientSupplies
-    ? isOutOfSupplies
-      ? "No supplies available. Printing is blocked until stock is restored."
-      : `${supplies} supplies available. ${printQuantity} are required for the current batch.`
-    : "Supplies are in a healthy range and ready for the current print loop.";
+  const {
+    isOutOfSupplies,
+    printButtonLabel,
+    buttonHelperText,
+    suppliesStatusText,
+  } = buildPrintPresentation({
+    supplies,
+    printQuantity,
+    isActionDisabled: isDisabled,
+    mode: "classic",
+  });
 
   return (
     <ControlsCard elevation={0}>

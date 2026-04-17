@@ -1,15 +1,9 @@
 import { createSlice, isAnyOf } from "@reduxjs/toolkit";
 import { type ApiErrorCode, type ApiErrorInfo } from "../../api/client";
 import {
-  buyAutoBuySuppliesThunk,
-  buyAutoprinterThunk,
-  buyGoldThunk,
-  buySuppliesThunk,
-  increaseCreditCapacityThunk,
-  increaseCreditGenerationThunk,
-  increaseManualPrintBatchThunk,
-  increaseSuppliesBatchThunk,
-  toggleAutoBuySuppliesThunk,
+  operationsStateFulfilledActions,
+  operationsStatePendingActions,
+  operationsStateRejectedActions,
 } from "../gameOperationThunks";
 
 export interface OperationsState {
@@ -70,54 +64,18 @@ const operationsSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    builder.addMatcher(
-      isAnyOf(
-        buySuppliesThunk.pending,
-        buyGoldThunk.pending,
-        buyAutoBuySuppliesThunk.pending,
-        buyAutoprinterThunk.pending,
-        increaseCreditGenerationThunk.pending,
-        increaseManualPrintBatchThunk.pending,
-        increaseSuppliesBatchThunk.pending,
-        increaseCreditCapacityThunk.pending,
-        toggleAutoBuySuppliesThunk.pending,
-      ),
-      (state) => {
-        startLoading(state);
-        clearOperationError(state);
-      },
-    );
+    builder.addMatcher(isAnyOf(...operationsStatePendingActions), (state) => {
+      startLoading(state);
+      clearOperationError(state);
+    });
+
+    builder.addMatcher(isAnyOf(...operationsStateFulfilledActions), (state) => {
+      finishLoading(state);
+      clearOperationError(state);
+    });
 
     builder.addMatcher(
-      isAnyOf(
-        buySuppliesThunk.fulfilled,
-        buyGoldThunk.fulfilled,
-        buyAutoBuySuppliesThunk.fulfilled,
-        buyAutoprinterThunk.fulfilled,
-        increaseCreditGenerationThunk.fulfilled,
-        increaseManualPrintBatchThunk.fulfilled,
-        increaseSuppliesBatchThunk.fulfilled,
-        increaseCreditCapacityThunk.fulfilled,
-        toggleAutoBuySuppliesThunk.fulfilled,
-      ),
-      (state) => {
-        finishLoading(state);
-        clearOperationError(state);
-      },
-    );
-
-    builder.addMatcher(
-      isAnyOf(
-        buySuppliesThunk.rejected,
-        buyGoldThunk.rejected,
-        buyAutoBuySuppliesThunk.rejected,
-        buyAutoprinterThunk.rejected,
-        increaseCreditGenerationThunk.rejected,
-        increaseManualPrintBatchThunk.rejected,
-        increaseSuppliesBatchThunk.rejected,
-        increaseCreditCapacityThunk.rejected,
-        toggleAutoBuySuppliesThunk.rejected,
-      ),
+      isAnyOf(...operationsStateRejectedActions),
       (state, action) => {
         finishLoading(state);
         applyOperationError(
