@@ -55,6 +55,7 @@ function createGameMockValue(
     error: null,
     isLoading: false,
     supplies: 24,
+    manualPrintQuantity: 1,
     isPrintDisabled: false,
     printTicket: printTicketSpy,
     ...overrides,

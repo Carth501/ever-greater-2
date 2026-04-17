@@ -7,6 +7,7 @@ import {
   buySuppliesThunk,
   increaseCreditCapacityThunk,
   increaseCreditGenerationThunk,
+  increaseManualPrintBatchThunk,
   increaseSuppliesBatchThunk,
   toggleAutoBuySuppliesThunk,
 } from "../store/slices/operationsSlice";
@@ -78,6 +79,14 @@ export function useOperations(onError?: (message: string) => void) {
     });
   };
 
+  const increaseManualPrintBatch = () => {
+    dispatch(increaseManualPrintBatchThunk()).then((result) => {
+      if (result.type === increaseManualPrintBatchThunk.rejected.type) {
+        notifyRejected(result.payload);
+      }
+    });
+  };
+
   const increaseSuppliesBatch = () => {
     dispatch(increaseSuppliesBatchThunk()).then((result) => {
       if (result.type === increaseSuppliesBatchThunk.rejected.type) {
@@ -105,6 +114,7 @@ export function useOperations(onError?: (message: string) => void) {
     buyAutoBuySupplies,
     toggleAutoBuySupplies,
     increaseCreditGeneration,
+    increaseManualPrintBatch,
     increaseSuppliesBatch,
     increaseCreditCapacity,
   };

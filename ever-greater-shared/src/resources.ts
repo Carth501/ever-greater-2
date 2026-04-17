@@ -11,6 +11,7 @@ export enum ResourceType {
   CREDIT = "CREDIT",
   CREDIT_GENERATION_LEVEL = "CREDIT_GENERATION_LEVEL",
   CREDIT_CAPACITY_LEVEL = "CREDIT_CAPACITY_LEVEL",
+  MANUAL_PRINT_BATCH_LEVEL = "MANUAL_PRINT_BATCH_LEVEL",
   SUPPLIES_BATCH_LEVEL = "SUPPLIES_BATCH_LEVEL",
   GLOBAL_TICKETS = "GLOBAL_TICKETS",
 }
@@ -29,6 +30,7 @@ export const RESOURCE_DB_FIELDS: Partial<Record<ResourceType, string>> = {
   [ResourceType.CREDIT]: "credit_value",
   [ResourceType.CREDIT_GENERATION_LEVEL]: "credit_generation_level",
   [ResourceType.CREDIT_CAPACITY_LEVEL]: "credit_capacity_level",
+  [ResourceType.MANUAL_PRINT_BATCH_LEVEL]: "manual_print_batch_level",
   [ResourceType.SUPPLIES_BATCH_LEVEL]: "supplies_batch_level",
 };
 
@@ -45,6 +47,7 @@ export const DB_FIELD_TO_RESOURCE: Record<string, ResourceType> = {
   credit_value: ResourceType.CREDIT,
   credit_generation_level: ResourceType.CREDIT_GENERATION_LEVEL,
   credit_capacity_level: ResourceType.CREDIT_CAPACITY_LEVEL,
+  manual_print_batch_level: ResourceType.MANUAL_PRINT_BATCH_LEVEL,
   supplies_batch_level: ResourceType.SUPPLIES_BATCH_LEVEL,
 };
 
@@ -70,6 +73,7 @@ export interface User {
   credit_value: number;
   credit_generation_level: number;
   credit_capacity_level: number;
+  manual_print_batch_level: number;
   supplies_batch_level: number;
   auto_buy_supplies_purchased: boolean;
   auto_buy_supplies_active: boolean;

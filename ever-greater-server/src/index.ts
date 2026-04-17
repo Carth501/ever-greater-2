@@ -64,6 +64,7 @@ type UserUpdatePayload = Partial<{
   credit_value: number;
   credit_generation_level: number;
   credit_capacity_level: number;
+  manual_print_batch_level: number;
   supplies_batch_level: number;
   auto_buy_supplies_purchased: boolean;
   auto_buy_supplies_active: boolean;
@@ -82,6 +83,7 @@ function toPeriodicUserSnapshot(
     credit_value: user.credit_value || 0,
     credit_generation_level: user.credit_generation_level || 0,
     credit_capacity_level: user.credit_capacity_level || 0,
+    manual_print_batch_level: user.manual_print_batch_level || 0,
     supplies_batch_level: user.supplies_batch_level || 0,
     auto_buy_supplies_purchased: user.auto_buy_supplies_purchased || false,
     auto_buy_supplies_active: user.auto_buy_supplies_active || false,
@@ -127,6 +129,13 @@ function buildPeriodicUserUpdatePayload(
 
   if (
     !previous ||
+    previous.manual_print_batch_level !== current.manual_print_batch_level
+  ) {
+    payload.manual_print_batch_level = current.manual_print_batch_level;
+  }
+
+  if (
+    !previous ||
     previous.supplies_batch_level !== current.supplies_batch_level
   ) {
     payload.supplies_batch_level = current.supplies_batch_level;
@@ -166,6 +175,7 @@ function toClientUser(user: Awaited<ReturnType<typeof getUserById>>) {
     credit_value: user.credit_value || 0,
     credit_generation_level: user.credit_generation_level || 0,
     credit_capacity_level: user.credit_capacity_level || 0,
+    manual_print_batch_level: user.manual_print_batch_level || 0,
     supplies_batch_level: user.supplies_batch_level || 0,
     auto_buy_supplies_purchased: user.auto_buy_supplies_purchased || false,
     auto_buy_supplies_active: user.auto_buy_supplies_active || false,
@@ -637,6 +647,7 @@ function createApp(): Express {
         credit_value: result.user.credit_value,
         credit_generation_level: result.user.credit_generation_level,
         credit_capacity_level: result.user.credit_capacity_level,
+        manual_print_batch_level: result.user.manual_print_batch_level,
         supplies_batch_level: result.user.supplies_batch_level,
         auto_buy_supplies_purchased: result.user.auto_buy_supplies_purchased,
         auto_buy_supplies_active: result.user.auto_buy_supplies_active,

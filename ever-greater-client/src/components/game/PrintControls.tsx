@@ -9,6 +9,7 @@ import { JSX, useId } from "react";
 
 type PrintControlsProps = {
   supplies: number;
+  printQuantity: number;
   isDisabled: boolean;
   onPrintClick: () => void;
 };
@@ -62,18 +63,26 @@ const SuppliesCard = styled(Paper, {
 
 function PrintControls({
   supplies,
+  printQuantity,
   isDisabled,
   onPrintClick,
 }: PrintControlsProps): JSX.Element {
   const helperTextId = useId();
+  const hasInsufficientSupplies = supplies < printQuantity;
   const isOutOfSupplies = supplies === 0;
-  const buttonHelperText = isOutOfSupplies
-    ? "Printing is disabled because supplies are depleted. Refill stock to resume ticket printing."
+  const printButtonLabel =
+    printQuantity === 1 ? "Print a ticket" : `Print ${printQuantity} tickets`;
+  const buttonHelperText = hasInsufficientSupplies
+    ? isOutOfSupplies
+      ? "Printing is disabled because supplies are depleted. Refill stock to resume ticket printing."
+      : `Printing is disabled because the current batch needs ${printQuantity} supplies.`
     : isDisabled
       ? "Printing is temporarily unavailable while the current action finishes."
       : "Printing is available and ready from this panel.";
-  const suppliesStatusText = isOutOfSupplies
-    ? "No supplies available. Printing is blocked until stock is restored."
+  const suppliesStatusText = hasInsufficientSupplies
+    ? isOutOfSupplies
+      ? "No supplies available. Printing is blocked until stock is restored."
+      : `${supplies} supplies available. ${printQuantity} are required for the current batch.`
     : "Supplies are in a healthy range and ready for the current print loop.";
 
   return (
@@ -110,7 +119,7 @@ function PrintControls({
                 aria-describedby={helperTextId}
                 sx={{ minWidth: 220 }}
               >
-                Print a ticket
+                {printButtonLabel}
               </Button>
               <Typography
                 id={helperTextId}

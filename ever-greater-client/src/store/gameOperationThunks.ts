@@ -47,6 +47,12 @@ export const increaseCreditGenerationThunk = createGameOperationThunk(
   "Failed to increase credit generation",
 );
 
+export const increaseManualPrintBatchThunk = createGameOperationThunk(
+  "operations/increaseManualPrintBatch",
+  () => operationsApi.increaseManualPrintBatch(),
+  "Failed to increase manual print batch size",
+);
+
 export const increaseSuppliesBatchThunk = createGameOperationThunk(
   "operations/increaseSuppliesBatch",
   () => operationsApi.increaseSuppliesBatch(),

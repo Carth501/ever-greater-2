@@ -3,6 +3,7 @@ import {
   ResourceType,
   canAfford,
   getBuySuppliesGainForGold,
+  getManualPrintQuantity,
   getMaxSuppliesPurchaseGold,
   getOperationCost,
   getOperationGain,
@@ -25,6 +26,7 @@ type OperationHandlers = Pick<
   | "buyAutoBuySupplies"
   | "toggleAutoBuySupplies"
   | "increaseCreditGeneration"
+  | "increaseManualPrintBatch"
   | "increaseSuppliesBatch"
   | "increaseCreditCapacity"
 >;
@@ -129,6 +131,7 @@ const upgradeRegistry: RegistryEntry[] = [
     operationIds: [
       OperationId.AUTO_BUY_SUPPLIES,
       OperationId.TOGGLE_AUTO_BUY_SUPPLIES,
+      OperationId.INCREASE_MANUAL_PRINT_BATCH,
       OperationId.INCREASE_SUPPLIES_BATCH,
       OperationId.INCREASE_CREDIT_GENERATION,
     ],
@@ -145,11 +148,17 @@ const upgradeRegistry: RegistryEntry[] = [
           operations[OperationId.INCREASE_SUPPLIES_BATCH],
           operationContext,
         )[ResourceType.GOLD] ?? 0;
+      const manualPrintBatchCost =
+        getOperationCost(
+          operations[OperationId.INCREASE_MANUAL_PRINT_BATCH],
+          operationContext,
+        )[ResourceType.GOLD] ?? 0;
       const creditGenerationCost =
         getOperationCost(
           operations[OperationId.INCREASE_CREDIT_GENERATION],
           operationContext,
         )[ResourceType.GOLD] ?? 0;
+      const currentManualPrintQuantity = getManualPrintQuantity(user);
       const currentSuppliesBatchGold = getMaxSuppliesPurchaseGold(user);
 
       return (
@@ -164,6 +173,13 @@ const upgradeRegistry: RegistryEntry[] = [
           creditGenerationCost={creditGenerationCost}
           canAffordCreditGeneration={canAfford(user, {
             [ResourceType.GOLD]: creditGenerationCost,
+          })}
+          manualPrintBatchCost={manualPrintBatchCost}
+          manualPrintBatchLevel={user.manual_print_batch_level ?? 0}
+          currentManualPrintQuantity={currentManualPrintQuantity}
+          nextManualPrintQuantity={currentManualPrintQuantity * 2}
+          canAffordManualPrintBatch={canAfford(user, {
+            [ResourceType.GOLD]: manualPrintBatchCost,
           })}
           suppliesBatchCost={suppliesBatchCost}
           suppliesBatchLevel={user.supplies_batch_level ?? 0}
@@ -181,6 +197,7 @@ const upgradeRegistry: RegistryEntry[] = [
           onBuyAutoBuySupplies={handlers.buyAutoBuySupplies}
           onToggleAutoBuySupplies={handlers.toggleAutoBuySupplies}
           onIncreaseCreditGeneration={handlers.increaseCreditGeneration}
+          onIncreaseManualPrintBatch={handlers.increaseManualPrintBatch}
           onIncreaseSuppliesBatch={handlers.increaseSuppliesBatch}
         />
       );

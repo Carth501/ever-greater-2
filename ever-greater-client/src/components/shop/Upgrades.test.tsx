@@ -55,6 +55,7 @@ describe("Upgrades", () => {
       error: null,
       isLoading: false,
       supplies: user.printer_supplies,
+      manualPrintQuantity: 1,
       isPrintDisabled: false,
       printTicket: vi.fn<() => void>(),
     };
@@ -70,6 +71,7 @@ describe("Upgrades", () => {
       buyAutoBuySupplies: vi.fn<() => void>(),
       toggleAutoBuySupplies: vi.fn<(active: boolean) => void>(),
       increaseCreditGeneration: vi.fn<() => void>(),
+      increaseManualPrintBatch: vi.fn<() => void>(),
       increaseSuppliesBatch: vi.fn<() => void>(),
       increaseCreditCapacity: vi.fn<() => void>(),
     };
@@ -88,6 +90,7 @@ describe("Upgrades", () => {
 
     expect(screen.getByRole("heading", { name: "Upgrades" })).toBeTruthy();
     expect(screen.getByText("Auto-Buy Supplies")).toBeTruthy();
+    expect(screen.getByText("Increase Manual Print Batch")).toBeTruthy();
     expect(screen.getByText("Increase Supplies Batch")).toBeTruthy();
     expect(screen.getByText("Increase Credit Generation")).toBeTruthy();
     expect(screen.getByText("Increase Credit Capacity")).toBeTruthy();
@@ -103,8 +106,22 @@ describe("Upgrades", () => {
 
     expect(screen.queryByText("Autoprinter")).toBeNull();
     expect(screen.getByText("Auto-Buy Supplies")).toBeTruthy();
+    expect(screen.getByText("Increase Manual Print Batch")).toBeTruthy();
     expect(screen.getByText("Increase Supplies Batch")).toBeTruthy();
     expect(screen.getByText("Increase Credit Capacity")).toBeTruthy();
+  });
+
+  it("shows the scaled manual print batch upgrade cost for the current level", () => {
+    mockDependencies({ manual_print_batch_level: 2, gold: 30 });
+
+    render(<Upgrades />);
+
+    expect(screen.getByText("Cost: 40g · Lvl 2")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Doubles each manual print from 4 tickets to 8 tickets per press.",
+      ),
+    ).toBeTruthy();
   });
 
   it("shows the scaled supplies batch upgrade cost for the current level", () => {

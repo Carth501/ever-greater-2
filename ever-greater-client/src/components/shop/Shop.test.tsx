@@ -55,6 +55,7 @@ describe("Shop", () => {
       error: null,
       isLoading: false,
       supplies: user.printer_supplies,
+      manualPrintQuantity: 1,
       isPrintDisabled: false,
       printTicket: vi.fn<() => void>(),
     };
@@ -70,6 +71,7 @@ describe("Shop", () => {
       buyAutoBuySupplies: vi.fn<() => void>(),
       toggleAutoBuySupplies: vi.fn<(active: boolean) => void>(),
       increaseCreditGeneration: vi.fn<() => void>(),
+      increaseManualPrintBatch: vi.fn<() => void>(),
       increaseSuppliesBatch: vi.fn<() => void>(),
       increaseCreditCapacity: vi.fn<() => void>(),
     };

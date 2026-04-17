@@ -14,6 +14,11 @@ type UpgradeGoldGroupProps = {
   canAffordAutoBuyUnlock: boolean;
   creditGenerationCost: number;
   canAffordCreditGeneration: boolean;
+  manualPrintBatchCost: number;
+  manualPrintBatchLevel: number;
+  currentManualPrintQuantity: number;
+  nextManualPrintQuantity: number;
+  canAffordManualPrintBatch: boolean;
   suppliesBatchCost: number;
   suppliesBatchLevel: number;
   currentSuppliesBatchAmount: number;
@@ -24,6 +29,7 @@ type UpgradeGoldGroupProps = {
   onBuyAutoBuySupplies: () => void;
   onToggleAutoBuySupplies: (active: boolean) => void;
   onIncreaseCreditGeneration: () => void;
+  onIncreaseManualPrintBatch: () => void;
   onIncreaseSuppliesBatch: () => void;
 };
 
@@ -35,6 +41,11 @@ function UpgradeGoldGroup({
   canAffordAutoBuyUnlock,
   creditGenerationCost,
   canAffordCreditGeneration,
+  manualPrintBatchCost,
+  manualPrintBatchLevel,
+  currentManualPrintQuantity,
+  nextManualPrintQuantity,
+  canAffordManualPrintBatch,
   suppliesBatchCost,
   suppliesBatchLevel,
   currentSuppliesBatchAmount,
@@ -45,6 +56,7 @@ function UpgradeGoldGroup({
   onBuyAutoBuySupplies,
   onToggleAutoBuySupplies,
   onIncreaseCreditGeneration,
+  onIncreaseManualPrintBatch,
   onIncreaseSuppliesBatch,
 }: UpgradeGoldGroupProps): JSX.Element {
   return (
@@ -88,6 +100,30 @@ function UpgradeGoldGroup({
             Buy
           </Button>
         )}
+      </ShopRow>
+
+      <ShopRow>
+        <Box>
+          <Typography variant="subtitle1" fontWeight={600}>
+            Increase Manual Print Batch
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Cost: {manualPrintBatchCost}g · Lvl {manualPrintBatchLevel}
+          </Typography>
+          <Typography variant="caption" color="text.secondary" display="block">
+            Doubles each manual print from {currentManualPrintQuantity} ticket
+            {currentManualPrintQuantity === 1 ? "" : "s"} to{" "}
+            {nextManualPrintQuantity} ticket
+            {nextManualPrintQuantity === 1 ? "" : "s"} per press.
+          </Typography>
+        </Box>
+        <Button
+          onClick={onIncreaseManualPrintBatch}
+          variant="contained"
+          disabled={!canAffordManualPrintBatch}
+        >
+          Buy
+        </Button>
       </ShopRow>
 
       <ShopRow>

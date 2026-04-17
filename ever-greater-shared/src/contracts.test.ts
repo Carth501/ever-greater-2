@@ -5,6 +5,8 @@ import {
   clientOperationIds,
   getBuySuppliesGainForGold,
   getCreditGenerationAmount,
+  getManualPrintBatchUpgradeCost,
+  getManualPrintQuantity,
   getMaxSuppliesPurchaseGold,
   getOperationCost,
   getOperationGain,
@@ -34,6 +36,7 @@ function makeUser(overrides: Partial<User> = {}): User {
     credit_value: 100,
     credit_generation_level: 5,
     credit_capacity_level: 100,
+    manual_print_batch_level: 0,
     supplies_batch_level: 0,
     auto_buy_supplies_purchased: false,
     auto_buy_supplies_active: false,
@@ -256,6 +259,46 @@ describe("shared operation contracts", () => {
     ).toEqual({ [ResourceType.GOLD]: 40 });
   });
 
+  it("scales manual print quantity when quantity is omitted", () => {
+    const user = makeUser({
+      manual_print_batch_level: 2,
+      printer_supplies: 20,
+      money: 0,
+      tickets_contributed: 0,
+    });
+
+    expect(getManualPrintQuantity(user)).toBe(4);
+    expect(
+      getOperationCost(operations[OperationId.PRINT_TICKET], {
+        user,
+      }),
+    ).toEqual({ [ResourceType.PRINTER_SUPPLIES]: 4 });
+    expect(
+      getOperationGain(operations[OperationId.PRINT_TICKET], {
+        user,
+      }),
+    ).toEqual({
+      [ResourceType.MONEY]: 4,
+      [ResourceType.TICKETS_CONTRIBUTED]: 4,
+    });
+  });
+
+  it("scales manual print batch upgrade cost by current level", () => {
+    const baseLevelUser = makeUser({ manual_print_batch_level: 0 });
+    const oneUpgradeUser = makeUser({ manual_print_batch_level: 1 });
+    const twoUpgradeUser = makeUser({ manual_print_batch_level: 2 });
+
+    expect(getManualPrintBatchUpgradeCost(baseLevelUser)).toBe(10);
+    expect(getManualPrintBatchUpgradeCost(oneUpgradeUser)).toBe(20);
+    expect(getManualPrintBatchUpgradeCost(twoUpgradeUser)).toBe(40);
+
+    expect(
+      getOperationCost(operations[OperationId.INCREASE_MANUAL_PRINT_BATCH], {
+        user: twoUpgradeUser,
+      }),
+    ).toEqual({ [ResourceType.GOLD]: 40 });
+  });
+
   it("scales ticket printing by quantity", () => {
     const user = makeUser({
       printer_supplies: 20,
@@ -396,6 +439,8 @@ function resourceField(resourceType: ResourceType): keyof User | null {
       return "credit_generation_level";
     case ResourceType.CREDIT_CAPACITY_LEVEL:
       return "credit_capacity_level";
+    case ResourceType.MANUAL_PRINT_BATCH_LEVEL:
+      return "manual_print_batch_level";
     case ResourceType.SUPPLIES_BATCH_LEVEL:
       return "supplies_batch_level";
     case ResourceType.GLOBAL_TICKETS:

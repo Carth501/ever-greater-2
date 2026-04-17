@@ -31,6 +31,7 @@ function makeUser(overrides: Partial<User> = {}): User {
     credit_value: 0,
     credit_generation_level: 0,
     credit_capacity_level: 0,
+    manual_print_batch_level: 0,
     supplies_batch_level: 0,
     auto_buy_supplies_purchased: false,
     auto_buy_supplies_active: false,
@@ -71,6 +72,35 @@ describe("executeOperationForUser", () => {
     );
     expect(mockDbAccess.incrementGlobalCount).toHaveBeenCalledWith(
       4,
+      undefined,
+    );
+    expect(result.count).toBe(104);
+    expect(result.user).toEqual(updatedUser);
+  });
+
+  it("uses the manual print batch level when no quantity is provided", async () => {
+    const user = makeUser({ manual_print_batch_level: 2, printer_supplies: 8 });
+    const updatedUser = makeUser({
+      manual_print_batch_level: 2,
+      printer_supplies: 4,
+      money: 4,
+      tickets_contributed: 14,
+    });
+
+    mockDbAccess.getUserById.mockResolvedValue(user);
+    mockDbAccess.getGlobalCount.mockResolvedValue(100);
+    mockDbAccess.executeResourceTransaction.mockResolvedValue(updatedUser);
+    mockDbAccess.incrementGlobalCount.mockResolvedValue(104);
+
+    const result = await executeOperationForUser(1, OperationId.PRINT_TICKET);
+
+    expect(mockDbAccess.executeResourceTransaction).toHaveBeenCalledWith(
+      1,
+      { [ResourceType.PRINTER_SUPPLIES]: 4 },
+      {
+        [ResourceType.MONEY]: 4,
+        [ResourceType.TICKETS_CONTRIBUTED]: 4,
+      },
       undefined,
     );
     expect(result.count).toBe(104);

@@ -44,6 +44,7 @@ export enum OperationId {
   BUY_GOLD = "BUY_GOLD",
   BUY_AUTOPRINTER = "BUY_AUTOPRINTER",
   PRINT_TICKET = "PRINT_TICKET",
+  INCREASE_MANUAL_PRINT_BATCH = "INCREASE_MANUAL_PRINT_BATCH",
   INCREASE_SUPPLIES_BATCH = "INCREASE_SUPPLIES_BATCH",
   INCREASE_CREDIT_GENERATION = "INCREASE_CREDIT_GENERATION",
   INCREASE_CREDIT_CAPACITY = "INCREASE_CREDIT_CAPACITY",
@@ -51,6 +52,7 @@ export enum OperationId {
 }
 
 export const SUPPLIES_PER_GOLD = 200;
+export const MANUAL_PRINT_BATCH_UPGRADE_COST = 10;
 export const SUPPLIES_BATCH_UPGRADE_COST = 10;
 
 function getOperationQuantity(params?: any): number {
@@ -63,6 +65,18 @@ function getOperationQuantity(params?: any): number {
 
 export function getSuppliesBatchLevel(user: User): number {
   return Math.max(0, user.supplies_batch_level ?? 0);
+}
+
+export function getManualPrintBatchLevel(user: User): number {
+  return Math.max(0, user.manual_print_batch_level ?? 0);
+}
+
+export function getManualPrintQuantity(user: User): number {
+  return 2 ** getManualPrintBatchLevel(user);
+}
+
+export function getManualPrintBatchUpgradeCost(user: User): number {
+  return 2 ** getManualPrintBatchLevel(user) * MANUAL_PRINT_BATCH_UPGRADE_COST;
 }
 
 export function getSuppliesBatchUpgradeCost(user: User): number {
@@ -83,6 +97,14 @@ export function getBuySuppliesSpend(user: User): number {
 
 export function getBuySuppliesGainForGold(spendGold: number): number {
   return spendGold * SUPPLIES_PER_GOLD;
+}
+
+function getPrintTicketQuantity(ctx: OperationContext): number {
+  if (ctx.params?.quantity === undefined) {
+    return getManualPrintQuantity(ctx.user);
+  }
+
+  return getOperationQuantity(ctx.params);
 }
 
 export function getCreditGenerationAmount(user: User): number {
@@ -175,17 +197,29 @@ export const operations: Record<OperationId, Operation> = {
     name: "Print Ticket",
     description: "Print a ticket using supplies",
     cost: (ctx: OperationContext) => {
-      const quantity = getOperationQuantity(ctx.params);
+      const quantity = getPrintTicketQuantity(ctx);
       return {
         [ResourceType.PRINTER_SUPPLIES]: quantity,
       };
     },
     gain: (ctx: OperationContext) => {
-      const quantity = getOperationQuantity(ctx.params);
+      const quantity = getPrintTicketQuantity(ctx);
       return {
         [ResourceType.MONEY]: quantity,
         [ResourceType.TICKETS_CONTRIBUTED]: quantity,
       };
+    },
+  },
+
+  [OperationId.INCREASE_MANUAL_PRINT_BATCH]: {
+    id: OperationId.INCREASE_MANUAL_PRINT_BATCH,
+    name: "Increase Manual Print Batch",
+    description: "Double the tickets printed by each manual press",
+    cost: (ctx: OperationContext) => ({
+      [ResourceType.GOLD]: getManualPrintBatchUpgradeCost(ctx.user),
+    }),
+    gain: {
+      [ResourceType.MANUAL_PRINT_BATCH_LEVEL]: 1,
     },
   },
 

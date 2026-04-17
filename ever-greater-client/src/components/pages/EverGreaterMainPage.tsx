@@ -48,6 +48,7 @@ function EverGreaterMainPage({ onLogout }: MainPageProps): JSX.Element {
   const {
     count: scalingNumber,
     supplies,
+    manualPrintQuantity,
     isPrintDisabled,
     printTicket,
   } = useGame();
@@ -71,6 +72,7 @@ function EverGreaterMainPage({ onLogout }: MainPageProps): JSX.Element {
 
           <PrintControls
             supplies={supplies}
+            printQuantity={manualPrintQuantity}
             isDisabled={isPrintDisabled}
             onPrintClick={printTicket}
           />

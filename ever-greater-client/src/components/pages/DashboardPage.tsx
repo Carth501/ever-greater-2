@@ -39,6 +39,7 @@ function DashboardPage({
     count,
     isLoading: isTicketLoading,
     supplies,
+    manualPrintQuantity,
     isPrintDisabled,
     printTicket,
   } = useGame();
@@ -186,6 +187,7 @@ function DashboardPage({
                 <DashboardPrintPanel
                   hasLiveUser={hasLiveUser}
                   isAutoBuyActive={isAutoBuyActive}
+                  manualPrintQuantity={manualPrintQuantity}
                   onPrintTicket={printTicket}
                   printButtonDisabled={printButtonDisabled}
                   visibleSupplies={visibleSupplies}
