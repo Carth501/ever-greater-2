@@ -23,6 +23,7 @@ export {
   getOperationCost,
   getOperationGain,
   getSuppliesBatchLevel,
+  getSuppliesBatchUpgradeCost,
   isClientOperationId,
   OperationId,
   operations,

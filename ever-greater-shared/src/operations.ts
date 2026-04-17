@@ -51,7 +51,7 @@ export enum OperationId {
 }
 
 export const SUPPLIES_PER_GOLD = 200;
-export const SUPPLIES_BATCH_UPGRADE_COST = 1;
+export const SUPPLIES_BATCH_UPGRADE_COST = 10;
 
 function getOperationQuantity(params?: any): number {
   if (!Number.isInteger(params?.quantity) || params.quantity < 1) {
@@ -63,6 +63,10 @@ function getOperationQuantity(params?: any): number {
 
 export function getSuppliesBatchLevel(user: User): number {
   return Math.max(0, user.supplies_batch_level ?? 0);
+}
+
+export function getSuppliesBatchUpgradeCost(user: User): number {
+  return 2 ** getSuppliesBatchLevel(user) * SUPPLIES_BATCH_UPGRADE_COST;
 }
 
 export function getMaxSuppliesPurchaseGold(user: User): number {
@@ -189,9 +193,9 @@ export const operations: Record<OperationId, Operation> = {
     id: OperationId.INCREASE_SUPPLIES_BATCH,
     name: "Increase Supplies Batch",
     description: "Double the max supplies you can buy at once",
-    cost: {
-      [ResourceType.GOLD]: SUPPLIES_BATCH_UPGRADE_COST,
-    },
+    cost: (ctx: OperationContext) => ({
+      [ResourceType.GOLD]: getSuppliesBatchUpgradeCost(ctx.user),
+    }),
     gain: {
       [ResourceType.SUPPLIES_BATCH_LEVEL]: 1,
     },

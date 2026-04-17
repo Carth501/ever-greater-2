@@ -8,6 +8,7 @@ import {
   getMaxSuppliesPurchaseGold,
   getOperationCost,
   getOperationGain,
+  getSuppliesBatchUpgradeCost,
   isUserResourceFields,
   isWebSocketMessage,
   OperationId,
@@ -237,6 +238,22 @@ describe("shared operation contracts", () => {
       }),
     ).toEqual({ [ResourceType.PRINTER_SUPPLIES]: 600 });
     expect(getBuySuppliesGainForGold(3)).toBe(600);
+  });
+
+  it("scales supplies batch upgrade cost by current level", () => {
+    const baseLevelUser = makeUser({ supplies_batch_level: 0 });
+    const oneUpgradeUser = makeUser({ supplies_batch_level: 1 });
+    const twoUpgradeUser = makeUser({ supplies_batch_level: 2 });
+
+    expect(getSuppliesBatchUpgradeCost(baseLevelUser)).toBe(10);
+    expect(getSuppliesBatchUpgradeCost(oneUpgradeUser)).toBe(20);
+    expect(getSuppliesBatchUpgradeCost(twoUpgradeUser)).toBe(40);
+
+    expect(
+      getOperationCost(operations[OperationId.INCREASE_SUPPLIES_BATCH], {
+        user: twoUpgradeUser,
+      }),
+    ).toEqual({ [ResourceType.GOLD]: 40 });
   });
 
   it("scales ticket printing by quantity", () => {

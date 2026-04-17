@@ -106,4 +106,12 @@ describe("Upgrades", () => {
     expect(screen.getByText("Increase Supplies Batch")).toBeTruthy();
     expect(screen.getByText("Increase Credit Capacity")).toBeTruthy();
   });
+
+  it("shows the scaled supplies batch upgrade cost for the current level", () => {
+    mockDependencies({ supplies_batch_level: 2, gold: 30 });
+
+    render(<Upgrades />);
+
+    expect(screen.getByText("Cost: 40g · Lvl 2")).toBeTruthy();
+  });
 });
