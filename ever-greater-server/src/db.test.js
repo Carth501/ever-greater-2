@@ -297,6 +297,7 @@ describe('Database Functions', () => {
               { column_name: 'credit_value' },
               { column_name: 'credit_generation_level' },
               { column_name: 'credit_capacity_level' },
+              { column_name: 'ticket_batch_level' },
               { column_name: 'manual_print_batch_level' },
               { column_name: 'supplies_batch_level' },
             ],
