@@ -132,10 +132,10 @@ describe("Upgrades", () => {
 
     render(<Upgrades />);
 
-    expect(screen.getByText("Cost: 40g · Lvl 2")).toBeTruthy();
+    expect(screen.getByText("Cost: 30g · Lvl 2")).toBeTruthy();
     expect(
       screen.getByText(
-        "Doubles each manual print from 4 tickets to 8 tickets per press.",
+        "Increases each manual print from 3 tickets to 4 tickets per press.",
       ),
     ).toBeTruthy();
   });

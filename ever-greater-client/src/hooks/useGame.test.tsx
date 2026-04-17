@@ -30,7 +30,7 @@ describe("useGame", () => {
       wrapper: createWrapper({ manual_print_batch_level: 2 }),
     });
 
-    expect(result.current.manualPrintQuantity).toBe(4);
+    expect(result.current.manualPrintQuantity).toBe(3);
   });
 
   it("includes the general ticket batch scale in the manual print quantity", () => {
@@ -41,7 +41,7 @@ describe("useGame", () => {
       }),
     });
 
-    expect(result.current.manualPrintQuantity).toBe(8);
+    expect(result.current.manualPrintQuantity).toBe(6);
   });
 
   it("disables printing when supplies are below the manual batch and auto-buy is unavailable", () => {

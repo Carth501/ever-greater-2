@@ -73,8 +73,16 @@ function getBatchMultiplier(level: number): number {
   return 2 ** Math.max(0, level);
 }
 
+function getBatchSize(level: number): number {
+  return Math.max(0, level) + 1;
+}
+
 function getBatchUpgradeCost(level: number, baseCost: number): number {
   return getBatchMultiplier(level) * baseCost;
+}
+
+function getLinearUpgradeCost(level: number, baseCost: number): number {
+  return getBatchSize(level) * baseCost;
 }
 
 export function getTicketBatchLevel(user: User): number {
@@ -102,7 +110,7 @@ export function getAutoprinterPrintQuantity(user: User): number {
 
 export function getManualPrintQuantity(user: User): number {
   return getScaledTicketQuantity(
-    getBatchMultiplier(getManualPrintBatchLevel(user)),
+    getBatchSize(getManualPrintBatchLevel(user)),
     user,
   );
 }
@@ -115,7 +123,7 @@ export function getTicketBatchUpgradeCost(user: User): number {
 }
 
 export function getManualPrintBatchUpgradeCost(user: User): number {
-  return getBatchUpgradeCost(
+  return getLinearUpgradeCost(
     getManualPrintBatchLevel(user),
     MANUAL_PRINT_BATCH_UPGRADE_COST,
   );

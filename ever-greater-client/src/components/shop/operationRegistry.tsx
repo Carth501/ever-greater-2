@@ -223,13 +223,16 @@ const goldUpgradeDefinitions: GoldUpgradeDefinition[] = [
           user,
         })[ResourceType.GOLD] ?? 0;
       const currentManualPrintQuantity = getManualPrintQuantity(user);
-      const nextManualPrintQuantity = currentManualPrintQuantity * 2;
+      const nextManualPrintQuantity = getManualPrintQuantity({
+        ...user,
+        manual_print_batch_level: (user.manual_print_batch_level ?? 0) + 1,
+      });
 
       return {
         key: "increase-manual-print-batch",
         title: "Increase Manual Print Batch",
         meta: `Cost: ${manualPrintBatchCost}g · Lvl ${user.manual_print_batch_level ?? 0}`,
-        description: `Doubles each manual print from ${formatTicketCount(
+        description: `Increases each manual print from ${formatTicketCount(
           currentManualPrintQuantity,
         )} to ${formatTicketCount(nextManualPrintQuantity)} per press.`,
         action: {

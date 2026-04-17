@@ -286,19 +286,19 @@ describe("shared operation contracts", () => {
       tickets_contributed: 0,
     });
 
-    expect(getManualPrintQuantity(user)).toBe(8);
+    expect(getManualPrintQuantity(user)).toBe(6);
     expect(
       getOperationCost(operations[OperationId.PRINT_TICKET], {
         user,
       }),
-    ).toEqual({ [ResourceType.PRINTER_SUPPLIES]: 8 });
+    ).toEqual({ [ResourceType.PRINTER_SUPPLIES]: 6 });
     expect(
       getOperationGain(operations[OperationId.PRINT_TICKET], {
         user,
       }),
     ).toEqual({
-      [ResourceType.MONEY]: 8,
-      [ResourceType.TICKETS_CONTRIBUTED]: 8,
+      [ResourceType.MONEY]: 6,
+      [ResourceType.TICKETS_CONTRIBUTED]: 6,
     });
   });
 
@@ -309,13 +309,13 @@ describe("shared operation contracts", () => {
 
     expect(getManualPrintBatchUpgradeCost(baseLevelUser)).toBe(10);
     expect(getManualPrintBatchUpgradeCost(oneUpgradeUser)).toBe(20);
-    expect(getManualPrintBatchUpgradeCost(twoUpgradeUser)).toBe(40);
+    expect(getManualPrintBatchUpgradeCost(twoUpgradeUser)).toBe(30);
 
     expect(
       getOperationCost(operations[OperationId.INCREASE_MANUAL_PRINT_BATCH], {
         user: twoUpgradeUser,
       }),
-    ).toEqual({ [ResourceType.GOLD]: 40 });
+    ).toEqual({ [ResourceType.GOLD]: 30 });
   });
 
   it("scales ticket printing by quantity", () => {
