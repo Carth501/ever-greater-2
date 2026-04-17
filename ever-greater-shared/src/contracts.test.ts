@@ -1,27 +1,31 @@
 import { describe, expect, it } from "vitest";
 import {
-  applyTransaction,
-  canAfford,
-  clientOperationIds,
-  getBuySuppliesGainForGold,
-  getCreditGenerationAmount,
-  getManualPrintBatchUpgradeCost,
-  getManualPrintQuantity,
-  getMaxSuppliesPurchaseGold,
-  getOperationCost,
-  getOperationGain,
-  getSuppliesBatchUpgradeCost,
-  getTicketBatchUpgradeCost,
-  isUserResourceFields,
-  isWebSocketMessage,
-  OperationId,
-  operations,
-  parseWebSocketMessage,
-  type ResourceAmount,
-  ResourceType,
-  type User,
-  validateOperation,
-  type WebSocketMessage,
+    applyTransaction,
+    canAfford,
+    clientOperationIds,
+    CREDIT_CAPACITY_UPGRADE_AMOUNT,
+    getAutoprinterCost,
+    getBuySuppliesGainForGold,
+    getCreditCapacityUpgradeCost,
+    getCreditGenerationAmount,
+    getCreditGenerationUpgradeCost,
+    getManualPrintBatchUpgradeCost,
+    getManualPrintQuantity,
+    getMaxSuppliesPurchaseGold,
+    getOperationCost,
+    getOperationGain,
+    getSuppliesBatchUpgradeCost,
+    getTicketBatchUpgradeCost,
+    isUserResourceFields,
+    isWebSocketMessage,
+    OperationId,
+    operations,
+    parseWebSocketMessage,
+    type ResourceAmount,
+    ResourceType,
+    type User,
+    validateOperation,
+    type WebSocketMessage,
 } from "./index.js";
 
 function makeUser(overrides: Partial<User> = {}): User {
@@ -34,9 +38,9 @@ function makeUser(overrides: Partial<User> = {}): User {
     money: 10000,
     gold: 100,
     autoprinters: 2,
-    credit_value: 100,
-    credit_generation_level: 5,
-    credit_capacity_level: 100,
+    credit_value: 0,
+    credit_generation_level: 0,
+    credit_capacity_level: 0,
     ticket_batch_level: 0,
     manual_print_batch_level: 0,
     supplies_batch_level: 0,
@@ -69,7 +73,13 @@ describe("shared operation contracts", () => {
         operationId === OperationId.TOGGLE_AUTO_BUY_SUPPLIES
           ? { auto_buy_supplies_purchased: true }
           : operationId === OperationId.GENERATE_CREDIT
-            ? { credit_value: 99, credit_capacity_level: 100 }
+            ? {
+                credit_value: 99,
+                credit_generation_level: 5,
+                credit_capacity_level: 100,
+              }
+            : operationId === OperationId.BUY_AUTOPRINTER
+              ? { credit_value: 1000 }
             : {},
       );
       const operation = operations[operationId];
@@ -345,6 +355,65 @@ describe("shared operation contracts", () => {
 
   it("marks internal-only credit generation operations as non-client", () => {
     expect(clientOperationIds).not.toContain(OperationId.GENERATE_CREDIT);
+  });
+
+  it("scales credit generation upgrade cost by current level", () => {
+    const baseLevelUser = makeUser({ credit_generation_level: 0 });
+    const oneUpgradeUser = makeUser({ credit_generation_level: 1 });
+    const twoUpgradeUser = makeUser({ credit_generation_level: 2 });
+    const fiveUpgradeUser = makeUser({ credit_generation_level: 5 });
+
+    expect(getCreditGenerationUpgradeCost(baseLevelUser)).toBe(1);
+    expect(getCreditGenerationUpgradeCost(oneUpgradeUser)).toBe(2);
+    expect(getCreditGenerationUpgradeCost(twoUpgradeUser)).toBe(3);
+    expect(getCreditGenerationUpgradeCost(fiveUpgradeUser)).toBe(7);
+
+    expect(
+      getOperationCost(operations[OperationId.INCREASE_CREDIT_GENERATION], {
+        user: fiveUpgradeUser,
+      }),
+    ).toEqual({ [ResourceType.GOLD]: 7 });
+  });
+
+  it("multiplies autoprinter cost by the updated economy factor", () => {
+    const baseAutoprinterUser = makeUser({ autoprinters: 0 });
+    const threeAutoprinterUser = makeUser({ autoprinters: 3 });
+
+    expect(getAutoprinterCost(baseAutoprinterUser)).toBe(40);
+    expect(getAutoprinterCost(threeAutoprinterUser)).toBe(320);
+
+    expect(
+      getOperationCost(operations[OperationId.BUY_AUTOPRINTER], {
+        user: threeAutoprinterUser,
+      }),
+    ).toEqual({ [ResourceType.CREDIT]: 320 });
+  });
+
+  it("scales credit capacity upgrade cost by current level", () => {
+    const baseLevelUser = makeUser({ credit_capacity_level: 0 });
+    const oneUpgradeUser = makeUser({ credit_capacity_level: 1 });
+    const twoUpgradeUser = makeUser({ credit_capacity_level: 2 });
+    const threeUpgradeUser = makeUser({ credit_capacity_level: 3 });
+
+    expect(getCreditCapacityUpgradeCost(baseLevelUser)).toBe(200);
+    expect(getCreditCapacityUpgradeCost(oneUpgradeUser)).toBe(210);
+    expect(getCreditCapacityUpgradeCost(twoUpgradeUser)).toBe(228);
+    expect(getCreditCapacityUpgradeCost(threeUpgradeUser)).toBe(251);
+
+    expect(
+      getOperationCost(operations[OperationId.INCREASE_CREDIT_CAPACITY], {
+        user: threeUpgradeUser,
+      }),
+    ).toEqual({ [ResourceType.GLOBAL_TICKETS]: 251 });
+
+    expect(
+      getOperationGain(operations[OperationId.INCREASE_CREDIT_CAPACITY], {
+        user: threeUpgradeUser,
+      }),
+    ).toEqual({
+      [ResourceType.CREDIT_CAPACITY_LEVEL]:
+        CREDIT_CAPACITY_UPGRADE_AMOUNT,
+    });
   });
 
   it("calculates periodic credit generation from current value and capacity", () => {

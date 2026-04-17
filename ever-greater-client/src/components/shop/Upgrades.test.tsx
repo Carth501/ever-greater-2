@@ -96,7 +96,10 @@ describe("Upgrades", () => {
     expect(screen.getByText("Increase Supplies Batch")).toBeTruthy();
     expect(screen.getByText("Increase Credit Generation")).toBeTruthy();
     expect(screen.getByText("Increase Credit Capacity")).toBeTruthy();
+    expect(screen.getByText("Cost: 3g")).toBeTruthy();
+    expect(screen.getByText("Cost: 251 tickets")).toBeTruthy();
     expect(screen.getByText("Autoprinter")).toBeTruthy();
+    expect(screen.getByText("Cost: 320 credit")).toBeTruthy();
     expect(screen.queryByText("200 Supplies")).toBeNull();
     expect(screen.queryByText("Gold", { exact: true })).toBeNull();
   });
@@ -146,5 +149,20 @@ describe("Upgrades", () => {
     render(<Upgrades />);
 
     expect(screen.getByText("Cost: 40g · Lvl 2")).toBeTruthy();
+  });
+
+  it("shows scaled credit upgrade costs for the current levels", () => {
+    mockDependencies({
+      credit_generation_level: 5,
+      credit_capacity_level: 2,
+      gold: 20,
+      tickets_contributed: 800,
+      tickets_withdrawn: 0,
+    });
+
+    render(<Upgrades />);
+
+    expect(screen.getByText("Cost: 7g")).toBeTruthy();
+    expect(screen.getByText("Cost: 228 tickets")).toBeTruthy();
   });
 });

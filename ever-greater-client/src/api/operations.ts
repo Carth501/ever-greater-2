@@ -70,7 +70,7 @@ export async function buyGold(quantity: number): Promise<User> {
 }
 
 /**
- * Buy an autoprinter with gold (uses generic operation endpoint)
+ * Buy an autoprinter with credit (uses generic operation endpoint)
  */
 export async function buyAutoprinter(): Promise<User> {
   return executeOperation(OperationId.BUY_AUTOPRINTER);
@@ -112,7 +112,7 @@ export async function increaseSuppliesBatch(): Promise<User> {
 }
 
 /**
- * Increase credit capacity maximum by 1
+ * Increase credit capacity maximum by 20
  */
 export async function increaseCreditCapacity(): Promise<User> {
   return executeOperation(OperationId.INCREASE_CREDIT_CAPACITY);

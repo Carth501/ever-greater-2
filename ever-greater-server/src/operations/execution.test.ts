@@ -2,9 +2,9 @@ import { OperationId, ResourceType, type User } from "ever-greater-shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as dbAccess from "./db-access.js";
 import {
-  executeOperationForUser,
-  OperationUserNotFoundError,
-  OperationValidationError,
+    executeOperationForUser,
+    OperationUserNotFoundError,
+    OperationValidationError,
 } from "./execution.js";
 
 vi.mock("./db-access.js", () => ({
@@ -163,6 +163,82 @@ describe("executeOperationForUser", () => {
       false,
       undefined,
     );
+    expect(result.user).toEqual(updatedUser);
+  });
+
+  it("charges the scaled gold cost for credit generation upgrades", async () => {
+    const user = makeUser({ gold: 20, credit_generation_level: 5 });
+    const updatedUser = makeUser({ gold: 13, credit_generation_level: 6 });
+
+    mockDbAccess.getUserById.mockResolvedValue(user);
+    mockDbAccess.getGlobalCount.mockResolvedValue(100);
+    mockDbAccess.executeResourceTransaction.mockResolvedValue(updatedUser);
+
+    const result = await executeOperationForUser(
+      1,
+      OperationId.INCREASE_CREDIT_GENERATION,
+    );
+
+    expect(mockDbAccess.executeResourceTransaction).toHaveBeenCalledWith(
+      1,
+      { [ResourceType.GOLD]: 7 },
+      { [ResourceType.CREDIT_GENERATION_LEVEL]: 1 },
+      undefined,
+    );
+    expect(result.user).toEqual(updatedUser);
+  });
+
+  it("charges the multiplied credit cost for autoprinter purchases", async () => {
+    const user = makeUser({ credit_value: 500, autoprinters: 3 });
+    const updatedUser = makeUser({ credit_value: 180, autoprinters: 4 });
+
+    mockDbAccess.getUserById.mockResolvedValue(user);
+    mockDbAccess.getGlobalCount.mockResolvedValue(100);
+    mockDbAccess.executeResourceTransaction.mockResolvedValue(updatedUser);
+
+    const result = await executeOperationForUser(
+      1,
+      OperationId.BUY_AUTOPRINTER,
+    );
+
+    expect(mockDbAccess.executeResourceTransaction).toHaveBeenCalledWith(
+      1,
+      { [ResourceType.CREDIT]: 320 },
+      { [ResourceType.AUTOPRINTERS]: 1 },
+      undefined,
+    );
+    expect(result.user).toEqual(updatedUser);
+  });
+
+  it("charges the scaled ticket cost for credit capacity upgrades", async () => {
+    const user = makeUser({
+      tickets_contributed: 1000,
+      credit_capacity_level: 3,
+    });
+    const updatedUser = makeUser({
+      tickets_contributed: 1000,
+      credit_capacity_level: 23,
+    });
+
+    mockDbAccess.getUserById.mockResolvedValue(user);
+    mockDbAccess.getGlobalCount
+      .mockResolvedValueOnce(1000)
+      .mockResolvedValueOnce(749);
+    mockDbAccess.executeResourceTransaction.mockResolvedValue(updatedUser);
+
+    const result = await executeOperationForUser(
+      1,
+      OperationId.INCREASE_CREDIT_CAPACITY,
+    );
+
+    expect(mockDbAccess.executeResourceTransaction).toHaveBeenCalledWith(
+      1,
+      { [ResourceType.GLOBAL_TICKETS]: 251 },
+      { [ResourceType.CREDIT_CAPACITY_LEVEL]: 20 },
+      undefined,
+    );
+    expect(mockDbAccess.getGlobalCount).toHaveBeenCalledTimes(2);
+    expect(result.count).toBe(749);
     expect(result.user).toEqual(updatedUser);
   });
 

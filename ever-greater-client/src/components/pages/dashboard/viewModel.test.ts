@@ -57,6 +57,35 @@ describe("dashboard view model", () => {
     expect(model.automationMix).toBeGreaterThan(0);
   });
 
+  it("derives scaled credit upgrade costs from the shared operation definitions", () => {
+    const model = buildDashboardViewModel(
+      {
+        user: mockUser({
+          credit_generation_level: 5,
+          credit_capacity_level: 2,
+          autoprinters: 3,
+          tickets_contributed: 800,
+          tickets_withdrawn: 100,
+          gold: 20,
+        }),
+        count: 500,
+        isTicketLoading: false,
+        supplies: 100,
+        isPrintDisabled: false,
+      },
+      {
+        isConnected: true,
+        isReconnecting: false,
+        lastUpdateAt: 9_500,
+        clock: 10_000,
+      },
+    );
+
+    expect(model.creditGenerationCost).toBe(7);
+    expect(model.creditCapacityCost).toBe(228);
+    expect(model.autoprinterCost).toBe(320);
+  });
+
   it("identifies late realtime updates", () => {
     expect(
       getDashboardSignalState({

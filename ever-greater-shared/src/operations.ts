@@ -1,8 +1,8 @@
 import {
-  RESOURCE_DB_FIELDS,
-  ResourceAmount,
-  ResourceType,
-  User,
+	RESOURCE_DB_FIELDS,
+	ResourceAmount,
+	ResourceType,
+	User,
 } from "./resources.js";
 
 /**
@@ -56,6 +56,8 @@ export const SUPPLIES_PER_GOLD = 200;
 export const TICKET_BATCH_UPGRADE_COST = 10;
 export const MANUAL_PRINT_BATCH_UPGRADE_COST = 10;
 export const SUPPLIES_BATCH_UPGRADE_COST = 10;
+export const AUTOPRINTER_COST_MULTIPLIER = 20;
+export const CREDIT_CAPACITY_UPGRADE_AMOUNT = 20;
 
 function getOperationQuantity(params?: any): number {
   if (!Number.isInteger(params?.quantity) || params.quantity < 1) {
@@ -85,8 +87,12 @@ function getLinearUpgradeCost(level: number, baseCost: number): number {
   return getBatchSize(level) * baseCost;
 }
 
+function getLevel(userLevel: number | undefined): number {
+  return Math.max(0, userLevel ?? 0);
+}
+
 export function getTicketBatchLevel(user: User): number {
-  return Math.max(0, user.ticket_batch_level ?? 0);
+  return getLevel(user.ticket_batch_level);
 }
 
 export function getTicketBatchScale(user: User): number {
@@ -94,7 +100,7 @@ export function getTicketBatchScale(user: User): number {
 }
 
 export function getManualPrintBatchLevel(user: User): number {
-  return Math.max(0, user.manual_print_batch_level ?? 0);
+  return getLevel(user.manual_print_batch_level);
 }
 
 export function getScaledTicketQuantity(
@@ -106,6 +112,16 @@ export function getScaledTicketQuantity(
 
 export function getAutoprinterPrintQuantity(user: User): number {
   return getScaledTicketQuantity(Math.max(0, user.autoprinters ?? 0), user);
+}
+
+export function getAutoprinterCost(user: User): number {
+  const currentAutoprinters = Math.max(0, user.autoprinters ?? 0);
+
+  return (
+    AUTOPRINTER_COST_MULTIPLIER *
+    2 *
+    Math.floor(Math.pow(currentAutoprinters + 1, 1.5))
+  );
 }
 
 export function getManualPrintQuantity(user: User): number {
@@ -134,6 +150,18 @@ export function getSuppliesBatchUpgradeCost(user: User): number {
     getSuppliesBatchLevel(user),
     SUPPLIES_BATCH_UPGRADE_COST,
   );
+}
+
+export function getCreditGenerationUpgradeCost(user: User): number {
+  const level = getLevel(user.credit_generation_level);
+
+  return Math.floor(1 + Math.pow(level, 1.2));
+}
+
+export function getCreditCapacityUpgradeCost(user: User): number {
+  const level = getLevel(user.credit_capacity_level);
+
+  return Math.floor(200 + Math.pow(level, 1.5) * 10);
 }
 
 export function getMaxSuppliesPurchaseGold(user: User): number {
@@ -233,13 +261,9 @@ export const operations: Record<OperationId, Operation> = {
     id: OperationId.BUY_AUTOPRINTER,
     name: "Buy Autoprinter",
     description: "Purchase an autoprinter with credit",
-    cost: (ctx: OperationContext) => {
-      const currentAutoprinters = ctx.user.autoprinters;
-      const creditCost = 2 * Math.floor(Math.pow(currentAutoprinters + 1, 1.5));
-      return {
-        [ResourceType.CREDIT]: creditCost,
-      };
-    },
+    cost: (ctx: OperationContext) => ({
+      [ResourceType.CREDIT]: getAutoprinterCost(ctx.user),
+    }),
     gain: {
       [ResourceType.AUTOPRINTERS]: 1,
     },
@@ -304,9 +328,9 @@ export const operations: Record<OperationId, Operation> = {
     id: OperationId.INCREASE_CREDIT_GENERATION,
     name: "Increase Credit Generation",
     description: "Increase credit generation by 0.1 per second",
-    cost: {
-      [ResourceType.GOLD]: 1,
-    },
+    cost: (ctx: OperationContext) => ({
+      [ResourceType.GOLD]: getCreditGenerationUpgradeCost(ctx.user),
+    }),
     gain: {
       [ResourceType.CREDIT_GENERATION_LEVEL]: 1,
     },
@@ -315,12 +339,12 @@ export const operations: Record<OperationId, Operation> = {
   [OperationId.INCREASE_CREDIT_CAPACITY]: {
     id: OperationId.INCREASE_CREDIT_CAPACITY,
     name: "Increase Credit Capacity",
-    description: "Increase your maximum credit by 1",
-    cost: {
-      [ResourceType.GLOBAL_TICKETS]: 200,
-    },
+    description: `Increase your maximum credit by ${CREDIT_CAPACITY_UPGRADE_AMOUNT}`,
+    cost: (ctx: OperationContext) => ({
+      [ResourceType.GLOBAL_TICKETS]: getCreditCapacityUpgradeCost(ctx.user),
+    }),
     gain: {
-      [ResourceType.CREDIT_CAPACITY_LEVEL]: 1,
+      [ResourceType.CREDIT_CAPACITY_LEVEL]: CREDIT_CAPACITY_UPGRADE_AMOUNT,
     },
   },
 
