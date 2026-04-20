@@ -10,8 +10,13 @@ import {
   AutoBuyScaleMode,
   getAutoBuyRule,
   getBuySuppliesGainForGold,
+  getMaxAffordableGoldQuantity,
   getMaxSuppliesPurchaseGold,
+  getOperationCost,
+  OperationId,
+  operations,
   resolveAutoBuySpendAmount,
+  ResourceType,
   type User,
 } from "ever-greater-shared";
 import { useEffect, useId, useState } from "react";
@@ -25,6 +30,40 @@ type DashboardAutoBuyManagementPanelProps = {
   manualPrintQuantity: number;
   user: User;
 };
+
+type AutoBuyRuleDraft = {
+  thresholdInput: string;
+  scaleMode: AutoBuyScaleMode;
+  scaleValueInput: string;
+};
+
+type ManagedAutoBuyResource = {
+  key: AutoBuyResourceKey;
+  title: string;
+  thresholdLabel: string;
+  scaleLabel: string;
+  customScaleLabel: string;
+  thresholdHelperText: string;
+  scaleHelperText: string;
+  customHelperText: string;
+  currentValue: number;
+  currentValueSuffix: string;
+  triggerFloor: number;
+  triggerDescription: string;
+  previewValue: string;
+  previewDescription: string;
+  summaryText: string;
+  normalizedThreshold: number;
+  normalizedScaleValue: number;
+  hasDraftChanges: boolean;
+  usesCustomScaleValue: boolean;
+  saveButtonLabel: string;
+};
+
+const managedResourceKeys = [
+  AutoBuyResourceKey.PRINTER_SUPPLIES,
+  AutoBuyResourceKey.GOLD,
+] as const;
 
 const scaleOptions = [
   { value: AutoBuyScaleMode.MIN, label: "Min" },
@@ -78,6 +117,148 @@ function getScaleValueInputValue(
     : "";
 }
 
+function isCustomScaleMode(scaleMode: AutoBuyScaleMode): boolean {
+  return (
+    scaleMode === AutoBuyScaleMode.CUSTOM_VALUE ||
+    scaleMode === AutoBuyScaleMode.CUSTOM_PERCENT
+  );
+}
+
+function buildRuleDraft(
+  resourceKey: AutoBuyResourceKey,
+  user: User,
+): AutoBuyRuleDraft {
+  const rule = getAutoBuyRule(user.auto_buy_settings, resourceKey);
+
+  return {
+    thresholdInput: String(rule.threshold),
+    scaleMode: rule.scaleMode,
+    scaleValueInput: getScaleValueInputValue(rule.scaleMode, rule.scaleValue),
+  };
+}
+
+function buildDrafts(user: User): Record<AutoBuyResourceKey, AutoBuyRuleDraft> {
+  return Object.fromEntries(
+    managedResourceKeys.map((resourceKey) => [
+      resourceKey,
+      buildRuleDraft(resourceKey, user),
+    ]),
+  ) as Record<AutoBuyResourceKey, AutoBuyRuleDraft>;
+}
+
+function buildManagedAutoBuyResource(
+  resourceKey: AutoBuyResourceKey,
+  user: User,
+  manualPrintQuantity: number,
+  draft: AutoBuyRuleDraft,
+): ManagedAutoBuyResource {
+  const currentRule = getAutoBuyRule(user.auto_buy_settings, resourceKey);
+  const normalizedThreshold = clampThresholdInput(draft.thresholdInput);
+  const normalizedScaleValue = clampScaleValueInput(
+    draft.scaleValueInput,
+    draft.scaleMode,
+  );
+  const usesCustomScaleValue = isCustomScaleMode(draft.scaleMode);
+  const hasDraftChanges =
+    normalizedThreshold !== currentRule.threshold ||
+    draft.scaleMode !== currentRule.scaleMode ||
+    normalizedScaleValue !== currentRule.scaleValue;
+
+  if (resourceKey === AutoBuyResourceKey.PRINTER_SUPPLIES) {
+    const maxSpendGold = Math.min(
+      user.gold ?? 0,
+      getMaxSuppliesPurchaseGold(user),
+    );
+    const previewSpendGold = resolveAutoBuySpendAmount(
+      {
+        threshold: normalizedThreshold,
+        scaleMode: draft.scaleMode,
+        scaleValue: normalizedScaleValue,
+      },
+      user.gold ?? 0,
+      maxSpendGold,
+    );
+    const previewSupplies = getBuySuppliesGainForGold(previewSpendGold);
+    const triggerFloor = Math.max(normalizedThreshold, manualPrintQuantity);
+
+    return {
+      key: resourceKey,
+      title: "Printer supplies",
+      thresholdLabel: "Printer supplies threshold",
+      scaleLabel: "Printer supplies scale",
+      customScaleLabel:
+        draft.scaleMode === AutoBuyScaleMode.CUSTOM_PERCENT
+          ? "Printer supplies custom percent"
+          : "Printer supplies custom value",
+      thresholdHelperText:
+        "Attempt a refill once supplies dip below this floor.",
+      scaleHelperText: "Choose how aggressively auto-buy spends gold.",
+      customHelperText:
+        draft.scaleMode === AutoBuyScaleMode.CUSTOM_PERCENT
+          ? "Rounded and clamped to 1-100% of current gold."
+          : "Spend a fixed amount of gold when the rule triggers.",
+      currentValue: user.printer_supplies,
+      currentValueSuffix: "supplies",
+      triggerFloor,
+      triggerDescription: "Threshold or print batch, whichever is higher",
+      previewValue: `${formatNumber(previewSpendGold)} gold`,
+      previewDescription: `${formatNumber(previewSupplies)} supplies at the current batch cap`,
+      summaryText: `The current rule will try to spend ${formatNumber(previewSpendGold)} gold for ${formatNumber(previewSupplies)} supplies whenever stock falls short.`,
+      normalizedThreshold,
+      normalizedScaleValue,
+      hasDraftChanges,
+      usesCustomScaleValue,
+      saveButtonLabel: "Save printer supplies settings",
+    };
+  }
+
+  const maxGoldQuantity = getMaxAffordableGoldQuantity(user);
+  const previewGoldQuantity = resolveAutoBuySpendAmount(
+    {
+      threshold: normalizedThreshold,
+      scaleMode: draft.scaleMode,
+      scaleValue: normalizedScaleValue,
+    },
+    maxGoldQuantity,
+    maxGoldQuantity,
+  );
+  const previewSpendMoney =
+    getOperationCost(operations[OperationId.BUY_GOLD], {
+      user,
+      params: { quantity: previewGoldQuantity },
+    })[ResourceType.MONEY] ?? 0;
+
+  return {
+    key: resourceKey,
+    title: "Gold",
+    thresholdLabel: "Gold threshold",
+    scaleLabel: "Gold scale",
+    customScaleLabel:
+      draft.scaleMode === AutoBuyScaleMode.CUSTOM_PERCENT
+        ? "Gold custom percent"
+        : "Gold custom value",
+    thresholdHelperText:
+      "Attempt a gold purchase once reserves dip below this floor.",
+    scaleHelperText: "Choose how aggressively auto-buy buys gold.",
+    customHelperText:
+      draft.scaleMode === AutoBuyScaleMode.CUSTOM_PERCENT
+        ? "Rounded and clamped to 1-100% of the gold you can currently afford."
+        : "Buy a fixed amount of gold when the rule triggers.",
+    currentValue: user.gold,
+    currentValueSuffix: "gold",
+    triggerFloor: normalizedThreshold,
+    triggerDescription: "Threshold-driven reserve target",
+    previewValue: `${formatNumber(previewSpendMoney)} money`,
+    previewDescription: `${formatNumber(previewGoldQuantity)} gold at the current rate`,
+    summaryText: `The current rule will try to buy ${formatNumber(previewGoldQuantity)} gold for ${formatNumber(previewSpendMoney)} money whenever reserves dip below the configured floor.`,
+    normalizedThreshold,
+    normalizedScaleValue,
+    hasDraftChanges,
+    usesCustomScaleValue,
+    saveButtonLabel: "Save gold settings",
+  };
+}
+
 export function DashboardAutoBuyManagementPanel({
   hasLiveUser,
   manualPrintQuantity,
@@ -85,57 +266,24 @@ export function DashboardAutoBuyManagementPanel({
 }: DashboardAutoBuyManagementPanelProps) {
   const headingId = useId();
   const descriptionId = useId();
-  const currentRule = getAutoBuyRule(
-    user.auto_buy_settings,
-    AutoBuyResourceKey.PRINTER_SUPPLIES,
-  );
-  const [thresholdInput, setThresholdInput] = useState(
-    String(currentRule.threshold),
-  );
-  const [scaleMode, setScaleMode] = useState<AutoBuyScaleMode>(
-    currentRule.scaleMode,
-  );
-  const [scaleValueInput, setScaleValueInput] = useState(
-    getScaleValueInputValue(currentRule.scaleMode, currentRule.scaleValue),
-  );
+  const [drafts, setDrafts] = useState<
+    Record<AutoBuyResourceKey, AutoBuyRuleDraft>
+  >(() => buildDrafts(user));
   const { configureAutoBuy, isLoading, toggleAutoBuySupplies } =
     useOperations();
 
   useEffect(() => {
-    setThresholdInput(String(currentRule.threshold));
-    setScaleMode(currentRule.scaleMode);
-    setScaleValueInput(
-      getScaleValueInputValue(currentRule.scaleMode, currentRule.scaleValue),
-    );
-  }, [currentRule.scaleMode, currentRule.scaleValue, currentRule.threshold]);
+    setDrafts(buildDrafts(user));
+  }, [user.auto_buy_settings]);
 
-  const usesCustomScaleValue =
-    scaleMode === AutoBuyScaleMode.CUSTOM_VALUE ||
-    scaleMode === AutoBuyScaleMode.CUSTOM_PERCENT;
-  const normalizedThreshold = clampThresholdInput(thresholdInput);
-  const normalizedScaleValue = clampScaleValueInput(scaleValueInput, scaleMode);
-  const maxSpendGold = Math.min(
-    user.gold ?? 0,
-    getMaxSuppliesPurchaseGold(user),
+  const managedResources = managedResourceKeys.map((resourceKey) =>
+    buildManagedAutoBuyResource(
+      resourceKey,
+      user,
+      manualPrintQuantity,
+      drafts[resourceKey],
+    ),
   );
-  const previewSpendGold = resolveAutoBuySpendAmount(
-    {
-      threshold: normalizedThreshold,
-      scaleMode,
-      scaleValue: normalizedScaleValue,
-    },
-    user.gold ?? 0,
-    maxSpendGold,
-  );
-  const previewSupplies = getBuySuppliesGainForGold(previewSpendGold);
-  const effectiveTriggerFloor = Math.max(
-    normalizedThreshold,
-    manualPrintQuantity,
-  );
-  const hasDraftChanges =
-    normalizedThreshold !== currentRule.threshold ||
-    scaleMode !== currentRule.scaleMode ||
-    normalizedScaleValue !== currentRule.scaleValue;
   const canManage = hasLiveUser && user.auto_buy_supplies_purchased;
   const statusLabel = !user.auto_buy_supplies_purchased
     ? "Unlock required"
@@ -148,12 +296,33 @@ export function DashboardAutoBuyManagementPanel({
       ? "success"
       : "default";
 
-  const saveRule = () => {
+  const updateDraft = (
+    resourceKey: AutoBuyResourceKey,
+    updates: Partial<AutoBuyRuleDraft>,
+  ) => {
+    setDrafts((currentDrafts) => ({
+      ...currentDrafts,
+      [resourceKey]: {
+        ...currentDrafts[resourceKey],
+        ...updates,
+      },
+    }));
+  };
+
+  const saveRule = (resourceKey: AutoBuyResourceKey) => {
+    const resource = managedResources.find(
+      (candidate) => candidate.key === resourceKey,
+    );
+
+    if (!resource) {
+      return;
+    }
+
     configureAutoBuy({
-      resourceKey: AutoBuyResourceKey.PRINTER_SUPPLIES,
-      threshold: normalizedThreshold,
-      scaleMode,
-      scaleValue: normalizedScaleValue,
+      resourceKey,
+      threshold: resource.normalizedThreshold,
+      scaleMode: drafts[resourceKey].scaleMode,
+      scaleValue: resource.normalizedScaleValue,
     });
   };
 
@@ -186,116 +355,166 @@ export function DashboardAutoBuyManagementPanel({
             <Chip label={statusLabel} color={statusColor} variant="outlined" />
           </Stack>
 
-          <MetricsRow>
-            <MetricCard>
-              <Typography variant="subtitle2" color="text.secondary">
-                Resource
-              </Typography>
-              <Typography variant="h6" fontWeight={700}>
-                Printer supplies
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Current stock {formatNumber(user.printer_supplies)}
-              </Typography>
-            </MetricCard>
+          <Stack spacing={2}>
+            {managedResources.map((resource) => (
+              <Box
+                key={resource.key}
+                sx={{
+                  border: (theme) => `1px solid ${theme.palette.divider}`,
+                  borderRadius: 3,
+                  p: { xs: 2, sm: 2.5 },
+                }}
+              >
+                <Stack spacing={2.5}>
+                  <Typography variant="h6" fontWeight={700}>
+                    {resource.title}
+                  </Typography>
 
-            <MetricCard>
-              <Typography variant="subtitle2" color="text.secondary">
-                Trigger floor
-              </Typography>
-              <Typography variant="h6" fontWeight={700}>
-                {formatNumber(effectiveTriggerFloor)}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Threshold or print batch, whichever is higher
-              </Typography>
-            </MetricCard>
+                  <MetricsRow>
+                    <MetricCard>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        Resource
+                      </Typography>
+                      <Typography variant="h6" fontWeight={700}>
+                        {resource.title}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Current stock {formatNumber(resource.currentValue)}{" "}
+                        {resource.currentValueSuffix}
+                      </Typography>
+                    </MetricCard>
 
-            <MetricCard>
-              <Typography variant="subtitle2" color="text.secondary">
-                Preview spend
-              </Typography>
-              <Typography variant="h6" fontWeight={700}>
-                {formatNumber(previewSpendGold)} gold
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {formatNumber(previewSupplies)} supplies at the current batch
-                cap
-              </Typography>
-            </MetricCard>
-          </MetricsRow>
+                    <MetricCard>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        Trigger floor
+                      </Typography>
+                      <Typography variant="h6" fontWeight={700}>
+                        {formatNumber(resource.triggerFloor)}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {resource.triggerDescription}
+                      </Typography>
+                    </MetricCard>
 
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: {
-                xs: "1fr",
-                md: "repeat(3, minmax(0, 1fr))",
-              },
-              gap: 2,
-            }}
-          >
-            <TextField
-              label="Threshold"
-              type="number"
-              value={thresholdInput}
-              onChange={(event) => setThresholdInput(event.target.value)}
-              inputProps={{ min: 0, step: 1 }}
-              disabled={!canManage || isLoading}
-              helperText="Attempt a refill once supplies dip below this floor."
-            />
+                    <MetricCard>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        Preview action
+                      </Typography>
+                      <Typography variant="h6" fontWeight={700}>
+                        {resource.previewValue}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {resource.previewDescription}
+                      </Typography>
+                    </MetricCard>
+                  </MetricsRow>
 
-            <TextField
-              select
-              label="Scale"
-              value={scaleMode}
-              onChange={(event) => {
-                const nextScaleMode = event.target.value as AutoBuyScaleMode;
-                setScaleMode(nextScaleMode);
-                if (
-                  nextScaleMode !== AutoBuyScaleMode.CUSTOM_PERCENT &&
-                  nextScaleMode !== AutoBuyScaleMode.CUSTOM_VALUE
-                ) {
-                  setScaleValueInput("");
-                } else if (scaleValueInput.trim() === "") {
-                  setScaleValueInput("1");
-                }
-              }}
-              disabled={!canManage || isLoading}
-              helperText="Choose how aggressively auto-buy spends gold."
-            >
-              {scaleOptions.map((option) => (
-                <MenuItem key={option.value} value={option.value}>
-                  {option.label}
-                </MenuItem>
-              ))}
-            </TextField>
+                  <Box
+                    sx={{
+                      display: "grid",
+                      gridTemplateColumns: {
+                        xs: "1fr",
+                        md: "repeat(3, minmax(0, 1fr))",
+                      },
+                      gap: 2,
+                    }}
+                  >
+                    <TextField
+                      label={resource.thresholdLabel}
+                      type="number"
+                      value={drafts[resource.key].thresholdInput}
+                      onChange={(event) =>
+                        updateDraft(resource.key, {
+                          thresholdInput: event.target.value,
+                        })
+                      }
+                      inputProps={{ min: 0, step: 1 }}
+                      disabled={!canManage || isLoading}
+                      helperText={resource.thresholdHelperText}
+                    />
 
-            <TextField
-              label={
-                scaleMode === AutoBuyScaleMode.CUSTOM_PERCENT
-                  ? "Custom percent"
-                  : "Custom value"
-              }
-              type="number"
-              value={scaleValueInput}
-              onChange={(event) => setScaleValueInput(event.target.value)}
-              inputProps={{
-                min: 1,
-                max:
-                  scaleMode === AutoBuyScaleMode.CUSTOM_PERCENT
-                    ? 100
-                    : undefined,
-                step: 1,
-              }}
-              disabled={!canManage || isLoading || !usesCustomScaleValue}
-              helperText={
-                scaleMode === AutoBuyScaleMode.CUSTOM_PERCENT
-                  ? "Rounded and clamped to 1-100% of current gold."
-                  : "Spend a fixed amount of gold when the rule triggers."
-              }
-            />
-          </Box>
+                    <TextField
+                      select
+                      label={resource.scaleLabel}
+                      value={drafts[resource.key].scaleMode}
+                      onChange={(event) => {
+                        const nextScaleMode = event.target
+                          .value as AutoBuyScaleMode;
+                        const currentScaleValueInput =
+                          drafts[resource.key].scaleValueInput;
+
+                        updateDraft(resource.key, {
+                          scaleMode: nextScaleMode,
+                          scaleValueInput: !isCustomScaleMode(nextScaleMode)
+                            ? ""
+                            : currentScaleValueInput.trim() === ""
+                              ? "1"
+                              : currentScaleValueInput,
+                        });
+                      }}
+                      disabled={!canManage || isLoading}
+                      helperText={resource.scaleHelperText}
+                    >
+                      {scaleOptions.map((option) => (
+                        <MenuItem key={option.value} value={option.value}>
+                          {option.label}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+
+                    <TextField
+                      label={resource.customScaleLabel}
+                      type="number"
+                      value={drafts[resource.key].scaleValueInput}
+                      onChange={(event) =>
+                        updateDraft(resource.key, {
+                          scaleValueInput: event.target.value,
+                        })
+                      }
+                      inputProps={{
+                        min: 1,
+                        max:
+                          drafts[resource.key].scaleMode ===
+                          AutoBuyScaleMode.CUSTOM_PERCENT
+                            ? 100
+                            : undefined,
+                        step: 1,
+                      }}
+                      disabled={
+                        !canManage ||
+                        isLoading ||
+                        !resource.usesCustomScaleValue
+                      }
+                      helperText={resource.customHelperText}
+                    />
+                  </Box>
+
+                  <Stack
+                    direction={{ xs: "column", sm: "row" }}
+                    spacing={1.5}
+                    justifyContent="space-between"
+                    alignItems={{ xs: "flex-start", sm: "center" }}
+                  >
+                    <Box>
+                      <Typography variant="body2" color="text.secondary">
+                        {resource.summaryText}
+                      </Typography>
+                    </Box>
+
+                    <Button
+                      variant="contained"
+                      onClick={() => saveRule(resource.key)}
+                      disabled={
+                        !canManage || isLoading || !resource.hasDraftChanges
+                      }
+                    >
+                      {resource.saveButtonLabel}
+                    </Button>
+                  </Stack>
+                </Stack>
+              </Box>
+            ))}
+          </Stack>
 
           <Stack
             direction={{ xs: "column", sm: "row" }}
@@ -306,33 +525,24 @@ export function DashboardAutoBuyManagementPanel({
             <Box>
               <Typography variant="body2" color="text.secondary">
                 {canManage
-                  ? `The current rule will try to spend ${formatNumber(previewSpendGold)} gold for ${formatNumber(previewSupplies)} supplies whenever stock falls short.`
+                  ? "Pause or resume the entire auto-buy engine without leaving the management panel."
                   : hasLiveUser
-                    ? "Unlock auto-buy supplies in the shop before adjusting the refill policy."
+                    ? "Unlock auto-buy supplies in the shop before adjusting these policies."
                     : "Preview mode shows the policy shape, but live changes are disabled until an account is connected."}
               </Typography>
             </Box>
 
-            <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-              <Button
-                variant="outlined"
-                onClick={() =>
-                  toggleAutoBuySupplies(!user.auto_buy_supplies_active)
-                }
-                disabled={!canManage || isLoading}
-              >
-                {user.auto_buy_supplies_active
-                  ? "Pause auto-buy"
-                  : "Resume auto-buy"}
-              </Button>
-              <Button
-                variant="contained"
-                onClick={saveRule}
-                disabled={!canManage || isLoading || !hasDraftChanges}
-              >
-                Save settings
-              </Button>
-            </Stack>
+            <Button
+              variant="outlined"
+              onClick={() =>
+                toggleAutoBuySupplies(!user.auto_buy_supplies_active)
+              }
+              disabled={!canManage || isLoading}
+            >
+              {user.auto_buy_supplies_active
+                ? "Pause auto-buy"
+                : "Resume auto-buy"}
+            </Button>
           </Stack>
         </Stack>
       </PanelCard>

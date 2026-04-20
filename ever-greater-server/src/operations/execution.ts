@@ -2,6 +2,7 @@ import {
   AutoBuyResourceKey,
   getAutoBuyRule,
   getManualPrintQuantity,
+  getMaxAffordableGoldQuantity,
   getMaxSuppliesPurchaseGold,
   OperationId,
   operations,
@@ -71,39 +72,63 @@ function getAutoBuySuppliesSpend(user: User): number {
   );
 }
 
-async function maybeAutoBuyForPrint(
+export function getAutoBuySuppliesTargetSpend(user: User): number {
+  const rule = getAutoBuyRule(
+    user.auto_buy_settings,
+    AutoBuyResourceKey.PRINTER_SUPPLIES,
+  );
+  const maxSpend = getMaxSuppliesPurchaseGold(user);
+
+  return resolveAutoBuySpendAmount(rule, maxSpend, maxSpend);
+}
+
+function getAutoBuyGoldQuantity(user: User): number {
+  const rule = getAutoBuyRule(user.auto_buy_settings, AutoBuyResourceKey.GOLD);
+  const maxQuantity = getMaxAffordableGoldQuantity(user);
+
+  return resolveAutoBuySpendAmount(rule, maxQuantity, maxQuantity);
+}
+
+export async function maybeAutoBuyGoldForUser(
   userId: number,
   currentUser: User,
   globalTicketCount: number,
+  requiredGold: number,
   client?: PoolClient,
 ): Promise<User> {
-  const printQuantity = getManualPrintQuantity(currentUser);
+  if (
+    !currentUser.auto_buy_supplies_purchased ||
+    !currentUser.auto_buy_supplies_active
+  ) {
+    return currentUser;
+  }
+
   const autoBuyRule = getAutoBuyRule(
     currentUser.auto_buy_settings,
-    AutoBuyResourceKey.PRINTER_SUPPLIES,
+    AutoBuyResourceKey.GOLD,
   );
 
   if (
     !shouldTriggerAutoBuy(
-      currentUser.printer_supplies ?? 0,
-      printQuantity,
+      currentUser.gold ?? 0,
+      requiredGold,
       autoBuyRule.threshold,
     )
   ) {
     return currentUser;
   }
 
-  const spendGold = getAutoBuySuppliesSpend(currentUser);
+  const quantity = getAutoBuyGoldQuantity(currentUser);
 
-  if (spendGold < 1) {
+  if (quantity < 1) {
     return currentUser;
   }
 
   try {
     const result = await executeOperationForUser(
       userId,
-      OperationId.BUY_SUPPLIES,
-      { spendGold },
+      OperationId.BUY_GOLD,
+      { quantity },
       {
         client,
         currentUser,
@@ -115,6 +140,75 @@ async function maybeAutoBuyForPrint(
   } catch (error) {
     if (error instanceof OperationValidationError) {
       return currentUser;
+    }
+
+    throw error;
+  }
+}
+
+async function maybeAutoBuyForPrint(
+  userId: number,
+  currentUser: User,
+  globalTicketCount: number,
+  client?: PoolClient,
+): Promise<User> {
+  let nextUser = await maybeAutoBuyGoldForUser(
+    userId,
+    currentUser,
+    globalTicketCount,
+    0,
+    client,
+  );
+
+  const printQuantity = getManualPrintQuantity(nextUser);
+  const autoBuyRule = getAutoBuyRule(
+    nextUser.auto_buy_settings,
+    AutoBuyResourceKey.PRINTER_SUPPLIES,
+  );
+
+  if (
+    !shouldTriggerAutoBuy(
+      nextUser.printer_supplies ?? 0,
+      printQuantity,
+      autoBuyRule.threshold,
+    )
+  ) {
+    return nextUser;
+  }
+
+  let spendGold = getAutoBuySuppliesSpend(nextUser);
+
+  if (spendGold < 1) {
+    nextUser = await maybeAutoBuyGoldForUser(
+      userId,
+      nextUser,
+      globalTicketCount,
+      getAutoBuySuppliesTargetSpend(nextUser),
+      client,
+    );
+    spendGold = getAutoBuySuppliesSpend(nextUser);
+  }
+
+  if (spendGold < 1) {
+    return nextUser;
+  }
+
+  try {
+    const result = await executeOperationForUser(
+      userId,
+      OperationId.BUY_SUPPLIES,
+      { spendGold },
+      {
+        client,
+        currentUser: nextUser,
+        globalTicketCount,
+        allowPrintAutoBuyFallback: false,
+      },
+    );
+    return result.user;
+  } catch (error) {
+    if (error instanceof OperationValidationError) {
+      return nextUser;
     }
 
     throw error;

@@ -65,6 +65,7 @@ export type ResourceAmount = Partial<Record<ResourceType, number>>;
 
 export enum AutoBuyResourceKey {
   PRINTER_SUPPLIES = "printer_supplies",
+  GOLD = "gold",
 }
 
 export enum AutoBuyScaleMode {
@@ -82,7 +83,7 @@ export interface AutoBuyRule {
 
 export type AutoBuySettings = Record<AutoBuyResourceKey, AutoBuyRule>;
 
-const DEFAULT_PRINTER_SUPPLIES_AUTO_BUY_RULE: AutoBuyRule = {
+const DEFAULT_AUTO_BUY_RULE: AutoBuyRule = {
   threshold: 0,
   scaleMode: AutoBuyScaleMode.MAX,
   scaleValue: 0,
@@ -124,7 +125,7 @@ export function normalizeAutoBuyRule(rule?: unknown): AutoBuyRule {
   const rawRule = isRecord(rule) ? rule : {};
   const scaleMode = isAutoBuyScaleMode(rawRule.scaleMode)
     ? rawRule.scaleMode
-    : DEFAULT_PRINTER_SUPPLIES_AUTO_BUY_RULE.scaleMode;
+    : DEFAULT_AUTO_BUY_RULE.scaleMode;
 
   return {
     threshold: clampToNonNegativeInteger(rawRule.threshold),
@@ -141,7 +142,10 @@ export function normalizeAutoBuyRule(rule?: unknown): AutoBuyRule {
 export function getDefaultAutoBuySettings(): AutoBuySettings {
   return {
     [AutoBuyResourceKey.PRINTER_SUPPLIES]: {
-      ...DEFAULT_PRINTER_SUPPLIES_AUTO_BUY_RULE,
+      ...DEFAULT_AUTO_BUY_RULE,
+    },
+    [AutoBuyResourceKey.GOLD]: {
+      ...DEFAULT_AUTO_BUY_RULE,
     },
   };
 }
@@ -152,6 +156,9 @@ export function normalizeAutoBuySettings(settings?: unknown): AutoBuySettings {
   return {
     [AutoBuyResourceKey.PRINTER_SUPPLIES]: normalizeAutoBuyRule(
       rawSettings[AutoBuyResourceKey.PRINTER_SUPPLIES],
+    ),
+    [AutoBuyResourceKey.GOLD]: normalizeAutoBuyRule(
+      rawSettings[AutoBuyResourceKey.GOLD],
     ),
   };
 }

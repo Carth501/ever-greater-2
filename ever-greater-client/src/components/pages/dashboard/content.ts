@@ -71,7 +71,7 @@ export const dashboardContent: DashboardContent = {
     regionLabel: "Auto-buy management",
     heading: "Auto-buy management",
     description:
-      "Tune the refill floor and spend scale without going back into the shop flow.",
+      "Tune resource floors and purchase scale without going back into the shop flow.",
   },
   shop: {
     regionLabel: "Shop overview",

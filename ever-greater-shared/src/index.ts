@@ -54,6 +54,7 @@ export {
   getManualPrintBatchLevel,
   getManualPrintBatchUpgradeCost,
   getManualPrintQuantity,
+  getMaxAffordableGoldQuantity,
   getMaxCreditValue,
   getMaxSuppliesPurchaseGold,
   getOperationCost,

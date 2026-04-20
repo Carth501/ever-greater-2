@@ -195,8 +195,8 @@ const goldUpgradeDefinitions: GoldUpgradeDefinition[] = [
         title: "Auto-Buy Supplies",
         meta: autoBuyPurchased ? "Unlocked" : `Cost: ${autoBuyCost}g`,
         description: autoBuyPurchased
-          ? "Toggle automatic supplies purchasing on and off"
-          : "One-time unlock. You keep access permanently.",
+          ? "Toggle automatic supplies and gold purchasing on and off"
+          : "One-time unlock for automatic supplies and gold purchasing.",
         action: autoBuyPurchased
           ? {
               kind: "toggle",

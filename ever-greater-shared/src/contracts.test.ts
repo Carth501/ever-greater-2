@@ -13,6 +13,7 @@ import {
   getDefaultAutoBuySettings,
   getManualPrintBatchUpgradeCost,
   getManualPrintQuantity,
+  getMaxAffordableGoldQuantity,
   getMaxCreditValue,
   getMaxSuppliesPurchaseGold,
   getOperationCost,
@@ -242,7 +243,7 @@ describe("shared operation contracts", () => {
 
     expect(
       validateOperation(user, operations[OperationId.CONFIGURE_AUTO_BUY], {
-        resourceKey: AutoBuyResourceKey.PRINTER_SUPPLIES,
+        resourceKey: AutoBuyResourceKey.GOLD,
         threshold: 20,
         scaleMode: AutoBuyScaleMode.CUSTOM_VALUE,
         scaleValue: 3,
@@ -343,6 +344,12 @@ describe("shared operation contracts", () => {
     expect(shouldTriggerAutoBuy(5, 1, 8)).toBe(true);
     expect(shouldTriggerAutoBuy(5, 6, 2)).toBe(true);
     expect(shouldTriggerAutoBuy(8, 4, 6)).toBe(false);
+  });
+
+  it("derives affordable gold quantity from available money", () => {
+    expect(getMaxAffordableGoldQuantity(makeUser({ money: 0 }))).toBe(0);
+    expect(getMaxAffordableGoldQuantity(makeUser({ money: 99 }))).toBe(0);
+    expect(getMaxAffordableGoldQuantity(makeUser({ money: 425 }))).toBe(4);
   });
 
   it("scales supplies purchases with batch upgrades", () => {
@@ -658,6 +665,11 @@ describe("shared websocket contracts", () => {
               scaleMode: AutoBuyScaleMode.CUSTOM_PERCENT,
               scaleValue: 40,
             },
+            gold: {
+              threshold: 4,
+              scaleMode: AutoBuyScaleMode.CUSTOM_VALUE,
+              scaleValue: 2,
+            },
           },
         },
       }),
@@ -669,6 +681,11 @@ describe("shared websocket contracts", () => {
             threshold: 12,
             scaleMode: AutoBuyScaleMode.CUSTOM_PERCENT,
             scaleValue: 40,
+          },
+          gold: {
+            threshold: 4,
+            scaleMode: AutoBuyScaleMode.CUSTOM_VALUE,
+            scaleValue: 2,
           },
         },
       },

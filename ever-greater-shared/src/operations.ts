@@ -72,6 +72,7 @@ export const SUPPLIES_BATCH_UPGRADE_COST = 10;
 export const AUTOPRINTER_COST_MULTIPLIER = 20;
 export const CREDIT_CAPACITY_UPGRADE_AMOUNT = 20;
 export const GEM_TICKET_COST = 2000;
+const GOLD_COST_PER_UNIT = 100;
 
 function getOperationQuantity(params?: any): number {
   if (!Number.isInteger(params?.quantity) || params.quantity < 1) {
@@ -186,6 +187,10 @@ export function getMaxSuppliesPurchaseGold(user: User): number {
   return 2 ** getSuppliesBatchLevel(user);
 }
 
+export function getMaxAffordableGoldQuantity(user: User): number {
+  return Math.max(0, Math.floor((user.money ?? 0) / GOLD_COST_PER_UNIT));
+}
+
 function getRequestedSpendGold(params?: any): number | undefined {
   if (params?.spendGold === undefined) {
     return undefined;
@@ -291,7 +296,7 @@ export const operations: Record<OperationId, Operation> = {
     cost: (ctx: OperationContext) => {
       const quantity = getOperationQuantity(ctx.params);
       return {
-        [ResourceType.MONEY]: 100 * quantity,
+        [ResourceType.MONEY]: GOLD_COST_PER_UNIT * quantity,
       };
     },
     gain: (ctx: OperationContext) => {

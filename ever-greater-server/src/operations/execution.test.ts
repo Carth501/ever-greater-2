@@ -185,6 +185,11 @@ describe("executeOperationForUser", () => {
           scaleMode: AutoBuyScaleMode.CUSTOM_PERCENT,
           scaleValue: 40,
         },
+        gold: {
+          threshold: 0,
+          scaleMode: AutoBuyScaleMode.MAX,
+          scaleValue: 0,
+        },
       },
     });
 
@@ -211,10 +216,91 @@ describe("executeOperationForUser", () => {
           scaleMode: AutoBuyScaleMode.CUSTOM_PERCENT,
           scaleValue: 40,
         },
+        gold: {
+          threshold: 0,
+          scaleMode: AutoBuyScaleMode.MAX,
+          scaleValue: 0,
+        },
       },
       undefined,
     );
     expect(result.user).toEqual(updatedUser);
+  });
+
+  it("auto-buys gold before refilling supplies when the print fallback needs it", async () => {
+    const user = makeUser({
+      printer_supplies: 0,
+      money: 200,
+      gold: 0,
+      auto_buy_supplies_purchased: true,
+      auto_buy_supplies_active: true,
+    });
+    const goldPurchasedUser = makeUser({
+      printer_supplies: 0,
+      money: 0,
+      gold: 2,
+      auto_buy_supplies_purchased: true,
+      auto_buy_supplies_active: true,
+    });
+    const refilledUser = makeUser({
+      printer_supplies: 200,
+      money: 0,
+      gold: 1,
+      auto_buy_supplies_purchased: true,
+      auto_buy_supplies_active: true,
+    });
+    const printedUser = makeUser({
+      printer_supplies: 199,
+      money: 1,
+      gold: 1,
+      tickets_contributed: 11,
+      auto_buy_supplies_purchased: true,
+      auto_buy_supplies_active: true,
+    });
+
+    mockDbAccess.getUserById.mockResolvedValue(user);
+    mockDbAccess.getGlobalCount.mockResolvedValue(100);
+    mockDbAccess.executeResourceTransaction
+      .mockResolvedValueOnce(goldPurchasedUser)
+      .mockResolvedValueOnce(refilledUser)
+      .mockResolvedValueOnce(printedUser);
+    mockDbAccess.incrementGlobalCount.mockResolvedValue(101);
+
+    const result = await executeOperationForUser(
+      1,
+      OperationId.PRINT_TICKET,
+      undefined,
+      {
+        allowPrintAutoBuyFallback: true,
+      },
+    );
+
+    expect(mockDbAccess.executeResourceTransaction).toHaveBeenNthCalledWith(
+      1,
+      1,
+      { [ResourceType.MONEY]: 200 },
+      { [ResourceType.GOLD]: 2 },
+      undefined,
+    );
+    expect(mockDbAccess.executeResourceTransaction).toHaveBeenNthCalledWith(
+      2,
+      1,
+      { [ResourceType.GOLD]: 1 },
+      { [ResourceType.PRINTER_SUPPLIES]: 200 },
+      undefined,
+    );
+    expect(mockDbAccess.executeResourceTransaction).toHaveBeenNthCalledWith(
+      3,
+      1,
+      { [ResourceType.PRINTER_SUPPLIES]: 1 },
+      {
+        [ResourceType.MONEY]: 1,
+        [ResourceType.TICKETS_CONTRIBUTED]: 1,
+      },
+      undefined,
+    );
+    expect(result.user).toEqual(printedUser);
+    expect(result.count).toBe(101);
   });
 
   it("charges the scaled gold cost for credit generation upgrades", async () => {

@@ -7,6 +7,8 @@ describe('Database Functions', () => {
   let db;
   let consoleErrorSpy;
   let mockExecuteOperationForUser;
+  let mockMaybeAutoBuyGoldForUser;
+  let mockGetAutoBuySuppliesTargetSpend;
 
   class MockOperationValidationError extends Error {
     constructor(validation) {
@@ -46,8 +48,12 @@ describe('Database Functions', () => {
     }));
 
     mockExecuteOperationForUser = vi.fn();
+    mockMaybeAutoBuyGoldForUser = vi.fn(async (_userId, currentUser) => currentUser);
+    mockGetAutoBuySuppliesTargetSpend = vi.fn(() => 1);
     vi.doMock('./operations/execution.js', () => ({
       executeOperationForUser: mockExecuteOperationForUser,
+      getAutoBuySuppliesTargetSpend: mockGetAutoBuySuppliesTargetSpend,
+      maybeAutoBuyGoldForUser: mockMaybeAutoBuyGoldForUser,
       OperationValidationError: MockOperationValidationError,
     }));
 

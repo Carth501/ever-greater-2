@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import {
+  AutoBuyResourceKey,
   AutoBuyScaleMode,
   getDefaultAutoBuySettings,
 } from "ever-greater-shared";
@@ -43,7 +44,7 @@ describe("DashboardAutoBuyManagementPanel", () => {
     mockedUseOperations.mockReturnValue(createOperationsMockValue());
   });
 
-  it("saves updated threshold rules through configureAutoBuy", () => {
+  it("saves updated printer supplies rules through configureAutoBuy", () => {
     const configureAutoBuy = vi.fn<(params: unknown) => void>();
     mockedUseOperations.mockReturnValue(
       createOperationsMockValue({ configureAutoBuy }),
@@ -62,17 +63,87 @@ describe("DashboardAutoBuyManagementPanel", () => {
       />,
     );
 
-    fireEvent.change(screen.getByLabelText(/threshold/i), {
+    fireEvent.change(screen.getByLabelText("Printer supplies threshold"), {
       target: { value: "18" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /save settings/i }));
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /save printer supplies settings/i,
+      }),
+    );
 
     expect(configureAutoBuy).toHaveBeenCalledWith({
-      resourceKey: "printer_supplies",
+      resourceKey: AutoBuyResourceKey.PRINTER_SUPPLIES,
       threshold: 18,
       scaleMode: AutoBuyScaleMode.MAX,
       scaleValue: 0,
     });
+  });
+
+  it("saves updated gold rules through configureAutoBuy", () => {
+    const configureAutoBuy = vi.fn<(params: unknown) => void>();
+    mockedUseOperations.mockReturnValue(
+      createOperationsMockValue({ configureAutoBuy }),
+    );
+
+    render(
+      <DashboardAutoBuyManagementPanel
+        hasLiveUser
+        manualPrintQuantity={4}
+        user={mockUser({
+          money: 1200,
+          gold: 2,
+          auto_buy_supplies_purchased: true,
+          auto_buy_supplies_active: true,
+          auto_buy_settings: getDefaultAutoBuySettings(),
+        })}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Gold threshold"), {
+      target: { value: "6" },
+    });
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "Gold scale" }));
+    fireEvent.click(screen.getByRole("option", { name: "Custom Value" }));
+    fireEvent.change(screen.getByLabelText("Gold custom value"), {
+      target: { value: "3" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: /save gold settings/i }),
+    );
+
+    expect(configureAutoBuy).toHaveBeenCalledWith({
+      resourceKey: AutoBuyResourceKey.GOLD,
+      threshold: 6,
+      scaleMode: AutoBuyScaleMode.CUSTOM_VALUE,
+      scaleValue: 3,
+    });
+  });
+
+  it("shows gold preview action with money first and gold second", () => {
+    render(
+      <DashboardAutoBuyManagementPanel
+        hasLiveUser
+        manualPrintQuantity={4}
+        user={mockUser({
+          money: 623600,
+          gold: 0,
+          auto_buy_supplies_purchased: true,
+          auto_buy_supplies_active: true,
+          auto_buy_settings: {
+            ...getDefaultAutoBuySettings(),
+            gold: {
+              threshold: 10,
+              scaleMode: AutoBuyScaleMode.MAX,
+              scaleValue: 0,
+            },
+          },
+        })}
+      />,
+    );
+
+    expect(screen.getByText("623,600 money")).toBeTruthy();
+    expect(screen.getByText("6,236 gold at the current rate")).toBeTruthy();
   });
 
   it("delegates pause and resume actions through toggleAutoBuySupplies", () => {

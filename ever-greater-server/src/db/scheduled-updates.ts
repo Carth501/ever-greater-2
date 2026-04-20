@@ -12,6 +12,8 @@ import {
 } from "ever-greater-shared";
 import {
   executeOperationForUser,
+  getAutoBuySuppliesTargetSpend,
+  maybeAutoBuyGoldForUser,
   OperationValidationError,
 } from "../operations/execution.js";
 import {
@@ -52,7 +54,13 @@ export async function processAutoprinters(): Promise<{
     let newGlobalCount: number | null = null;
 
     for (const user of users) {
-      let currentUser = user;
+      let currentUser = await maybeAutoBuyGoldForUser(
+        user.id,
+        user,
+        0,
+        0,
+        client,
+      );
       const desiredPrintQuantity = getAutoprinterPrintQuantity(currentUser);
       const autoBuyRule = getAutoBuyRule(
         currentUser.auto_buy_settings,
@@ -69,7 +77,7 @@ export async function processAutoprinters(): Promise<{
         );
 
       if (needsAutoBuyRefill) {
-        const spendGold = resolveAutoBuySpendAmount(
+        let spendGold = resolveAutoBuySpendAmount(
           autoBuyRule,
           currentUser.gold ?? 0,
           Math.min(
@@ -77,6 +85,24 @@ export async function processAutoprinters(): Promise<{
             getMaxSuppliesPurchaseGold(currentUser),
           ),
         );
+
+        if (spendGold < 1) {
+          currentUser = await maybeAutoBuyGoldForUser(
+            currentUser.id,
+            currentUser,
+            0,
+            getAutoBuySuppliesTargetSpend(currentUser),
+            client,
+          );
+          spendGold = resolveAutoBuySpendAmount(
+            autoBuyRule,
+            currentUser.gold ?? 0,
+            Math.min(
+              currentUser.gold ?? 0,
+              getMaxSuppliesPurchaseGold(currentUser),
+            ),
+          );
+        }
 
         if (spendGold >= 1) {
           try {

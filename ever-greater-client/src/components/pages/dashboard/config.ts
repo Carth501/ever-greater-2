@@ -71,5 +71,10 @@ export const previewDashboardUser: User = {
       scaleMode: AutoBuyScaleMode.CUSTOM_PERCENT,
       scaleValue: 25,
     },
+    gold: {
+      threshold: 12,
+      scaleMode: AutoBuyScaleMode.CUSTOM_VALUE,
+      scaleValue: 4,
+    },
   },
 };
