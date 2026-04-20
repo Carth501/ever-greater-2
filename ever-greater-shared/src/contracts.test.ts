@@ -37,6 +37,7 @@ function makeUser(overrides: Partial<User> = {}): User {
     printer_supplies: 500,
     money: 10000,
     gold: 100,
+    gems: 0,
     autoprinters: 2,
     credit_value: 0,
     credit_generation_level: 0,
@@ -92,7 +93,10 @@ describe("shared operation contracts", () => {
               ? { active: false }
               : undefined;
       const globalTicketCount =
-        operationId === OperationId.INCREASE_CREDIT_CAPACITY ? 1000 : undefined;
+        operationId === OperationId.INCREASE_CREDIT_CAPACITY ||
+        operationId === OperationId.BUY_GEM
+          ? 5000
+          : undefined;
 
       const validation = validateOperation(
         user,
@@ -116,7 +120,14 @@ describe("shared operation contracts", () => {
 
       expect(validation.cost).toEqual(expectedCost);
       expect(validation.gain).toEqual(expectedGain);
-      expect(canAfford(user, expectedCost)).toBe(true);
+
+      if (expectedCost[ResourceType.GLOBAL_TICKETS] === undefined) {
+        expect(canAfford(user, expectedCost)).toBe(true);
+      } else {
+        expect(globalTicketCount).toBeGreaterThanOrEqual(
+          expectedCost[ResourceType.GLOBAL_TICKETS] ?? 0,
+        );
+      }
 
       const updatedUser = applyTransaction(user, expectedCost, expectedGain);
 
@@ -416,6 +427,22 @@ describe("shared operation contracts", () => {
     });
   });
 
+  it("prices gems as 2000 global tickets for 1 gem", () => {
+    const user = makeUser();
+
+    expect(
+      getOperationCost(operations[OperationId.BUY_GEM], {
+        user,
+      }),
+    ).toEqual({ [ResourceType.GLOBAL_TICKETS]: 2000 });
+
+    expect(
+      getOperationGain(operations[OperationId.BUY_GEM], {
+        user,
+      }),
+    ).toEqual({ [ResourceType.GEMS]: 1 });
+  });
+
   it("calculates periodic credit generation from current value and capacity", () => {
     expect(
       getCreditGenerationAmount(
@@ -530,6 +557,8 @@ function resourceField(resourceType: ResourceType): keyof User | null {
       return "money";
     case ResourceType.GOLD:
       return "gold";
+    case ResourceType.GEMS:
+      return "gems";
     case ResourceType.AUTOPRINTERS:
       return "autoprinters";
     case ResourceType.CREDIT:

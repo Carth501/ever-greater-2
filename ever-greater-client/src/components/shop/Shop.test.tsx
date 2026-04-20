@@ -67,6 +67,7 @@ describe("Shop", () => {
       errorDetail: null,
       buySupplies: vi.fn<() => void>(),
       buyGold: vi.fn<(quantity: number) => void>(),
+      buyGem: vi.fn<() => void>(),
       buyAutoprinter: vi.fn<() => void>(),
       buyAutoBuySupplies: vi.fn<() => void>(),
       toggleAutoBuySupplies: vi.fn<(active: boolean) => void>(),
@@ -92,6 +93,9 @@ describe("Shop", () => {
     expect(screen.getByRole("heading", { name: "Shop" })).toBeTruthy();
     expect(screen.getByText("Gold", { exact: true })).toBeTruthy();
     expect(screen.getByText("Up to 200 Supplies")).toBeTruthy();
+    expect(screen.getByText("Buy Gem")).toBeTruthy();
+    expect(screen.getByText(/Gems Owned:/)).toBeTruthy();
+    expect(screen.getByText("Cost: 2000 tickets")).toBeTruthy();
     expect(screen.queryByText("Auto-Buy Supplies")).toBeNull();
     expect(screen.queryByText("Increase Credit Generation")).toBeNull();
     expect(screen.queryByText("Increase Credit Capacity")).toBeNull();
@@ -105,6 +109,7 @@ describe("Shop", () => {
 
     expect(screen.queryByText("Gold", { exact: true })).toBeNull();
     expect(screen.getByText("Up to 200 Supplies")).toBeTruthy();
+    expect(screen.getByText("Buy Gem")).toBeTruthy();
   });
 
   it("shows partial supplies purchases when gold is below the upgraded batch cap", () => {

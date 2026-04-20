@@ -67,6 +67,7 @@ describe("Upgrades", () => {
       errorDetail: null,
       buySupplies: vi.fn<() => void>(),
       buyGold: vi.fn<(quantity: number) => void>(),
+      buyGem: vi.fn<() => void>(),
       buyAutoprinter: vi.fn<() => void>(),
       buyAutoBuySupplies: vi.fn<() => void>(),
       toggleAutoBuySupplies: vi.fn<(active: boolean) => void>(),
@@ -102,6 +103,7 @@ describe("Upgrades", () => {
     expect(screen.getByText("Cost: 320 credit")).toBeTruthy();
     expect(screen.queryByText("200 Supplies")).toBeNull();
     expect(screen.queryByText("Gold", { exact: true })).toBeNull();
+    expect(screen.queryByText("Buy Gem")).toBeNull();
   });
 
   it("keeps the autoprinter upgrade behind the existing late-game threshold", () => {
@@ -115,6 +117,7 @@ describe("Upgrades", () => {
     expect(screen.getByText("Increase Manual Print Batch")).toBeTruthy();
     expect(screen.getByText("Increase Supplies Batch")).toBeTruthy();
     expect(screen.getByText("Increase Credit Capacity")).toBeTruthy();
+    expect(screen.queryByText("Buy Gem")).toBeNull();
   });
 
   it("shows the scaled general ticket batch upgrade cost for the current level", () => {

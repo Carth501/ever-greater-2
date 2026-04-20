@@ -75,6 +75,7 @@ describe('Database Functions', () => {
               { column_name: 'printer_supplies' },
               { column_name: 'money' },
               { column_name: 'gold' },
+              { column_name: 'gems' },
               { column_name: 'autoprinters' },
               { column_name: 'milk' },
               { column_name: 'credit_value' },
@@ -106,7 +107,7 @@ describe('Database Functions', () => {
       const migrationInsertCalls = mockClient.query.mock.calls.filter((call) =>
         call[0].includes('INSERT INTO schema_migrations')
       );
-      expect(migrationInsertCalls).toHaveLength(8);
+      expect(migrationInsertCalls).toHaveLength(9);
       expect(mockClient.release).toHaveBeenCalled();
     });
 
@@ -123,6 +124,7 @@ describe('Database Functions', () => {
               { column_name: 'printer_supplies' },
               { column_name: 'money' },
               { column_name: 'gold' },
+              { column_name: 'gems' },
               { column_name: 'autoprinters' },
               { column_name: 'milk' },
               { column_name: 'credit_value' },
@@ -168,6 +170,7 @@ describe('Database Functions', () => {
               { column_name: 'printer_supplies' },
               { column_name: 'money' },
               { column_name: 'gold' },
+              { column_name: 'gems' },
               { column_name: 'autoprinters' },
               { column_name: 'milk' },
               { column_name: 'credit_value' },
@@ -202,7 +205,7 @@ describe('Database Functions', () => {
       mockClient.query.mockImplementation(async (query) => {
         if (query.includes('SELECT id FROM schema_migrations')) {
           return {
-            rows: [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }, { id: 5 }, { id: 6 }, { id: 7 }, { id: 8 }],
+            rows: [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }, { id: 5 }, { id: 6 }, { id: 7 }, { id: 8 }, { id: 9 }],
           };
         }
 
@@ -213,6 +216,7 @@ describe('Database Functions', () => {
               { column_name: 'printer_supplies' },
               { column_name: 'money' },
               { column_name: 'gold' },
+              { column_name: 'gems' },
               { column_name: 'autoprinters' },
               { column_name: 'credit_value' },
               { column_name: 'credit_generation_level' },
@@ -282,7 +286,7 @@ describe('Database Functions', () => {
 
         if (query.includes('SELECT id FROM schema_migrations')) {
           return {
-            rows: [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }, { id: 5 }, { id: 6 }, { id: 7 }, { id: 8 }],
+            rows: [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }, { id: 5 }, { id: 6 }, { id: 7 }, { id: 8 }, { id: 9 }],
           };
         }
 
@@ -293,6 +297,7 @@ describe('Database Functions', () => {
               { column_name: 'printer_supplies' },
               { column_name: 'money' },
               { column_name: 'gold' },
+              { column_name: 'gems' },
               { column_name: 'autoprinters' },
               { column_name: 'credit_value' },
               { column_name: 'credit_generation_level' },
@@ -416,6 +421,7 @@ describe('Database Functions', () => {
         printer_supplies: expectedStartingSupplies,
         money: 0,
         gold: 0,
+        gems: 0,
         autoprinters: 0,
         milk: 0,
         credit_value: 0,
@@ -439,6 +445,7 @@ describe('Database Functions', () => {
           'newuser@example.com',
           'hashed_password',
           expectedStartingSupplies,
+          0,
           0,
           0,
           0,

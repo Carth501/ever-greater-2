@@ -91,6 +91,14 @@ const gameOperationConfigs = {
         ? invalidQuantityMessage
         : null,
   }),
+  buyGem: defineGameOperationConfig({
+    typePrefix: "operations/buyGem",
+    execute: () => operationsApi.buyGem(),
+    fallbackMessage: "Failed to buy gem",
+    tracksOperationsState: true,
+    mergesIntoAuthUser: true,
+    exposeInOperationsHook: true,
+  }),
   buyAutoBuySupplies: defineGameOperationConfig({
     typePrefix: "operations/buyAutoBuySupplies",
     execute: () => operationsApi.buyAutoBuySupplies(),
@@ -193,6 +201,7 @@ function selectGameOperationThunks(
 
 export const buySuppliesThunk = gameOperationThunks.buySupplies;
 export const buyGoldThunk = gameOperationThunks.buyGold;
+export const buyGemThunk = gameOperationThunks.buyGem;
 export const buyAutoBuySuppliesThunk = gameOperationThunks.buyAutoBuySupplies;
 export const buyAutoprinterThunk = gameOperationThunks.buyAutoprinter;
 export const increaseCreditGenerationThunk =

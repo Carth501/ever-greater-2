@@ -14,6 +14,7 @@ import {
 import type { JSX } from "react";
 import type { useOperations } from "../../hooks/useOperations";
 import ShopCreditGroup from "./shop-groups/ShopCreditGroup";
+import ShopGemGroup from "./shop-groups/ShopGemGroup";
 import ShopGlobalTicketsGroup from "./shop-groups/ShopGlobalTicketsGroup";
 import ShopMoneyGroup from "./shop-groups/ShopMoneyGroup";
 import ShopSuppliesGroup from "./shop-groups/ShopSuppliesGroup";
@@ -25,6 +26,7 @@ type OperationHandlers = Pick<
   ReturnType<typeof useOperations>,
   | "buySupplies"
   | "buyGold"
+  | "buyGem"
   | "buyAutoprinter"
   | "buyAutoBuySupplies"
   | "toggleAutoBuySupplies"
@@ -135,6 +137,36 @@ const shopRegistry: RegistryEntry[] = [
           suppliesCostInGold={suppliesCost[ResourceType.GOLD] ?? 0}
           canAffordSupplies={(user.gold ?? 0) > 0}
           onBuySupplies={handlers.buySupplies}
+        />
+      );
+    },
+  },
+  {
+    key: "buy-gem",
+    operationIds: [OperationId.BUY_GEM],
+    isVisible: () => true,
+    render: ({ user, globalTicketCount, handlers }) => {
+      const ticketsContributed = user.tickets_contributed ?? 0;
+      const ticketsWithdrawn = user.tickets_withdrawn ?? 0;
+      const remainingCapacity = Math.max(
+        0,
+        ticketsContributed - ticketsWithdrawn,
+      );
+      const gemCost =
+        getOperationCost(operations[OperationId.BUY_GEM], {
+          user,
+        })[ResourceType.GLOBAL_TICKETS] ?? 0;
+      const canAffordGem =
+        remainingCapacity >= gemCost && globalTicketCount >= gemCost;
+
+      return (
+        <ShopGemGroup
+          globalTicketCount={globalTicketCount}
+          gemsOwned={user.gems ?? 0}
+          remainingCapacity={remainingCapacity}
+          gemCost={gemCost}
+          canAffordGem={canAffordGem}
+          onBuyGem={handlers.buyGem}
         />
       );
     },
@@ -362,13 +394,16 @@ const upgradeRegistry: RegistryEntry[] = [
         getOperationCost(operations[OperationId.INCREASE_CREDIT_CAPACITY], {
           user,
         })[ResourceType.GLOBAL_TICKETS] ?? 0;
+      const canAffordCreditCapacity =
+        remainingCapacity >= creditCapacityCost &&
+        globalTicketCount >= creditCapacityCost;
 
       return (
         <ShopGlobalTicketsGroup
           globalTicketCount={globalTicketCount}
           remainingCapacity={remainingCapacity}
           creditCapacityCost={creditCapacityCost}
-          canAffordCreditCapacity={remainingCapacity >= creditCapacityCost}
+          canAffordCreditCapacity={canAffordCreditCapacity}
           onIncreaseCreditCapacity={handlers.increaseCreditCapacity}
         />
       );
@@ -389,12 +424,9 @@ function renderRegistry(
 }
 
 export function getShopOperationGroups(
-  context: Omit<RegistryContext, "globalTicketCount">,
+  context: RegistryContext,
 ): RenderedGroup[] {
-  return renderRegistry(shopRegistry, {
-    ...context,
-    globalTicketCount: 0,
-  });
+  return renderRegistry(shopRegistry, context);
 }
 
 export function getUpgradeOperationGroups(

@@ -51,6 +51,7 @@ export const previewDashboardUser: User = {
   printer_supplies: 128,
   money: 245000,
   gold: 164,
+  gems: 0,
   autoprinters: 6,
   credit_value: 112,
   credit_generation_level: 9,

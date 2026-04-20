@@ -5,6 +5,7 @@ import { useAppDispatch, useAppSelector } from "../store/hooks";
 type HookOperationHandlers = {
   buySupplies: () => void;
   buyGold: (quantity: number) => void;
+  buyGem: () => void;
   buyAutoprinter: () => void;
   buyAutoBuySupplies: () => void;
   toggleAutoBuySupplies: (active: boolean) => void;

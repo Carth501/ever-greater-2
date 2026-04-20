@@ -567,6 +567,7 @@ function createApp(): Express {
         printer_supplies: result.user.printer_supplies,
         money: result.user.money,
         gold: result.user.gold,
+        gems: result.user.gems,
         autoprinters: result.user.autoprinters,
         tickets_contributed: result.user.tickets_contributed,
         tickets_withdrawn: result.user.tickets_withdrawn,

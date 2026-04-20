@@ -5,6 +5,7 @@ import Typography from "@mui/material/Typography";
 import { alpha, styled } from "@mui/material/styles";
 import { JSX } from "react";
 import { useAuth } from "../../hooks/useAuth";
+import { useGame } from "../../hooks/useGame";
 import { useOperations } from "../../hooks/useOperations";
 import { getShopOperationGroups } from "./operationRegistry";
 
@@ -32,6 +33,7 @@ const ShopCard = styled(Paper)(({ theme }) => ({
 
 function Shop({ onPurchaseError }: ShopProps): JSX.Element {
   const { user: currentUser } = useAuth();
+  const { count: globalTicketCount } = useGame();
   const operationHandlers = useOperations(onPurchaseError);
 
   if (!currentUser) {
@@ -39,6 +41,7 @@ function Shop({ onPurchaseError }: ShopProps): JSX.Element {
   }
   const shopGroups = getShopOperationGroups({
     user: currentUser,
+    globalTicketCount,
     handlers: operationHandlers,
   });
 

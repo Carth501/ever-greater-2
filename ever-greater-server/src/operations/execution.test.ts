@@ -27,6 +27,7 @@ function makeUser(overrides: Partial<User> = {}): User {
     printer_supplies: 10,
     money: 0,
     gold: 10,
+    gems: 0,
     autoprinters: 0,
     credit_value: 0,
     credit_generation_level: 0,
@@ -239,6 +240,33 @@ describe("executeOperationForUser", () => {
     );
     expect(mockDbAccess.getGlobalCount).toHaveBeenCalledTimes(2);
     expect(result.count).toBe(749);
+    expect(result.user).toEqual(updatedUser);
+  });
+
+  it("spends 2000 global tickets to award 1 gem", async () => {
+    const user = makeUser({ tickets_contributed: 5000, tickets_withdrawn: 0 });
+    const updatedUser = makeUser({
+      tickets_contributed: 5000,
+      tickets_withdrawn: 0,
+      gems: 1,
+    });
+
+    mockDbAccess.getUserById.mockResolvedValue(user);
+    mockDbAccess.getGlobalCount
+      .mockResolvedValueOnce(5000)
+      .mockResolvedValueOnce(3000);
+    mockDbAccess.executeResourceTransaction.mockResolvedValue(updatedUser);
+
+    const result = await executeOperationForUser(1, OperationId.BUY_GEM);
+
+    expect(mockDbAccess.executeResourceTransaction).toHaveBeenCalledWith(
+      1,
+      { [ResourceType.GLOBAL_TICKETS]: 2000 },
+      { [ResourceType.GEMS]: 1 },
+      undefined,
+    );
+    expect(mockDbAccess.getGlobalCount).toHaveBeenCalledTimes(2);
+    expect(result.count).toBe(3000);
     expect(result.user).toEqual(updatedUser);
   });
 

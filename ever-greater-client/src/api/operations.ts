@@ -70,6 +70,13 @@ export async function buyGold(quantity: number): Promise<User> {
 }
 
 /**
+ * Buy a gem with tickets (uses generic operation endpoint)
+ */
+export async function buyGem(): Promise<User> {
+  return executeOperation(OperationId.BUY_GEM);
+}
+
+/**
  * Buy an autoprinter with credit (uses generic operation endpoint)
  */
 export async function buyAutoprinter(): Promise<User> {

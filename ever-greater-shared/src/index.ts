@@ -27,6 +27,7 @@ export {
   clientOperationIds,
   CREDIT_CAPACITY_UPGRADE_AMOUNT,
   evaluateResourceAmount,
+  GEM_TICKET_COST,
   getAutoprinterCost,
   getAutoprinterPrintQuantity,
   getBuySuppliesGainForGold,

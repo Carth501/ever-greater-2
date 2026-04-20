@@ -7,6 +7,7 @@ export enum ResourceType {
   PRINTER_SUPPLIES = "PRINTER_SUPPLIES",
   MONEY = "MONEY",
   GOLD = "GOLD",
+  GEMS = "GEMS",
   AUTOPRINTERS = "AUTOPRINTERS",
   CREDIT = "CREDIT",
   CREDIT_GENERATION_LEVEL = "CREDIT_GENERATION_LEVEL",
@@ -27,6 +28,7 @@ export const RESOURCE_DB_FIELDS: Partial<Record<ResourceType, string>> = {
   [ResourceType.PRINTER_SUPPLIES]: "printer_supplies",
   [ResourceType.MONEY]: "money",
   [ResourceType.GOLD]: "gold",
+  [ResourceType.GEMS]: "gems",
   [ResourceType.AUTOPRINTERS]: "autoprinters",
   [ResourceType.CREDIT]: "credit_value",
   [ResourceType.CREDIT_GENERATION_LEVEL]: "credit_generation_level",
@@ -45,6 +47,7 @@ export const DB_FIELD_TO_RESOURCE: Record<string, ResourceType> = {
   printer_supplies: ResourceType.PRINTER_SUPPLIES,
   money: ResourceType.MONEY,
   gold: ResourceType.GOLD,
+  gems: ResourceType.GEMS,
   autoprinters: ResourceType.AUTOPRINTERS,
   credit_value: ResourceType.CREDIT,
   credit_generation_level: ResourceType.CREDIT_GENERATION_LEVEL,
@@ -72,6 +75,7 @@ export interface User {
   printer_supplies: number;
   money: number;
   gold: number;
+  gems: number;
   autoprinters: number;
   credit_value: number;
   credit_generation_level: number;
@@ -87,6 +91,7 @@ export const CLIENT_USER_STATE_DEFAULTS = {
   printer_supplies: 0,
   money: 0,
   gold: 0,
+  gems: 0,
   autoprinters: 0,
   tickets_contributed: 0,
   tickets_withdrawn: 0,

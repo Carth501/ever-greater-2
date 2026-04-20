@@ -26,6 +26,7 @@ async function runSeedCommand(): Promise<void> {
           printer_supplies,
           money,
           gold,
+          gems,
           autoprinters,
           credit_value,
           credit_generation_level,
@@ -34,7 +35,7 @@ async function runSeedCommand(): Promise<void> {
           auto_buy_supplies_purchased,
           auto_buy_supplies_active
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
         ON CONFLICT (email)
         DO UPDATE SET
           password_hash = EXCLUDED.password_hash,
@@ -42,6 +43,7 @@ async function runSeedCommand(): Promise<void> {
           printer_supplies = EXCLUDED.printer_supplies,
           money = EXCLUDED.money,
           gold = EXCLUDED.gold,
+          gems = EXCLUDED.gems,
           autoprinters = EXCLUDED.autoprinters,
           credit_value = EXCLUDED.credit_value,
           credit_generation_level = EXCLUDED.credit_generation_level,
@@ -58,6 +60,7 @@ async function runSeedCommand(): Promise<void> {
         STARTING_PRINTER_SUPPLIES * 4,
         250,
         25,
+        0,
         4,
         6,
         8,

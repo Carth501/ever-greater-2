@@ -16,6 +16,7 @@ type UserUpdatePayload = Partial<
     | "tickets_contributed"
     | "tickets_withdrawn"
     | "gold"
+    | "gems"
     | "autoprinters"
     | "credit_value"
     | "credit_generation_level"

@@ -42,6 +42,7 @@ export enum OperationId {
   AUTO_BUY_SUPPLIES = "AUTO_BUY_SUPPLIES",
   TOGGLE_AUTO_BUY_SUPPLIES = "TOGGLE_AUTO_BUY_SUPPLIES",
   BUY_GOLD = "BUY_GOLD",
+  BUY_GEM = "BUY_GEM",
   BUY_AUTOPRINTER = "BUY_AUTOPRINTER",
   PRINT_TICKET = "PRINT_TICKET",
   INCREASE_TICKET_BATCH = "INCREASE_TICKET_BATCH",
@@ -58,6 +59,7 @@ export const MANUAL_PRINT_BATCH_UPGRADE_COST = 10;
 export const SUPPLIES_BATCH_UPGRADE_COST = 10;
 export const AUTOPRINTER_COST_MULTIPLIER = 20;
 export const CREDIT_CAPACITY_UPGRADE_AMOUNT = 20;
+export const GEM_TICKET_COST = 2000;
 
 function getOperationQuantity(params?: any): number {
   if (!Number.isInteger(params?.quantity) || params.quantity < 1) {
@@ -258,6 +260,18 @@ export const operations: Record<OperationId, Operation> = {
       return {
         [ResourceType.GOLD]: quantity,
       };
+    },
+  },
+
+  [OperationId.BUY_GEM]: {
+    id: OperationId.BUY_GEM,
+    name: "Buy Gem",
+    description: "Purchase a gem with 2000 tickets",
+    cost: {
+      [ResourceType.GLOBAL_TICKETS]: GEM_TICKET_COST,
+    },
+    gain: {
+      [ResourceType.GEMS]: 1,
     },
   },
 

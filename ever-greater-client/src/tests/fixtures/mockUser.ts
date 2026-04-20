@@ -9,6 +9,7 @@ export function mockUser(overrides: Partial<User> = {}): User {
     printer_supplies: 100,
     money: 0,
     gold: 0,
+    gems: 0,
     autoprinters: 0,
     credit_value: 0,
     credit_generation_level: 0,

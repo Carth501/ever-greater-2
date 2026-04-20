@@ -105,11 +105,12 @@ export async function createUser(
   passwordHash: string,
 ): Promise<User> {
   const result = await pool.query(
-    `INSERT INTO users (email, password_hash, printer_supplies, money, gold, autoprinters, credit_value, credit_generation_level, credit_capacity_level, ticket_batch_level, manual_print_batch_level, supplies_batch_level, auto_buy_supplies_purchased, auto_buy_supplies_active) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING ${USER_SELECT_COLUMNS}`,
+    `INSERT INTO users (email, password_hash, printer_supplies, money, gold, gems, autoprinters, credit_value, credit_generation_level, credit_capacity_level, ticket_batch_level, manual_print_batch_level, supplies_batch_level, auto_buy_supplies_purchased, auto_buy_supplies_active) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING ${USER_SELECT_COLUMNS}`,
     [
       email,
       passwordHash,
       STARTING_PRINTER_SUPPLIES,
+      0,
       0,
       0,
       0,
