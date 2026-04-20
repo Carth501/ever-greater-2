@@ -1,6 +1,7 @@
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
+import { CREDIT_CAPACITY_UPGRADE_AMOUNT } from "ever-greater-shared";
 import { JSX } from "react";
 import { ShopGroup, ShopRow } from "./ShopGroupLayout";
 
@@ -37,7 +38,8 @@ function ShopGlobalTicketsGroup({
             Cost: {creditCapacityCost} tickets
           </Typography>
           <Typography variant="caption" color="text.secondary" display="block">
-            Permanently increase maximum credit by 1
+            Increase capacity level by 1 and max credit by{" "}
+            {CREDIT_CAPACITY_UPGRADE_AMOUNT}
           </Typography>
         </Box>
         <Button

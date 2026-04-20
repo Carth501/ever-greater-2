@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { User } from "../api/auth";
 import * as authApi from "../api/auth";
+import { AuthError } from "../api/client";
 import * as ticketApi from "../api/globalTicket";
 import * as operationsApi from "../api/operations";
 import {
@@ -9,6 +10,7 @@ import {
   mockWsUserUpdate,
 } from "../tests/fixtures";
 import { createTestStore } from "../tests/utils/testStore";
+import { printTicketThunk } from "./gameOperationThunks";
 import {
   applyUserUpdate,
   AuthState,
@@ -27,7 +29,6 @@ import {
 import {
   clearError as clearTicketError,
   fetchCountThunk,
-  incrementCountThunk,
   TicketState,
   updateCount,
 } from "./slices/ticketSlice";
@@ -77,7 +78,12 @@ describe("Redux Store Integration", () => {
 
     it("should handle login error", async () => {
       const errorMessage = "Invalid credentials";
-      mockAuthApi.login.mockRejectedValueOnce(new Error(errorMessage));
+      mockAuthApi.login.mockRejectedValueOnce(
+        new AuthError(errorMessage, 401, {
+          code: "INVALID_CREDENTIALS",
+          detail: "Try again",
+        }),
+      );
 
       await store.dispatch(
         loginThunk({ email: "test@example.com", password: "wrong" }) as any,
@@ -86,6 +92,8 @@ describe("Redux Store Integration", () => {
       const state = store.getState();
       expect(state.auth.user).toBeNull();
       expect(state.auth.error).toBe(errorMessage);
+      expect(state.auth.errorCode).toBe("INVALID_CREDENTIALS");
+      expect(state.auth.errorDetail).toBe("Try again");
     });
 
     it("should handle logout", async () => {
@@ -145,7 +153,7 @@ describe("Redux Store Integration", () => {
       let state = store.getState();
       expect(state.ticket.count).toBe(50);
 
-      await store.dispatch(incrementCountThunk() as any);
+      await store.dispatch(printTicketThunk() as any);
 
       state = store.getState();
       // Count should remain unchanged - it's updated via WebSocket
@@ -311,7 +319,7 @@ describe("Redux Store Integration", () => {
       const state = store.getState();
       expect(state.auth.user?.printer_supplies).toBe(150);
       expect(state.auth.user?.money).toBe(50);
-      expect(state.auth.error).toBeNull();
+      expect(state.operations.error).toBeNull();
     });
 
     it("should handle buy supplies error", async () => {
@@ -323,7 +331,7 @@ describe("Redux Store Integration", () => {
       await store.dispatch(buySuppliesThunk() as any);
 
       const state = store.getState();
-      expect(state.auth.error).toBe(errorMessage);
+      expect(state.operations.error).toBe(errorMessage);
     });
 
     it("should handle buy gold", async () => {
@@ -339,7 +347,7 @@ describe("Redux Store Integration", () => {
       const state = store.getState();
       expect(state.auth.user?.gold).toBe(10);
       expect(state.auth.user?.money).toBe(0);
-      expect(state.auth.error).toBeNull();
+      expect(state.operations.error).toBeNull();
     });
 
     it("should handle buy gold error", async () => {
@@ -349,7 +357,7 @@ describe("Redux Store Integration", () => {
       await store.dispatch(buyGoldThunk(5) as any);
 
       const state = store.getState();
-      expect(state.auth.error).toBe(errorMessage);
+      expect(state.operations.error).toBe(errorMessage);
     });
 
     it("should handle buy auto-buy supplies", async () => {
@@ -365,7 +373,7 @@ describe("Redux Store Integration", () => {
       const state = store.getState();
       expect(state.auth.user?.auto_buy_supplies_purchased).toBe(true);
       expect(state.auth.user?.gold).toBe(5);
-      expect(state.auth.error).toBeNull();
+      expect(state.operations.error).toBeNull();
     });
 
     it("should handle buy autoprinter", async () => {
@@ -381,7 +389,7 @@ describe("Redux Store Integration", () => {
       const state = store.getState();
       expect(state.auth.user?.autoprinters).toBe(1);
       expect(state.auth.user?.gold).toBe(0);
-      expect(state.auth.error).toBeNull();
+      expect(state.operations.error).toBeNull();
     });
   });
 
@@ -493,13 +501,17 @@ describe("Redux Store Integration", () => {
 
       const loadingState = store.getState();
       expect(loadingState.auth.isLoading).toBe(true);
-      expect(loadingState.auth.pendingRequestCount).toBe(2);
+      expect(loadingState.auth.pendingRequestCount).toBe(1);
+      expect(loadingState.operations.isLoading).toBe(true);
+      expect(loadingState.operations.pendingRequestCount).toBe(1);
 
       await Promise.all([promise1, promise2]);
 
       const finishedState = store.getState();
       expect(finishedState.auth.isLoading).toBe(false);
       expect(finishedState.auth.pendingRequestCount).toBe(0);
+      expect(finishedState.operations.isLoading).toBe(false);
+      expect(finishedState.operations.pendingRequestCount).toBe(0);
     });
   });
 
@@ -520,7 +532,7 @@ describe("Redux Store Integration", () => {
         new Error(errorMessage),
       );
 
-      await store.dispatch(incrementCountThunk() as any);
+      await store.dispatch(printTicketThunk() as any);
 
       const state = store.getState();
       expect(state.ticket.error).toBe(errorMessage);
@@ -557,7 +569,7 @@ describe("Redux Store Integration", () => {
         new Error("GLOBAL_TICKET_LIMIT"),
       );
 
-      await store.dispatch(incrementCountThunk() as any);
+      await store.dispatch(printTicketThunk() as any);
 
       const state = store.getState();
       expect(state.ticket.error).toBe("GLOBAL_TICKET_LIMIT");

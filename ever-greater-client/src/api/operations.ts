@@ -55,6 +55,13 @@ export async function buyAutoBuySupplies(): Promise<User> {
 }
 
 /**
+ * Enable or disable automatic supplies purchasing.
+ */
+export async function toggleAutoBuySupplies(active: boolean): Promise<User> {
+  return executeOperation(OperationId.TOGGLE_AUTO_BUY_SUPPLIES, { active });
+}
+
+/**
  * Buy gold with money (uses generic operation endpoint)
  * @param quantity Amount of gold to purchase
  */
@@ -63,7 +70,14 @@ export async function buyGold(quantity: number): Promise<User> {
 }
 
 /**
- * Buy an autoprinter with gold (uses generic operation endpoint)
+ * Buy a gem with tickets (uses generic operation endpoint)
+ */
+export async function buyGem(): Promise<User> {
+  return executeOperation(OperationId.BUY_GEM);
+}
+
+/**
+ * Buy an autoprinter with credit (uses generic operation endpoint)
  */
 export async function buyAutoprinter(): Promise<User> {
   return executeOperation(OperationId.BUY_AUTOPRINTER);
@@ -84,7 +98,28 @@ export async function increaseCreditGeneration(): Promise<User> {
 }
 
 /**
- * Increase credit capacity maximum by 1
+ * Increase the general ticket batch scale for all printing.
+ */
+export async function increaseTicketBatch(): Promise<User> {
+  return executeOperation(OperationId.INCREASE_TICKET_BATCH);
+}
+
+/**
+ * Increase the manual ticket print batch size.
+ */
+export async function increaseManualPrintBatch(): Promise<User> {
+  return executeOperation(OperationId.INCREASE_MANUAL_PRINT_BATCH);
+}
+
+/**
+ * Increase the maximum supplies purchase batch size.
+ */
+export async function increaseSuppliesBatch(): Promise<User> {
+  return executeOperation(OperationId.INCREASE_SUPPLIES_BATCH);
+}
+
+/**
+ * Increase credit capacity maximum by 20
  */
 export async function increaseCreditCapacity(): Promise<User> {
   return executeOperation(OperationId.INCREASE_CREDIT_CAPACITY);

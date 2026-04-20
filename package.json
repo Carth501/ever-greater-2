@@ -1,13 +1,24 @@
 {
 	"name": "ever-greater",
 	"private": true,
+	"engines": {
+		"node": ">=20"
+	},
 	"scripts": {
 		"client": "npm --prefix ever-greater-client start",
 		"server": "npm --prefix ever-greater-server start",
-		"dev": "npm-run-all --parallel server client",
+		"server:dev": "npm --prefix ever-greater-server run dev",
+		"server:migrate": "npm --prefix ever-greater-server run migrate",
+		"server:db:reset": "npm --prefix ever-greater-server run db:reset",
+		"server:db:seed": "npm --prefix ever-greater-server run db:seed",
+		"server:db:backup": "npm --prefix ever-greater-server run db:backup",
+		"dev": "npm-run-all --parallel server:dev client",
 		"kill": "powershell -Command \"$process = Get-NetTCPConnection -LocalPort 4000 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -First 1; if ($process) { Stop-Process -Id $process -Force; Write-Host 'Killed process on port 4000' } else { Write-Host 'No process found on port 4000' }\"",
 		"check:shared-deps": "node scripts/check-shared-deps.cjs",
-		"guardrails": "npm run check:shared-deps",
+		"check:client-slice-boundaries": "node scripts/check-client-slice-boundaries.cjs",
+		"check:client-typecheck": "npm --prefix ever-greater-client run typecheck",
+		"check:client-test-typecheck": "npm --prefix ever-greater-client run typecheck:tests",
+		"guardrails": "npm-run-all check:shared-deps check:client-slice-boundaries check:client-typecheck",
 		"test": "npm-run-all guardrails test:shared test:server test:client",
 		"test:shared": "npm --prefix ever-greater-shared test",
 		"test:server": "npm --prefix ever-greater-server test",

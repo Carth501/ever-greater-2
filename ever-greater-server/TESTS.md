@@ -1,6 +1,6 @@
 # Server Unit Tests
 
-Comprehensive unit tests for the Ever-Greater server, using Jest testing framework.
+Comprehensive unit tests for the Ever-Greater server, using the Vitest testing framework.
 
 ## Test Coverage
 
@@ -13,6 +13,11 @@ Tests for all database functions with mocked PostgreSQL pool:
   - Inserts initial data when empty
   - Skips insertion if table is already populated
   - Properly releases client connections on errors
+
+- **`prepareDatabaseForRuntime`** - Runtime database readiness checks
+  - Fails when migrations have not been applied
+  - Fails when tracked migrations are still pending
+  - Validates the ready schema without rerunning migrations
 
 - **`getGlobalCount`** - Retrieve current global count
   - Returns count successfully
@@ -74,9 +79,10 @@ Tests for Express endpoints with mocked database functions:
   - Returns current global count
   - Handles database errors
 
-- **POST `/api/increment`** - Increment count
+- **POST `/api/operations/:operationId`** - Execute a game operation
   - Returns 401 when not authenticated
-  - Increments count when authenticated
+  - Validates operation identifiers and request payloads
+  - Executes resource updates and reports operation results
 
 ## Running Tests
 
@@ -85,10 +91,10 @@ Tests for Express endpoints with mocked database functions:
 npm test
 
 # Run tests in watch mode
-npm test:watch
+npm run test:watch
 
 # Generate coverage report
-npm test:coverage
+npm run test:coverage
 
 # Run specific test file
 npm test -- src/db.test.js
@@ -97,9 +103,9 @@ npm test -- src/index.test.js
 
 ## Test Setup
 
-- **Framework**: Jest
+- **Framework**: Vitest
 - **HTTP Testing**: Supertest (for Express endpoints)
-- **Mocking**: Jest's built-in mocking utilities
+- **Mocking**: Vitest's built-in mocking utilities
 - **Environment**: Node.js test environment
 
 All external dependencies (PostgreSQL pool, bcryptjs, etc.) are mocked to ensure tests run independently without requiring a database connection.

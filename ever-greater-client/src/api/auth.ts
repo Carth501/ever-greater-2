@@ -23,10 +23,6 @@ type MeResponse = {
   user: User;
 };
 
-type ToggleAutoBuySuppliesResponse = {
-  user: User;
-};
-
 /**
  * Register a new user
  * @param email User email
@@ -89,104 +85,4 @@ export async function logout(): Promise<void> {
     method: "POST",
     credentials: "include",
   });
-}
-
-/**
- * Toggle auto-buy supplies active state after unlock.
- */
-export async function setAutoBuySuppliesActive(active: boolean): Promise<User> {
-  const data = await apiFetch<ToggleAutoBuySuppliesResponse>(
-    `${apiBase}/api/auth/auto-buy-supplies/toggle`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ active }),
-    },
-  );
-  return data.user;
-}
-
-/**
- * Buy supplies with money
- * @returns Object with updated money and printer_supplies
- */
-type BuySuppliesResponse = {
-  money: number;
-  printer_supplies: number;
-};
-
-export async function buySupplies(): Promise<BuySuppliesResponse> {
-  const response = await fetch(`${apiBase}/api/shop/buy-supplies`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    credentials: "include",
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to buy supplies");
-  }
-
-  const data = (await response.json()) as BuySuppliesResponse;
-  return data;
-}
-
-/**
- * Buy gold with money
- * @param quantity Number of gold to purchase
- * @returns Object with updated money and gold
- */
-type BuyGoldResponse = {
-  money: number;
-  gold: number;
-};
-
-export async function buyGold(quantity: number): Promise<BuyGoldResponse> {
-  const response = await fetch(`${apiBase}/api/shop/buy-gold`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    credentials: "include",
-    body: JSON.stringify({ quantity }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to buy gold");
-  }
-
-  const data = (await response.json()) as BuyGoldResponse;
-  return data;
-}
-
-/**
- * Buy an autoprinter with gold
- * Cost: 3 * (current_autoprinters + 1)^2 gold
- * @returns Object with updated gold and autoprinters
- */
-type BuyAutoprinterResponse = {
-  gold: number;
-  autoprinters: number;
-};
-
-export async function buyAutoprinter(): Promise<BuyAutoprinterResponse> {
-  const response = await fetch(`${apiBase}/api/shop/buy-autoprinter`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    credentials: "include",
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to buy autoprinter");
-  }
-
-  const data = (await response.json()) as BuyAutoprinterResponse;
-  return data;
 }

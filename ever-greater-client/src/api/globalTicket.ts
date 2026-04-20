@@ -1,4 +1,7 @@
-import { type WebSocketMessage } from "ever-greater-shared";
+import {
+  parseWebSocketMessage,
+  type WebSocketMessage,
+} from "../../../ever-greater-shared/src/messages";
 import { apiFetch } from "./client";
 
 const DEFAULT_API_BASE = "http://localhost:4000";
@@ -13,18 +16,14 @@ type CountPayload = {
   count: number;
 };
 
-type UserUpdate = {
-  printer_supplies?: number;
-  money?: number;
-  tickets_contributed?: number;
-  tickets_withdrawn?: number;
-  gold?: number;
-  autoprinters?: number;
-  credit_value?: number;
-  credit_generation_level?: number;
-  credit_capacity_level?: number;
-  auto_buy_supplies_purchased?: boolean;
-  auto_buy_supplies_active?: boolean;
+export type SocketStatus = "open" | "closed" | "error";
+
+export type SocketStatusDetails = {
+  readyState: number;
+  timestamp: number;
+  closeCode?: number;
+  closeReason?: string;
+  wasClean?: boolean;
 };
 
 function getWsUrl(): string {
@@ -40,15 +39,19 @@ export async function fetchGlobalCount(): Promise<number> {
 }
 
 export function connectGlobalCountSocket(
-  onCount: (count: number) => void,
-  onUserUpdate?: (update: UserUpdate) => void,
-  onStatus?: (status: "open" | "closed" | "error") => void,
+  onMessage?: (message: WebSocketMessage) => void,
+  onStatus?: (status: SocketStatus, details: SocketStatusDetails) => void,
   userId?: number,
 ): () => void {
   const socket = new WebSocket(getWsUrl());
 
   socket.addEventListener("open", () => {
-    onStatus?.("open");
+    const details: SocketStatusDetails = {
+      readyState: socket.readyState,
+      timestamp: Date.now(),
+    };
+
+    onStatus?.("open", details);
 
     if (userId !== undefined) {
       try {
@@ -59,18 +62,31 @@ export function connectGlobalCountSocket(
     }
   });
 
-  socket.addEventListener("close", () => onStatus?.("closed"));
-  socket.addEventListener("error", () => onStatus?.("error"));
+  socket.addEventListener("close", (event) => {
+    const details: SocketStatusDetails = {
+      readyState: socket.readyState,
+      timestamp: Date.now(),
+      closeCode: event.code,
+      closeReason: event.reason,
+      wasClean: event.wasClean,
+    };
+
+    onStatus?.("closed", details);
+  });
+  socket.addEventListener("error", () => {
+    const details: SocketStatusDetails = {
+      readyState: socket.readyState,
+      timestamp: Date.now(),
+    };
+
+    onStatus?.("error", details);
+  });
   socket.addEventListener("message", (event) => {
     try {
-      const message = JSON.parse(event.data as string) as WebSocketMessage;
+      const message = parseWebSocketMessage(JSON.parse(event.data as string));
 
-      if (message.type === "GLOBAL_COUNT_UPDATE") {
-        onCount(message.count);
-      } else if (message.type === "USER_RESOURCE_UPDATE") {
-        if (onUserUpdate) {
-          onUserUpdate(message.user_update);
-        }
+      if (message && onMessage) {
+        onMessage(message);
       }
     } catch (err) {
       // Ignore malformed payloads.

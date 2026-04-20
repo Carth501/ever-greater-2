@@ -4,36 +4,41 @@ import cors from "cors";
 import { randomUUID } from "crypto";
 import "dotenv/config";
 import {
+  CLIENT_USER_STATE_FIELDS,
+  isClientOperationId,
   OperationId,
-  operations,
-  ResourceType,
-  validateOperation,
+  toClientUserState,
+  type ClientUserState,
+  type ClientUserStateField,
   type GlobalCountUpdate,
   type UserResourceUpdate,
 } from "ever-greater-shared";
-import type { Request } from "express";
+import type { Request, Response } from "express";
 import express, { type Express } from "express";
 import session from "express-session";
 import http, { type Server } from "http";
+import path from "path";
 import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer, type RawData } from "ws";
 import { z } from "zod";
+import { assertRequiredEnvironment, getServerConfig } from "./config.js";
 import {
   cleanupOldTicketWithdrawals,
   closePool,
   createUser,
-  executeResourceTransaction,
   getGlobalCount,
   getUserByEmail,
   getUserById,
-  incrementGlobalCount,
-  initializeDatabase,
   pool,
+  prepareDatabaseForRuntime,
   processAutoprinters,
-  purchaseAutoBuySupplies,
-  setAutoBuySuppliesActive,
   updateAllUsersCreditValues,
 } from "./db.js";
+import {
+  executeOperationForUser,
+  OperationUserNotFoundError,
+  OperationValidationError,
+} from "./operations/execution.js";
 
 declare module "express-session" {
   interface SessionData {
@@ -42,49 +47,54 @@ declare module "express-session" {
 }
 
 const __filename = fileURLToPath(import.meta.url);
-const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
 const SESSION_SECRET_FALLBACK = "your-secret-key-change-in-production";
-
-const DEFAULT_ALLOWED_ORIGINS = [
-  "http://localhost:3000",
-  "http://127.0.0.1:3000",
-  "http://localhost:5173",
-  "http://127.0.0.1:5173",
-];
-
-function getAllowedOrigins(): string[] {
-  const configuredOrigins = (process.env.CLIENT_URL || "")
-    .split(",")
-    .map((origin) => origin.trim())
-    .filter(Boolean);
-
-  return configuredOrigins.length > 0
-    ? configuredOrigins
-    : DEFAULT_ALLOWED_ORIGINS;
-}
 
 let wss: WebSocketServer | undefined;
 let server: Server | undefined;
 let autoprinterInterval: NodeJS.Timeout | undefined;
-let creditUpdateInterval: NodeJS.Timeout | undefined;
 let ticketCleanupInterval: NodeJS.Timeout | undefined;
 const socketUserMap = new Map<WebSocket, number>();
+const userPeriodicSnapshotMap = new Map<number, ClientUserState>();
 
 const PgSession = connectPgSimple(session);
 
-type UserUpdatePayload = Partial<{
-  printer_supplies: number;
-  money: number;
-  gold: number;
-  autoprinters: number;
-  tickets_contributed: number;
-  tickets_withdrawn: number;
-  credit_value: number;
-  credit_generation_level: number;
-  credit_capacity_level: number;
-  auto_buy_supplies_purchased: boolean;
-  auto_buy_supplies_active: boolean;
-}>;
+type UserUpdatePayload = Partial<ClientUserState>;
+
+const ALWAYS_INCLUDED_PERIODIC_FIELDS = new Set<ClientUserStateField>([
+  "printer_supplies",
+  "tickets_contributed",
+  "tickets_withdrawn",
+  "credit_value",
+]);
+
+function toPeriodicUserSnapshot(
+  user: NonNullable<Awaited<ReturnType<typeof getUserById>>>,
+): ClientUserState {
+  return toClientUserState(user);
+}
+
+function buildPeriodicUserUpdatePayload(
+  current: ClientUserState,
+  previous: ClientUserState | undefined,
+): UserUpdatePayload {
+  const payload: UserUpdatePayload = {};
+
+  const applyFieldUpdate = (field: ClientUserStateField) => {
+    Object.assign(payload, { [field]: current[field] });
+  };
+
+  for (const field of CLIENT_USER_STATE_FIELDS) {
+    if (
+      !previous ||
+      ALWAYS_INCLUDED_PERIODIC_FIELDS.has(field) ||
+      previous[field] !== current[field]
+    ) {
+      applyFieldUpdate(field);
+    }
+  }
+
+  return payload;
+}
 
 function toClientUser(user: Awaited<ReturnType<typeof getUserById>>) {
   if (!user) {
@@ -94,17 +104,7 @@ function toClientUser(user: Awaited<ReturnType<typeof getUserById>>) {
   return {
     id: user.id,
     email: user.email,
-    tickets_contributed: user.tickets_contributed,
-    tickets_withdrawn: user.tickets_withdrawn || 0,
-    printer_supplies: user.printer_supplies,
-    money: user.money,
-    gold: user.gold,
-    autoprinters: user.autoprinters || 0,
-    credit_value: user.credit_value || 0,
-    credit_generation_level: user.credit_generation_level || 0,
-    credit_capacity_level: user.credit_capacity_level || 0,
-    auto_buy_supplies_purchased: user.auto_buy_supplies_purchased || false,
-    auto_buy_supplies_active: user.auto_buy_supplies_active || false,
+    ...toClientUserState(user),
   };
 }
 
@@ -147,6 +147,74 @@ function logRouteError(req: Request, error: unknown, message: string): void {
   });
 }
 
+type ApiErrorPayload = {
+  error: string;
+  code: string;
+  detail?: string;
+} & Record<string, unknown>;
+
+function sendError(
+  res: Response,
+  status: number,
+  payload: ApiErrorPayload,
+): Response {
+  return res.status(status).json(payload);
+}
+
+function sendOperationValidationError(
+  res: Response,
+  error: OperationValidationError,
+): Response {
+  const { validation } = error;
+
+  if (validation.error === "Insufficient resources") {
+    return sendError(res, 403, {
+      error: validation.error,
+      code: "INSUFFICIENT_RESOURCES",
+      insufficientResources: validation.insufficientResources,
+      cost: validation.cost,
+      gain: validation.gain,
+    });
+  }
+
+  if (validation.error === "Auto-buy supplies not unlocked") {
+    return sendError(res, 403, {
+      error: validation.error,
+      code: "AUTO_BUY_SUPPLIES_NOT_UNLOCKED",
+      cost: validation.cost,
+      gain: validation.gain,
+    });
+  }
+
+  if (
+    validation.error === "Quantity must be a positive integer" ||
+    validation.error === "'active' boolean is required"
+  ) {
+    return sendError(res, 400, {
+      error: "INVALID_REQUEST",
+      code: "INVALID_REQUEST",
+      detail:
+        validation.error === "Quantity must be a positive integer"
+          ? "quantity must be a positive integer"
+          : validation.error,
+    });
+  }
+
+  return sendError(res, 400, {
+    error: validation.error || "Invalid operation parameters",
+    code: "INVALID_OPERATION",
+    cost: validation.cost,
+    gain: validation.gain,
+  });
+}
+
+const credentialsSchema = z.object({
+  email: z.string(),
+  password: z.string(),
+});
+
+const operationRequestSchema = z.object({}).passthrough();
+
 function broadcastCount(count: number): void {
   if (!wss) return;
   const payload = JSON.stringify({
@@ -180,81 +248,47 @@ async function sendUserUpdate(
   });
 }
 
-async function broadcastAutoprinterUpdates(): Promise<void> {
-  if (!wss) return;
-
+function getConnectedUserIds(): Set<number> {
   const userIds = new Set<number>();
   socketUserMap.forEach((userId) => {
     userIds.add(userId);
   });
 
+  return userIds;
+}
+
+async function broadcastPeriodicUserUpdates(): Promise<void> {
+  if (!wss) return;
+
+  const userIds = getConnectedUserIds();
+
   for (const userId of userIds) {
     try {
       const user = await getUserById(userId);
       if (user) {
-        wss.clients.forEach((client) => {
-          if (
-            client.readyState === WebSocket.OPEN &&
-            socketUserMap.get(client) === userId
-          ) {
-            const payload = JSON.stringify({
-              type: "USER_RESOURCE_UPDATE",
-              user_update: {
-                printer_supplies: user.printer_supplies,
-                money: user.money,
-                tickets_contributed: user.tickets_contributed,
-                tickets_withdrawn: user.tickets_withdrawn,
-              },
-            } satisfies UserResourceUpdate);
-            client.send(payload);
-          }
-        });
+        const currentSnapshot = toPeriodicUserSnapshot(user);
+        const previousSnapshot = userPeriodicSnapshotMap.get(userId);
+
+        await sendUserUpdate(
+          userId,
+          buildPeriodicUserUpdatePayload(currentSnapshot, previousSnapshot),
+        );
+
+        userPeriodicSnapshotMap.set(userId, currentSnapshot);
       }
     } catch (error) {
       console.error(
-        `Error sending autoprinter update to user ${userId}:`,
+        `Error sending periodic user update to user ${userId}:`,
         error,
       );
     }
   }
 }
 
-async function broadcastCreditUpdates(): Promise<void> {
-  if (!wss) return;
-
-  const userIds = new Set<number>();
-  socketUserMap.forEach((userId) => {
-    userIds.add(userId);
-  });
-
-  for (const userId of userIds) {
-    try {
-      const user = await getUserById(userId);
-      if (user) {
-        wss.clients.forEach((client) => {
-          if (
-            client.readyState === WebSocket.OPEN &&
-            socketUserMap.get(client) === userId
-          ) {
-            const payload = JSON.stringify({
-              type: "USER_RESOURCE_UPDATE",
-              user_update: {
-                credit_value: user.credit_value,
-              },
-            } satisfies UserResourceUpdate);
-            client.send(payload);
-          }
-        });
-      }
-    } catch (error) {
-      console.error(`Error sending credit update to user ${userId}:`, error);
-    }
-  }
-}
-
 function createApp(): Express {
+  const serverConfig = getServerConfig();
   const app = express();
-  const allowedOrigins = getAllowedOrigins();
+  const allowedOrigins = serverConfig.allowedOrigins;
 
   app.use((req, res, next) => {
     const requestId = randomUUID();
@@ -286,12 +320,9 @@ function createApp(): Express {
 
   // Use MemoryStore for testing, PgSession for production
   const isTestEnvironment =
-    process.env.NODE_ENV === "test" || process.env.VITEST === "true";
-  const sessionSecret = process.env.SESSION_SECRET || SESSION_SECRET_FALLBACK;
-  if (
-    process.env.NODE_ENV === "production" &&
-    sessionSecret === SESSION_SECRET_FALLBACK
-  ) {
+    serverConfig.nodeEnv === "test" || process.env.VITEST === "true";
+  const sessionSecret = serverConfig.sessionSecret || SESSION_SECRET_FALLBACK;
+  if (serverConfig.nodeEnv === "production" && !serverConfig.sessionSecret) {
     throw new Error("SESSION_SECRET must be configured in production");
   }
 
@@ -309,7 +340,7 @@ function createApp(): Express {
       resave: false,
       saveUninitialized: false,
       cookie: {
-        secure: process.env.NODE_ENV === "production",
+        secure: serverConfig.nodeEnv === "production",
         httpOnly: true,
         maxAge: 30 * 24 * 60 * 60 * 1000,
       },
@@ -337,20 +368,27 @@ function createApp(): Express {
 
   app.post("/api/auth/register", async (req, res) => {
     try {
-      const { email, password } = req.body as {
-        email?: string;
-        password?: string;
-      };
-
-      if (!email || !password) {
-        return res
-          .status(400)
-          .json({ error: "Email and password are required" });
+      const credentialsResult = credentialsSchema.safeParse(req.body);
+      if (
+        !credentialsResult.success ||
+        credentialsResult.data.email.trim() === "" ||
+        credentialsResult.data.password === ""
+      ) {
+        return sendError(res, 400, {
+          error: "Email and password are required",
+          code: "INVALID_REQUEST",
+          detail: "Request body must include non-empty email and password",
+        });
       }
+
+      const { email, password } = credentialsResult.data;
 
       const existingUser = await getUserByEmail(email);
       if (existingUser) {
-        return res.status(409).json({ error: "Email already in use" });
+        return sendError(res, 409, {
+          error: "Email already in use",
+          code: "EMAIL_ALREADY_IN_USE",
+        });
       }
 
       const saltRounds = 10;
@@ -362,26 +400,37 @@ function createApp(): Express {
       return res.status(201).json({ user: toClientUser(user) });
     } catch (error) {
       logRouteError(req, error, "Error registering user");
-      return res.status(500).json({ error: "Failed to register user" });
+      return sendError(res, 500, {
+        error: "Failed to register user",
+        code: "REGISTER_FAILED",
+        detail: getErrorMessage(error),
+      });
     }
   });
 
   app.post("/api/auth/login", async (req, res) => {
     try {
-      const { email, password } = req.body as {
-        email?: string;
-        password?: string;
-      };
-
-      if (!email || !password) {
-        return res
-          .status(400)
-          .json({ error: "Email and password are required" });
+      const credentialsResult = credentialsSchema.safeParse(req.body);
+      if (
+        !credentialsResult.success ||
+        credentialsResult.data.email.trim() === "" ||
+        credentialsResult.data.password === ""
+      ) {
+        return sendError(res, 400, {
+          error: "Email and password are required",
+          code: "INVALID_REQUEST",
+          detail: "Request body must include non-empty email and password",
+        });
       }
+
+      const { email, password } = credentialsResult.data;
 
       const user = await getUserByEmail(email);
       if (!user) {
-        return res.status(401).json({ error: "Invalid email or password" });
+        return sendError(res, 401, {
+          error: "Invalid email or password",
+          code: "INVALID_CREDENTIALS",
+        });
       }
 
       const isValidPassword = await bcrypt.compare(
@@ -389,7 +438,10 @@ function createApp(): Express {
         user.password_hash,
       );
       if (!isValidPassword) {
-        return res.status(401).json({ error: "Invalid email or password" });
+        return sendError(res, 401, {
+          error: "Invalid email or password",
+          code: "INVALID_CREDENTIALS",
+        });
       }
 
       req.session.userId = user.id;
@@ -397,25 +449,39 @@ function createApp(): Express {
       return res.json({ user: toClientUser(user) });
     } catch (error) {
       logRouteError(req, error, "Error logging in user");
-      return res.status(500).json({ error: "Failed to login" });
+      return sendError(res, 500, {
+        error: "Failed to login",
+        code: "LOGIN_FAILED",
+        detail: getErrorMessage(error),
+      });
     }
   });
 
   app.get("/api/auth/me", async (req, res) => {
     try {
       if (!req.session.userId) {
-        return res.status(401).json({ error: "Not authenticated" });
+        return sendError(res, 401, {
+          error: "Not authenticated",
+          code: "AUTH_REQUIRED",
+        });
       }
 
       const user = await getUserById(req.session.userId);
       if (!user) {
-        return res.status(404).json({ error: "User not found" });
+        return sendError(res, 404, {
+          error: "User not found",
+          code: "USER_NOT_FOUND",
+        });
       }
 
       return res.json({ user: toClientUser(user) });
     } catch (error) {
       logRouteError(req, error, "Error fetching current user");
-      return res.status(500).json({ error: "Failed to fetch user" });
+      return sendError(res, 500, {
+        error: "Failed to fetch user",
+        code: "FETCH_USER_FAILED",
+        detail: getErrorMessage(error),
+      });
     }
   });
 
@@ -423,7 +489,11 @@ function createApp(): Express {
     req.session.destroy((err?: Error) => {
       if (err) {
         logRouteError(req, err, "Error destroying session");
-        return res.status(500).json({ error: "Failed to logout" });
+        return sendError(res, 500, {
+          error: "Failed to logout",
+          code: "LOGOUT_FAILED",
+          detail: getErrorMessage(err),
+        });
       }
       return res.json({ message: "Logged out successfully" });
     });
@@ -439,233 +509,109 @@ function createApp(): Express {
     }
   });
 
-  app.post("/api/auth/auto-buy-supplies/toggle", async (req, res) => {
-    try {
-      if (!req.session.userId) {
-        return res.status(401).json({ error: "Not authenticated" });
-      }
-
-      const { active } = req.body as { active?: boolean };
-      if (typeof active !== "boolean") {
-        return res.status(400).json({ error: "'active' boolean is required" });
-      }
-
-      const existingUser = await getUserById(req.session.userId);
-      if (!existingUser) {
-        return res.status(404).json({ error: "User not found" });
-      }
-
-      if (!existingUser.auto_buy_supplies_purchased) {
-        return res
-          .status(403)
-          .json({ error: "Auto-buy supplies not unlocked" });
-      }
-
-      const updatedUser = await setAutoBuySuppliesActive(
-        req.session.userId,
-        active,
-      );
-
-      await sendUserUpdate(req.session.userId, {
-        auto_buy_supplies_purchased: updatedUser.auto_buy_supplies_purchased,
-        auto_buy_supplies_active: updatedUser.auto_buy_supplies_active,
-      });
-
-      return res.json({ user: toClientUser(updatedUser) });
-    } catch (error) {
-      logRouteError(req, error, "Error toggling auto-buy supplies");
-      return res
-        .status(500)
-        .json({ error: "Failed to toggle auto-buy supplies" });
-    }
-  });
-
-  // NEW GENERIC OPERATION ENDPOINT
   app.post("/api/operations/:operationId", async (req, res) => {
     try {
       if (!req.session.userId) {
-        return res.status(401).json({ error: "Not authenticated" });
+        return sendError(res, 401, {
+          error: "Not authenticated",
+          code: "AUTH_REQUIRED",
+        });
       }
 
       const operationIdResult = z
         .nativeEnum(OperationId)
         .safeParse(req.params.operationId);
       if (!operationIdResult.success) {
-        return res.status(400).json({
+        return sendError(res, 400, {
           error: "INVALID_REQUEST",
+          code: "INVALID_REQUEST",
           detail: `Unknown operationId: ${req.params.operationId}`,
         });
       }
 
-      if (req.body.quantity !== undefined) {
-        const quantityResult = z
-          .number()
-          .int()
-          .positive()
-          .safeParse(req.body.quantity);
-        if (!quantityResult.success) {
-          return res.status(400).json({
-            error: "INVALID_REQUEST",
-            detail: "quantity must be a positive integer",
-          });
-        }
-      }
-
-      const operationId = operationIdResult.data;
-      const operation = operations[operationId];
-
-      const user = await getUserById(req.session.userId);
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
-
-      // Get global ticket count for validation
-      const globalTicketCount = await getGlobalCount();
-
-      let userForValidation = user;
-
-      // Auto-buy fallback: if print is requested with insufficient supplies and
-      // auto-buy is active, try to purchase supplies before validating print again.
-      if (
-        operationId === OperationId.PRINT_TICKET &&
-        user.auto_buy_supplies_active
-      ) {
-        const initialPrintValidation = validateOperation(
-          user,
-          operation,
-          req.body,
-          globalTicketCount,
-        );
-
-        const missingPrinterSupplies =
-          !initialPrintValidation.valid &&
-          initialPrintValidation.error === "Insufficient resources" &&
-          initialPrintValidation.insufficientResources?.includes(
-            ResourceType.PRINTER_SUPPLIES,
-          );
-
-        if (missingPrinterSupplies) {
-          const buySuppliesOperation = operations[OperationId.BUY_SUPPLIES];
-          const buySuppliesValidation = validateOperation(
-            user,
-            buySuppliesOperation,
-            undefined,
-            globalTicketCount,
-          );
-
-          if (buySuppliesValidation.valid) {
-            try {
-              userForValidation = await executeResourceTransaction(
-                req.session.userId,
-                buySuppliesValidation.cost,
-                buySuppliesValidation.gain,
-              );
-            } catch {
-              // Preserve existing error semantics for print: if fallback buy cannot
-              // complete due races or resources, print validation below reports
-              // insufficient printer supplies.
-            }
-          }
-        }
-      }
-
-      // Validate operation
-      const validation = validateOperation(
-        userForValidation,
-        operation,
-        req.body,
-        globalTicketCount,
+      const requestBodyResult = operationRequestSchema.safeParse(
+        req.body ?? {},
       );
-      if (!validation.valid) {
-        if (validation.error === "Insufficient resources") {
-          return res.status(403).json({
-            error: validation.error,
-            insufficientResources: validation.insufficientResources,
-            cost: validation.cost,
-            gain: validation.gain,
-          });
-        }
-
-        return res.status(400).json({
-          error: validation.error || "Invalid operation parameters",
-          cost: validation.cost,
-          gain: validation.gain,
+      if (!requestBodyResult.success) {
+        return sendError(res, 400, {
+          error: "INVALID_REQUEST",
+          code: "INVALID_REQUEST",
+          detail: "Request body must be a JSON object",
         });
       }
 
-      // Execute the transaction.
-      const updatedUser =
-        operationId === OperationId.AUTO_BUY_SUPPLIES
-          ? await purchaseAutoBuySupplies(
-              req.session.userId,
-              validation.cost[ResourceType.GOLD] ?? 0,
-            )
-          : await executeResourceTransaction(
-              req.session.userId,
-              validation.cost,
-              validation.gain,
-            );
+      const requestBody = requestBodyResult.data;
 
-      // Handle ticket printing if applicable
-      const gainedTickets =
-        validation.gain[ResourceType.TICKETS_CONTRIBUTED] ?? 0;
-      let newCount: number | null = null;
-
-      if (gainedTickets > 0) {
-        for (let i = 0; i < gainedTickets; i += 1) {
-          newCount = await incrementGlobalCount();
-        }
-
-        if (newCount !== null) {
-          broadcastCount(newCount);
-        }
+      const operationId = operationIdResult.data;
+      if (!isClientOperationId(operationId)) {
+        return sendError(res, 400, {
+          error: "INVALID_REQUEST",
+          code: "INVALID_REQUEST",
+          detail: `Unknown operationId: ${req.params.operationId}`,
+        });
       }
 
-      // Handle global ticket cost and broadcast updated count
-      const globalTicketCost =
-        validation.cost[ResourceType.GLOBAL_TICKETS] ?? 0;
-      if (globalTicketCost > 0) {
-        // Fetch and broadcast the new global count
-        newCount = await getGlobalCount();
-        broadcastCount(newCount);
+      const result = await executeOperationForUser(
+        req.session.userId,
+        operationId,
+        requestBody,
+        { allowPrintAutoBuyFallback: true },
+      );
+
+      if (result.count !== null) {
+        broadcastCount(result.count);
       }
 
       // Broadcast user updates
       await sendUserUpdate(req.session.userId, {
-        printer_supplies: updatedUser.printer_supplies,
-        money: updatedUser.money,
-        gold: updatedUser.gold,
-        autoprinters: updatedUser.autoprinters,
-        tickets_contributed: updatedUser.tickets_contributed,
-        tickets_withdrawn: updatedUser.tickets_withdrawn,
-        credit_value: updatedUser.credit_value,
-        credit_generation_level: updatedUser.credit_generation_level,
-        credit_capacity_level: updatedUser.credit_capacity_level,
-        auto_buy_supplies_purchased: updatedUser.auto_buy_supplies_purchased,
-        auto_buy_supplies_active: updatedUser.auto_buy_supplies_active,
+        printer_supplies: result.user.printer_supplies,
+        money: result.user.money,
+        gold: result.user.gold,
+        gems: result.user.gems,
+        autoprinters: result.user.autoprinters,
+        tickets_contributed: result.user.tickets_contributed,
+        tickets_withdrawn: result.user.tickets_withdrawn,
+        credit_value: result.user.credit_value,
+        credit_generation_level: result.user.credit_generation_level,
+        credit_capacity_level: result.user.credit_capacity_level,
+        manual_print_batch_level: result.user.manual_print_batch_level,
+        supplies_batch_level: result.user.supplies_batch_level,
+        auto_buy_supplies_purchased: result.user.auto_buy_supplies_purchased,
+        auto_buy_supplies_active: result.user.auto_buy_supplies_active,
       });
 
       return res.json({
-        operationId,
-        cost: validation.cost,
-        gain: validation.gain,
-        count: newCount,
-        user: toClientUser(updatedUser),
+        operationId: result.operationId,
+        cost: result.cost,
+        gain: result.gain,
+        count: result.count,
+        user: toClientUser(result.user),
       });
     } catch (error) {
+      if (error instanceof OperationValidationError) {
+        return sendOperationValidationError(res, error);
+      }
+      if (error instanceof OperationUserNotFoundError) {
+        return sendError(res, 404, {
+          error: "User not found",
+          code: "USER_NOT_FOUND",
+        });
+      }
       if (
         error instanceof Error &&
         error.name === "GlobalTicketLimitExceeded"
       ) {
-        return res.status(403).json({
+        return sendError(res, 403, {
           error: "GLOBAL_TICKET_LIMIT",
+          code: "GLOBAL_TICKET_LIMIT",
           detail: error.message,
         });
       }
       logRouteError(req, error, "Error executing operation");
-      return res.status(500).json({
+      return sendError(res, 500, {
         error: "Failed to execute operation",
-        details: getErrorMessage(error),
+        code: "OPERATION_EXECUTION_FAILED",
+        detail: getErrorMessage(error),
       });
     }
   });
@@ -711,71 +657,104 @@ function createServer(app: Express): Server {
     });
 
     socket.on("close", () => {
+      const disconnectedUserId = socketUserMap.get(socket);
       socketUserMap.delete(socket);
+
+      if (disconnectedUserId === undefined) {
+        return;
+      }
+
+      const hasOtherConnectionsForUser = Array.from(
+        socketUserMap.values(),
+      ).some((mappedUserId) => mappedUserId === disconnectedUserId);
+
+      if (!hasOtherConnectionsForUser) {
+        userPeriodicSnapshotMap.delete(disconnectedUserId);
+      }
     });
   });
 
   return httpServer;
 }
 
-// Start server only if this is the main module (not when required by tests)
-// Check if the script was invoked directly (contains index.js in argv[1])
-// When required by tests, process.argv[1] will be different (jest)
-const isMainModule = process.argv[1]?.includes("index.js") ?? false;
+function normalizeFilePath(filePath: string): string {
+  return path.normalize(filePath).toLowerCase();
+}
 
-if (isMainModule) {
-  (async () => {
-    try {
-      await initializeDatabase();
-      console.log("Database initialized successfully");
+function isDirectExecutionTarget(candidatePath: string | undefined): boolean {
+  if (!candidatePath) {
+    return false;
+  }
 
-      const app = createApp();
-      server = createServer(app);
+  return (
+    normalizeFilePath(path.resolve(candidatePath)) ===
+    normalizeFilePath(__filename)
+  );
+}
 
-      server.listen(PORT, () => {
-        console.log(
-          `ever-greater-server listening on http://localhost:${PORT}`,
-        );
-      });
+async function startServer(): Promise<void> {
+  const serverConfig = getServerConfig();
+  const port = serverConfig.port;
 
-      autoprinterInterval = setInterval(async () => {
-        try {
+  assertRequiredEnvironment(serverConfig);
+
+  try {
+    await prepareDatabaseForRuntime();
+    console.log("Database ready for runtime");
+
+    const app = createApp();
+    server = createServer(app);
+
+    server.listen(port, () => {
+      console.log(`ever-greater-server listening on http://localhost:${port}`);
+    });
+
+    let periodicTickSeconds = 0;
+
+    autoprinterInterval = setInterval(async () => {
+      try {
+        periodicTickSeconds += 1;
+        const shouldRunAutoprinter = periodicTickSeconds % 4 === 0;
+
+        if (shouldRunAutoprinter) {
           const result = await processAutoprinters();
-          if (result.totalTickets > 0 && result.newGlobalCount !== null) {
+
+          if (
+            result?.newGlobalCount !== null &&
+            result?.newGlobalCount !== undefined
+          ) {
             broadcastCount(result.newGlobalCount);
-            await broadcastAutoprinterUpdates();
           }
-        } catch (error) {
-          console.error("Error processing autoprinters:", error);
         }
-      }, 4000);
 
-      creditUpdateInterval = setInterval(async () => {
-        try {
-          await updateAllUsersCreditValues();
-          await broadcastCreditUpdates();
-        } catch (error) {
-          console.error("Error updating user credit values:", error);
-        }
-      }, 1000);
+        await updateAllUsersCreditValues();
 
-      ticketCleanupInterval = setInterval(async () => {
-        try {
-          const deletedCount = await cleanupOldTicketWithdrawals();
-          if (deletedCount > 0) {
-            console.log(
-              `Cleaned up ${deletedCount} old ticket withdrawal records`,
-            );
-          }
-        } catch (error) {
-          console.error("Error cleaning up old ticket withdrawals:", error);
+        await broadcastPeriodicUserUpdates();
+      } catch (error) {
+        console.error("Error processing periodic game updates:", error);
+      }
+    }, 1000);
+
+    ticketCleanupInterval = setInterval(async () => {
+      try {
+        const deletedCount = await cleanupOldTicketWithdrawals();
+        if (deletedCount > 0) {
+          console.log(
+            `Cleaned up ${deletedCount} old ticket withdrawal records`,
+          );
         }
-      }, 3600000); // 1 hour
-    } catch (error) {
-      console.error("Failed to initialize database:", error);
-      process.exit(1);
-    }
-  })();
+      } catch (error) {
+        console.error("Error cleaning up old ticket withdrawals:", error);
+      }
+    }, 3600000); // 1 hour
+  } catch (error) {
+    console.error("Failed to prepare database for runtime:", error);
+    process.exit(1);
+  }
+}
+
+if (isDirectExecutionTarget(process.argv[1])) {
+  void startServer();
 }
 
 const shutdown = async (signal: NodeJS.Signals): Promise<void> => {
@@ -783,10 +762,6 @@ const shutdown = async (signal: NodeJS.Signals): Promise<void> => {
 
   if (autoprinterInterval) {
     clearInterval(autoprinterInterval);
-  }
-
-  if (creditUpdateInterval) {
-    clearInterval(creditUpdateInterval);
   }
 
   if (ticketCleanupInterval) {
@@ -841,4 +816,4 @@ process.on("SIGINT", () => {
   void shutdown("SIGINT");
 });
 
-export { createApp, createServer };
+export { buildPeriodicUserUpdatePayload, createApp, createServer, startServer };

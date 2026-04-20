@@ -1,117 +1,104 @@
-import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import * as authApi from "../../api/auth";
-import * as operationsApi from "../../api/operations";
+import { createSlice, isAnyOf } from "@reduxjs/toolkit";
+import { type ApiErrorCode, type ApiErrorInfo } from "../../api/client";
+import {
+  operationsStateFulfilledActions,
+  operationsStatePendingActions,
+  operationsStateRejectedActions,
+} from "../gameOperationThunks";
 
-export const buySuppliesThunk = createAsyncThunk(
-  "operations/buySupplies",
-  async (_, { rejectWithValue }) => {
-    try {
-      const user = await operationsApi.buySupplies();
-      return user;
-    } catch (error) {
-      return rejectWithValue(
-        error instanceof Error ? error.message : "Failed to buy supplies",
-      );
-    }
-  },
-);
+export interface OperationsState {
+  isLoading: boolean;
+  pendingRequestCount: number;
+  error: string | null;
+  errorCode?: ApiErrorCode | null;
+  errorDetail?: string | null;
+}
 
-export const buyGoldThunk = createAsyncThunk(
-  "operations/buyGold",
-  async (quantity: number, { rejectWithValue }) => {
-    try {
-      const user = await operationsApi.buyGold(quantity);
-      return user;
-    } catch (error) {
-      return rejectWithValue(
-        error instanceof Error ? error.message : "Failed to buy gold",
-      );
-    }
-  },
-);
+const initialState: OperationsState = {
+  isLoading: false,
+  pendingRequestCount: 0,
+  error: null,
+  errorCode: null,
+  errorDetail: null,
+};
 
-export const buyAutoBuySuppliesThunk = createAsyncThunk(
-  "operations/buyAutoBuySupplies",
-  async (_, { rejectWithValue }) => {
-    try {
-      const user = await operationsApi.buyAutoBuySupplies();
-      return user;
-    } catch (error) {
-      return rejectWithValue(
-        error instanceof Error
-          ? error.message
-          : "Failed to unlock auto-buy supplies",
-      );
-    }
-  },
-);
+const startLoading = (state: OperationsState): void => {
+  state.pendingRequestCount += 1;
+  state.isLoading = state.pendingRequestCount > 0;
+};
 
-export const buyAutoprinterThunk = createAsyncThunk(
-  "operations/buyAutoprinter",
-  async (_, { rejectWithValue }) => {
-    try {
-      const user = await operationsApi.buyAutoprinter();
-      return user;
-    } catch (error) {
-      return rejectWithValue(
-        error instanceof Error ? error.message : "Failed to buy autoprinter",
-      );
-    }
-  },
-);
+const finishLoading = (state: OperationsState): void => {
+  state.pendingRequestCount = Math.max(0, state.pendingRequestCount - 1);
+  state.isLoading = state.pendingRequestCount > 0;
+};
 
-export const increaseCreditGenerationThunk = createAsyncThunk(
-  "operations/increaseCreditGeneration",
-  async (_, { rejectWithValue }) => {
-    try {
-      const user = await operationsApi.increaseCreditGeneration();
-      return user;
-    } catch (error) {
-      return rejectWithValue(
-        error instanceof Error
-          ? error.message
-          : "Failed to increase credit generation",
-      );
-    }
-  },
-);
+const clearOperationError = (state: OperationsState): void => {
+  state.error = null;
+  state.errorCode = null;
+  state.errorDetail = null;
+};
 
-export const increaseCreditCapacityThunk = createAsyncThunk(
-  "operations/increaseCreditCapacity",
-  async (_, { rejectWithValue }) => {
-    try {
-      const user = await operationsApi.increaseCreditCapacity();
-      return user;
-    } catch (error) {
-      return rejectWithValue(
-        error instanceof Error
-          ? error.message
-          : "Failed to increase credit capacity",
-      );
-    }
-  },
-);
+const applyOperationError = (
+  state: OperationsState,
+  payload: ApiErrorInfo | string | null | undefined,
+  fallbackMessage: string,
+): void => {
+  if (typeof payload === "string") {
+    state.error = payload;
+    state.errorCode = null;
+    state.errorDetail = null;
+    return;
+  }
 
-export const toggleAutoBuySuppliesThunk = createAsyncThunk(
-  "operations/toggleAutoBuySupplies",
-  async (active: boolean, { rejectWithValue }) => {
-    try {
-      const user = await authApi.setAutoBuySuppliesActive(active);
-      return user;
-    } catch (error) {
-      return rejectWithValue(
-        error instanceof Error
-          ? error.message
-          : "Failed to toggle auto-buy supplies",
-      );
-    }
-  },
-);
+  state.error = payload?.message || fallbackMessage;
+  state.errorCode = payload?.code ?? null;
+  state.errorDetail = payload?.detail ?? null;
+};
 
 const operationsSlice = createSlice({
   name: "operations",
-  initialState: {},
-  reducers: {},
+  initialState,
+  reducers: {
+    clearError: (state) => {
+      clearOperationError(state);
+    },
+  },
+  extraReducers: (builder) => {
+    builder.addMatcher(isAnyOf(...operationsStatePendingActions), (state) => {
+      startLoading(state);
+      clearOperationError(state);
+    });
+
+    builder.addMatcher(isAnyOf(...operationsStateFulfilledActions), (state) => {
+      finishLoading(state);
+      clearOperationError(state);
+    });
+
+    builder.addMatcher(
+      isAnyOf(...operationsStateRejectedActions),
+      (state, action) => {
+        finishLoading(state);
+        applyOperationError(
+          state,
+          action.payload as ApiErrorInfo | string,
+          "Operation failed",
+        );
+      },
+    );
+  },
 });
 
+export const { clearError } = operationsSlice.actions;
+export {
+  buyAutoBuySuppliesThunk,
+  buyAutoprinterThunk,
+  buyGoldThunk,
+  buySuppliesThunk,
+  increaseCreditCapacityThunk,
+  increaseCreditGenerationThunk,
+  increaseManualPrintBatchThunk,
+  increaseSuppliesBatchThunk,
+  increaseTicketBatchThunk,
+  toggleAutoBuySuppliesThunk,
+} from "../gameOperationThunks";
 export default operationsSlice.reducer;

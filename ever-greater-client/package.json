@@ -3,6 +3,9 @@
 	"version": "0.1.0",
 	"private": true,
 	"type": "module",
+	"engines": {
+		"node": ">=20"
+	},
 	"dependencies": {
 		"@emotion/react": "^11.14.0",
 		"@emotion/styled": "^11.14.1",
@@ -16,6 +19,7 @@
 		"@types/node": "^20.17.15",
 		"@types/react": "^19.2.14",
 		"@types/react-dom": "^19.2.3",
+		"ever-greater": "file:..",
 		"ever-greater-shared": "file:../ever-greater-shared",
 		"react": "^19.2.4",
 		"react-dom": "^19.2.4",
@@ -27,6 +31,8 @@
 		"start": "vite",
 		"build": "vite build",
 		"preview": "vite preview",
+		"typecheck": "tsc -p tsconfig.typecheck.json --noEmit",
+		"typecheck:tests": "tsc -p tsconfig.typecheck.tests.json --noEmit",
 		"test": "vitest",
 		"test:ui": "vitest --ui"
 	},

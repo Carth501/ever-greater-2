@@ -1,13 +1,15 @@
 import bcrypt from 'bcryptjs';
-import { OperationId, ResourceType } from 'ever-greater-shared';
+import { clientOperationIds, OperationId, ResourceType } from 'ever-greater-shared';
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as db from './db.ts';
-import { createApp } from './index.ts';
+import { buildPeriodicUserUpdatePayload, createApp } from './index.ts';
+import * as operationDb from './operations/db-access.ts';
 
 // Mock database BEFORE importing the app
 vi.mock('./db.ts', () => ({
   initializeDatabase: vi.fn().mockResolvedValue(undefined),
+  prepareDatabaseForRuntime: vi.fn().mockResolvedValue(undefined),
   closePool: vi.fn().mockResolvedValue(undefined),
   createUser: vi.fn(),
   getUserByEmail: vi.fn(),
@@ -26,15 +28,44 @@ vi.mock('./db.ts', () => ({
   },
 }));
 
+vi.mock('./operations/db-access.ts', () => ({
+  executeResourceTransaction: vi.fn(),
+  getGlobalCount: vi.fn(),
+  getUserById: vi.fn(),
+  incrementGlobalCount: vi.fn(),
+  purchaseAutoBuySupplies: vi.fn(),
+  setAutoBuySuppliesActive: vi.fn(),
+}));
+
 describe('Express API Endpoints', () => {
   let app;
   let agent;
   let consoleErrorSpy;
+  const mockOperationDb = operationDb;
 
   beforeEach(() => {
     // Clear all mocks
     vi.clearAllMocks();
     consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    mockOperationDb.executeResourceTransaction.mockImplementation((...args) =>
+      db.executeResourceTransaction(...args),
+    );
+    mockOperationDb.getGlobalCount.mockImplementation((...args) =>
+      db.getGlobalCount(...args),
+    );
+    mockOperationDb.getUserById.mockImplementation((...args) =>
+      db.getUserById(...args),
+    );
+    mockOperationDb.incrementGlobalCount.mockImplementation((...args) =>
+      db.incrementGlobalCount(...args),
+    );
+    mockOperationDb.purchaseAutoBuySupplies.mockImplementation((...args) =>
+      db.purchaseAutoBuySupplies(...args),
+    );
+    mockOperationDb.setAutoBuySuppliesActive.mockImplementation((...args) =>
+      db.setAutoBuySuppliesActive(...args),
+    );
 
     // Create a new app instance for each test
     app = createApp();
@@ -98,6 +129,7 @@ describe('Express API Endpoints', () => {
         .expect(400);
 
       expect(response.body.error).toBe('Email and password are required');
+      expect(response.body.code).toBe('INVALID_REQUEST');
     });
 
     it('should return 400 if both email and password are missing', async () => {
@@ -107,6 +139,7 @@ describe('Express API Endpoints', () => {
         .expect(400);
 
       expect(response.body.error).toBe('Email and password are required');
+      expect(response.body.code).toBe('INVALID_REQUEST');
     });
 
     it('should handle database errors', async () => {
@@ -183,6 +216,7 @@ describe('Express API Endpoints', () => {
         .expect(400);
 
       expect(response.body.error).toBe('Email and password are required');
+      expect(response.body.code).toBe('INVALID_REQUEST');
     });
 
     it('should handle database errors', async () => {
@@ -250,6 +284,7 @@ describe('Express API Endpoints', () => {
         .expect(401);
 
       expect(response.body.error).toBe('Not authenticated');
+      expect(response.body.code).toBe('AUTH_REQUIRED');
     });
   });
 
@@ -359,15 +394,20 @@ describe('Express API Endpoints', () => {
       db.incrementGlobalCount.mockResolvedValue(101);
       db.executeResourceTransaction.mockResolvedValue(testUser);
       db.purchaseAutoBuySupplies.mockResolvedValue(testUser);
+      db.setAutoBuySuppliesActive.mockResolvedValue(testUser);
 
       await agent
         .post('/api/auth/login')
         .send({ email: 'test@example.com', password: 'password123' })
         .expect(200);
 
-      for (const operationId of Object.values(OperationId)) {
+      for (const operationId of clientOperationIds) {
         const payload =
-          operationId === OperationId.BUY_GOLD ? { quantity: 1 } : {};
+          operationId === OperationId.BUY_GOLD
+            ? { quantity: 1 }
+            : operationId === OperationId.TOGGLE_AUTO_BUY_SUPPLIES
+              ? { active: false }
+              : {};
 
         const response = await agent
           .post(`/api/operations/${operationId}`)
@@ -419,7 +459,59 @@ describe('Express API Endpoints', () => {
 
       expect(response.body.user.auto_buy_supplies_purchased).toBe(true);
       expect(response.body.user.auto_buy_supplies_active).toBe(true);
-      expect(db.purchaseAutoBuySupplies).toHaveBeenCalledWith(1, 10);
+      expect(db.purchaseAutoBuySupplies).toHaveBeenCalledWith(1, 10, undefined);
+    });
+
+    it('should partially buy supplies using the upgraded batch ratio when gold is below the batch cap', async () => {
+      const testUser = {
+        id: 1,
+        email: 'test@example.com',
+        password_hash: await bcrypt.hash('password123', 10),
+        printer_supplies: 100,
+        money: 0,
+        gold: 3,
+        autoprinters: 0,
+        tickets_contributed: 0,
+        tickets_withdrawn: 0,
+        credit_value: 0,
+        credit_generation_level: 0,
+        credit_capacity_level: 0,
+        supplies_batch_level: 2,
+        auto_buy_supplies_purchased: false,
+        auto_buy_supplies_active: false,
+      };
+
+      const updatedUser = {
+        ...testUser,
+        printer_supplies: 700,
+        gold: 0,
+      };
+
+      db.getUserByEmail.mockResolvedValue(testUser);
+      db.getUserById.mockResolvedValue(testUser);
+      db.executeResourceTransaction.mockResolvedValue(updatedUser);
+      db.getGlobalCount.mockResolvedValue(100);
+
+      await agent
+        .post('/api/auth/login')
+        .send({ email: 'test@example.com', password: 'password123' })
+        .expect(200);
+
+      const response = await agent
+        .post('/api/operations/BUY_SUPPLIES')
+        .send({})
+        .expect(200);
+
+      expect(db.executeResourceTransaction).toHaveBeenCalledWith(
+        1,
+        { [ResourceType.GOLD]: 3 },
+        { [ResourceType.PRINTER_SUPPLIES]: 600 },
+        undefined,
+      );
+      expect(response.body.cost).toEqual({ [ResourceType.GOLD]: 3 });
+      expect(response.body.gain).toEqual({ [ResourceType.PRINTER_SUPPLIES]: 600 });
+      expect(response.body.user.printer_supplies).toBe(700);
+      expect(response.body.user.gold).toBe(0);
     });
 
     it('should include credit level updates in operation response', async () => {
@@ -528,6 +620,7 @@ describe('Express API Endpoints', () => {
         1,
         { [ResourceType.GOLD]: 1 },
         { [ResourceType.PRINTER_SUPPLIES]: 200 },
+        undefined,
       );
       expect(db.executeResourceTransaction).toHaveBeenNthCalledWith(
         2,
@@ -537,6 +630,7 @@ describe('Express API Endpoints', () => {
           [ResourceType.MONEY]: 1,
           [ResourceType.TICKETS_CONTRIBUTED]: 1,
         },
+        undefined,
       );
       expect(response.body.user.printer_supplies).toBe(199);
       expect(response.body.user.gold).toBe(2);
@@ -702,6 +796,7 @@ describe('Express API Endpoints', () => {
         .expect(400);
 
       expect(response.body.error).toBe('INVALID_REQUEST');
+      expect(response.body.code).toBe('INVALID_REQUEST');
       expect(response.body.detail).toContain('NOT_AN_OPERATION');
     });
 
@@ -736,6 +831,7 @@ describe('Express API Endpoints', () => {
         .expect(400);
 
       expect(response.body.error).toBe('INVALID_REQUEST');
+      expect(response.body.code).toBe('INVALID_REQUEST');
       expect(response.body.detail).toBe('quantity must be a positive integer');
     });
 
@@ -776,11 +872,12 @@ describe('Express API Endpoints', () => {
         .expect(403);
 
       expect(response.body.error).toBe('GLOBAL_TICKET_LIMIT');
+      expect(response.body.code).toBe('GLOBAL_TICKET_LIMIT');
       expect(response.body.detail).toBe('Personal ticket withdrawal limit exceeded');
     });
   });
 
-  describe('POST /api/auth/auto-buy-supplies/toggle', () => {
+  describe('POST /api/operations/TOGGLE_AUTO_BUY_SUPPLIES', () => {
     it('should toggle active state when unlocked', async () => {
       const testUser = {
         id: 1,
@@ -812,11 +909,14 @@ describe('Express API Endpoints', () => {
         .expect(200);
 
       const response = await agent
-        .post('/api/auth/auto-buy-supplies/toggle')
+        .post('/api/operations/TOGGLE_AUTO_BUY_SUPPLIES')
         .send({ active: false })
         .expect(200);
 
-      expect(db.setAutoBuySuppliesActive).toHaveBeenCalledWith(1, false);
+      expect(db.setAutoBuySuppliesActive).toHaveBeenCalledWith(1, false, undefined);
+      expect(response.body.operationId).toBe(OperationId.TOGGLE_AUTO_BUY_SUPPLIES);
+      expect(response.body.cost).toEqual({});
+      expect(response.body.gain).toEqual({});
       expect(response.body.user.auto_buy_supplies_purchased).toBe(true);
       expect(response.body.user.auto_buy_supplies_active).toBe(false);
     });
@@ -848,11 +948,128 @@ describe('Express API Endpoints', () => {
         .expect(200);
 
       const response = await agent
-        .post('/api/auth/auto-buy-supplies/toggle')
+        .post('/api/operations/TOGGLE_AUTO_BUY_SUPPLIES')
         .send({ active: true })
         .expect(403);
 
       expect(response.body.error).toBe('Auto-buy supplies not unlocked');
+      expect(response.body.code).toBe('AUTO_BUY_SUPPLIES_NOT_UNLOCKED');
     });
+
+    it('should reject toggle requests without an active boolean', async () => {
+      const testUser = {
+        id: 1,
+        email: 'test@example.com',
+        password_hash: await bcrypt.hash('password123', 10),
+        printer_supplies: 100,
+        money: 0,
+        gold: 2,
+        autoprinters: 0,
+        tickets_contributed: 0,
+        tickets_withdrawn: 0,
+        credit_value: 0,
+        credit_generation_level: 0,
+        credit_capacity_level: 0,
+        auto_buy_supplies_purchased: true,
+        auto_buy_supplies_active: true,
+      };
+
+      db.getUserByEmail.mockResolvedValue(testUser);
+
+      await agent
+        .post('/api/auth/login')
+        .send({ email: 'test@example.com', password: 'password123' })
+        .expect(200);
+
+      const response = await agent
+        .post('/api/operations/TOGGLE_AUTO_BUY_SUPPLIES')
+        .send({ active: 'yes' })
+        .expect(400);
+
+      expect(response.body.error).toBe('INVALID_REQUEST');
+      expect(response.body.code).toBe('INVALID_REQUEST');
+      expect(response.body.detail).toBe("'active' boolean is required");
+    });
+  });
+});
+
+describe('buildPeriodicUserUpdatePayload', () => {
+  it('always includes required core fields', () => {
+    const current = {
+      printer_supplies: 15,
+      money: 30,
+      gold: 4,
+      autoprinters: 2,
+      tickets_contributed: 10,
+      tickets_withdrawn: 3,
+      credit_value: 25,
+      credit_generation_level: 1,
+      credit_capacity_level: 5,
+      auto_buy_supplies_purchased: true,
+      auto_buy_supplies_active: false,
+    };
+
+    const previous = {
+      ...current,
+      money: 25,
+      gold: 3,
+    };
+
+    const payload = buildPeriodicUserUpdatePayload(current, previous);
+
+    expect(payload.printer_supplies).toBe(15);
+    expect(payload.tickets_contributed).toBe(10);
+    expect(payload.tickets_withdrawn).toBe(3);
+    expect(payload.credit_value).toBe(25);
+  });
+
+  it('includes non-core fields only when changed from previous snapshot', () => {
+    const previous = {
+      printer_supplies: 15,
+      money: 30,
+      gold: 4,
+      autoprinters: 2,
+      tickets_contributed: 10,
+      tickets_withdrawn: 3,
+      credit_value: 25,
+      credit_generation_level: 1,
+      credit_capacity_level: 5,
+      auto_buy_supplies_purchased: true,
+      auto_buy_supplies_active: false,
+    };
+
+    const current = {
+      ...previous,
+      money: 35,
+      auto_buy_supplies_active: true,
+    };
+
+    const payload = buildPeriodicUserUpdatePayload(current, previous);
+
+    expect(payload.money).toBe(35);
+    expect(payload.auto_buy_supplies_active).toBe(true);
+    expect(payload.gold).toBeUndefined();
+    expect(payload.autoprinters).toBeUndefined();
+    expect(payload.credit_generation_level).toBeUndefined();
+  });
+
+  it('includes all fields for first periodic snapshot', () => {
+    const current = {
+      printer_supplies: 15,
+      money: 30,
+      gold: 4,
+      autoprinters: 2,
+      tickets_contributed: 10,
+      tickets_withdrawn: 3,
+      credit_value: 25,
+      credit_generation_level: 1,
+      credit_capacity_level: 5,
+      auto_buy_supplies_purchased: true,
+      auto_buy_supplies_active: false,
+    };
+
+    const payload = buildPeriodicUserUpdatePayload(current, undefined);
+
+    expect(payload).toEqual(current);
   });
 });

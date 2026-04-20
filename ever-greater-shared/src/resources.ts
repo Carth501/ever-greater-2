@@ -7,10 +7,14 @@ export enum ResourceType {
   PRINTER_SUPPLIES = "PRINTER_SUPPLIES",
   MONEY = "MONEY",
   GOLD = "GOLD",
+  GEMS = "GEMS",
   AUTOPRINTERS = "AUTOPRINTERS",
   CREDIT = "CREDIT",
   CREDIT_GENERATION_LEVEL = "CREDIT_GENERATION_LEVEL",
   CREDIT_CAPACITY_LEVEL = "CREDIT_CAPACITY_LEVEL",
+  TICKET_BATCH_LEVEL = "TICKET_BATCH_LEVEL",
+  MANUAL_PRINT_BATCH_LEVEL = "MANUAL_PRINT_BATCH_LEVEL",
+  SUPPLIES_BATCH_LEVEL = "SUPPLIES_BATCH_LEVEL",
   GLOBAL_TICKETS = "GLOBAL_TICKETS",
 }
 
@@ -24,10 +28,14 @@ export const RESOURCE_DB_FIELDS: Partial<Record<ResourceType, string>> = {
   [ResourceType.PRINTER_SUPPLIES]: "printer_supplies",
   [ResourceType.MONEY]: "money",
   [ResourceType.GOLD]: "gold",
+  [ResourceType.GEMS]: "gems",
   [ResourceType.AUTOPRINTERS]: "autoprinters",
   [ResourceType.CREDIT]: "credit_value",
   [ResourceType.CREDIT_GENERATION_LEVEL]: "credit_generation_level",
   [ResourceType.CREDIT_CAPACITY_LEVEL]: "credit_capacity_level",
+  [ResourceType.TICKET_BATCH_LEVEL]: "ticket_batch_level",
+  [ResourceType.MANUAL_PRINT_BATCH_LEVEL]: "manual_print_batch_level",
+  [ResourceType.SUPPLIES_BATCH_LEVEL]: "supplies_batch_level",
 };
 
 /**
@@ -39,10 +47,14 @@ export const DB_FIELD_TO_RESOURCE: Record<string, ResourceType> = {
   printer_supplies: ResourceType.PRINTER_SUPPLIES,
   money: ResourceType.MONEY,
   gold: ResourceType.GOLD,
+  gems: ResourceType.GEMS,
   autoprinters: ResourceType.AUTOPRINTERS,
   credit_value: ResourceType.CREDIT,
   credit_generation_level: ResourceType.CREDIT_GENERATION_LEVEL,
   credit_capacity_level: ResourceType.CREDIT_CAPACITY_LEVEL,
+  ticket_batch_level: ResourceType.TICKET_BATCH_LEVEL,
+  manual_print_batch_level: ResourceType.MANUAL_PRINT_BATCH_LEVEL,
+  supplies_batch_level: ResourceType.SUPPLIES_BATCH_LEVEL,
 };
 
 /**
@@ -63,12 +75,60 @@ export interface User {
   printer_supplies: number;
   money: number;
   gold: number;
+  gems: number;
   autoprinters: number;
   credit_value: number;
   credit_generation_level: number;
   credit_capacity_level: number;
+  ticket_batch_level: number;
+  manual_print_batch_level: number;
+  supplies_batch_level: number;
   auto_buy_supplies_purchased: boolean;
   auto_buy_supplies_active: boolean;
+}
+
+export const CLIENT_USER_STATE_DEFAULTS = {
+  printer_supplies: 0,
+  money: 0,
+  gold: 0,
+  gems: 0,
+  autoprinters: 0,
+  tickets_contributed: 0,
+  tickets_withdrawn: 0,
+  credit_value: 0,
+  credit_generation_level: 0,
+  credit_capacity_level: 0,
+  ticket_batch_level: 0,
+  manual_print_batch_level: 0,
+  supplies_batch_level: 0,
+  auto_buy_supplies_purchased: false,
+  auto_buy_supplies_active: false,
+} satisfies Omit<User, "id" | "email">;
+
+export type ClientUserStateField = keyof typeof CLIENT_USER_STATE_DEFAULTS;
+
+export type ClientUserState = Pick<User, ClientUserStateField>;
+
+export const CLIENT_USER_STATE_FIELDS = Object.keys(
+  CLIENT_USER_STATE_DEFAULTS,
+) as ClientUserStateField[];
+
+export const CLIENT_USER_STATE_FIELD_TYPES = Object.fromEntries(
+  Object.entries(CLIENT_USER_STATE_DEFAULTS).map(([field, value]) => [
+    field,
+    typeof value,
+  ]),
+) as Record<ClientUserStateField, "number" | "boolean">;
+
+export function toClientUserState(
+  user: Partial<ClientUserState>,
+): ClientUserState {
+  return Object.fromEntries(
+    CLIENT_USER_STATE_FIELDS.map((field) => [
+      field,
+      user[field] ?? CLIENT_USER_STATE_DEFAULTS[field],
+    ]),
+  ) as ClientUserState;
 }
 
 /**

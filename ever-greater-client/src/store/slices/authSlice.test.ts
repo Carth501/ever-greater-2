@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { User } from "../../api/auth";
 import * as authApi from "../../api/auth";
+import { AuthError } from "../../api/client";
 import * as operationsApi from "../../api/operations";
 import { mockUser } from "../../tests/fixtures";
 import { createTestStore } from "../../tests/utils/testStore";
@@ -17,6 +18,9 @@ import {
   buyAutoBuySuppliesThunk,
   buyGoldThunk,
   buySuppliesThunk,
+  increaseManualPrintBatchThunk,
+  increaseSuppliesBatchThunk,
+  increaseTicketBatchThunk,
   toggleAutoBuySuppliesThunk,
 } from "./operationsSlice";
 
@@ -128,7 +132,12 @@ describe("authSlice", () => {
 
     it("should handle login failure", async () => {
       const errorMessage = "Invalid credentials";
-      mockAuthApi.login.mockRejectedValueOnce(new Error(errorMessage));
+      mockAuthApi.login.mockRejectedValueOnce(
+        new AuthError(errorMessage, 401, {
+          code: "INVALID_CREDENTIALS",
+          detail: "Try again",
+        }),
+      );
 
       const credentials = { email: "test@example.com", password: "wrong" };
       await store.dispatch(loginThunk(credentials) as any);
@@ -137,6 +146,8 @@ describe("authSlice", () => {
       expect(state.isLoading).toBe(false);
       expect(state.user).toBeNull();
       expect(state.error).toBe(errorMessage);
+      expect(state.errorCode).toBe("INVALID_CREDENTIALS");
+      expect(state.errorDetail).toBe("Try again");
     });
 
     it("should handle successful signup", async () => {
@@ -295,7 +306,7 @@ describe("authSlice", () => {
         preloadedState: { auth: stateWithUser },
       });
 
-      mockAuthApi.setAutoBuySuppliesActive.mockResolvedValueOnce({
+      mockOperationsApi.toggleAutoBuySupplies.mockResolvedValueOnce({
         ...defaultUser,
         auto_buy_supplies_purchased: true,
         auto_buy_supplies_active: false,
@@ -306,6 +317,96 @@ describe("authSlice", () => {
       const state = (store.getState() as { auth: AuthState }).auth;
       expect(state.user?.auto_buy_supplies_purchased).toBe(true);
       expect(state.user?.auto_buy_supplies_active).toBe(false);
+    });
+
+    it("should update supplies batch level via increaseSuppliesBatchThunk", async () => {
+      const stateWithUser: AuthState = {
+        user: {
+          ...defaultUser,
+          gold: 5,
+          supplies_batch_level: 0,
+        },
+        isCheckingAuth: false,
+        isLoading: false,
+        pendingRequestCount: 0,
+        error: null,
+      };
+
+      store = createTestStore({
+        preloadedState: { auth: stateWithUser },
+      });
+
+      mockOperationsApi.increaseSuppliesBatch.mockResolvedValueOnce({
+        ...defaultUser,
+        gold: 4,
+        supplies_batch_level: 1,
+      } as User);
+
+      await store.dispatch(increaseSuppliesBatchThunk() as any);
+
+      const state = (store.getState() as { auth: AuthState }).auth;
+      expect(state.user?.gold).toBe(4);
+      expect(state.user?.supplies_batch_level).toBe(1);
+    });
+
+    it("should update manual print batch level via increaseManualPrintBatchThunk", async () => {
+      const stateWithUser: AuthState = {
+        user: {
+          ...defaultUser,
+          gold: 5,
+          manual_print_batch_level: 0,
+        },
+        isCheckingAuth: false,
+        isLoading: false,
+        pendingRequestCount: 0,
+        error: null,
+      };
+
+      store = createTestStore({
+        preloadedState: { auth: stateWithUser },
+      });
+
+      mockOperationsApi.increaseManualPrintBatch.mockResolvedValueOnce({
+        ...defaultUser,
+        gold: 4,
+        manual_print_batch_level: 1,
+      } as User);
+
+      await store.dispatch(increaseManualPrintBatchThunk() as any);
+
+      const state = (store.getState() as { auth: AuthState }).auth;
+      expect(state.user?.gold).toBe(4);
+      expect(state.user?.manual_print_batch_level).toBe(1);
+    });
+
+    it("should update ticket batch level via increaseTicketBatchThunk", async () => {
+      const stateWithUser: AuthState = {
+        user: {
+          ...defaultUser,
+          gold: 5,
+          ticket_batch_level: 0,
+        },
+        isCheckingAuth: false,
+        isLoading: false,
+        pendingRequestCount: 0,
+        error: null,
+      };
+
+      store = createTestStore({
+        preloadedState: { auth: stateWithUser },
+      });
+
+      mockOperationsApi.increaseTicketBatch.mockResolvedValueOnce({
+        ...defaultUser,
+        gold: 4,
+        ticket_batch_level: 1,
+      } as User);
+
+      await store.dispatch(increaseTicketBatchThunk() as any);
+
+      const state = (store.getState() as { auth: AuthState }).auth;
+      expect(state.user?.gold).toBe(4);
+      expect(state.user?.ticket_batch_level).toBe(1);
     });
   });
 

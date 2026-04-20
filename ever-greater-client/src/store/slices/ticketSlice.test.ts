@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { DomainError } from "../../api/client";
 import * as ticketApi from "../../api/globalTicket";
 import * as operationsApi from "../../api/operations";
 import { mockUser } from "../../tests/fixtures";
 import { createTestStore } from "../../tests/utils/testStore";
+import { printTicketThunk } from "../gameOperationThunks";
 import ticketReducer, {
   clearError,
   fetchCountThunk,
-  incrementCountThunk,
   TicketState,
   updateCount,
 } from "./ticketSlice";
@@ -89,7 +90,7 @@ describe("ticketSlice", () => {
 
       mockOperationsApi.printTicket.mockResolvedValueOnce(mockUpdatedUser);
 
-      await store.dispatch(incrementCountThunk() as any);
+      await store.dispatch(printTicketThunk() as any);
 
       const state = (store.getState() as { ticket: TicketState }).ticket;
       expect(state.isLoading).toBe(false);
@@ -102,7 +103,7 @@ describe("ticketSlice", () => {
         new Error(errorMessage),
       );
 
-      await store.dispatch(incrementCountThunk() as any);
+      await store.dispatch(printTicketThunk() as any);
 
       const state = (store.getState() as { ticket: TicketState }).ticket;
       expect(state.isLoading).toBe(false);
@@ -112,10 +113,13 @@ describe("ticketSlice", () => {
     it("should handle print ticket error (insufficient resources)", async () => {
       const errorMessage = "Insufficient resources";
       mockOperationsApi.printTicket.mockRejectedValueOnce(
-        new Error(errorMessage),
+        new DomainError(errorMessage, 403, {
+          code: "INSUFFICIENT_RESOURCES",
+          detail: "Need more supplies",
+        }),
       );
 
-      await store.dispatch(incrementCountThunk() as any);
+      await store.dispatch(printTicketThunk() as any);
 
       const state = (store.getState() as { ticket: TicketState }).ticket;
       expect(state.isLoading).toBe(false);
@@ -151,31 +155,33 @@ describe("ticketSlice", () => {
       expect(state.error).toBe(errorMessage);
     });
 
-    it("should set isLoading on incrementCountThunk.pending", () => {
+    it("should set isLoading on printTicketThunk.pending", () => {
       const state = ticketReducer(
         initialState,
-        incrementCountThunk.pending(""),
+        printTicketThunk.pending("", undefined),
       );
       expect(state.isLoading).toBe(true);
       expect(state.error).toBeNull();
     });
 
-    it("should not update count on incrementCountThunk.fulfilled", () => {
+    it("should not update count on printTicketThunk.fulfilled", () => {
       const stateWithCount: TicketState = { ...initialState, count: 100 };
       const state = ticketReducer(
         stateWithCount,
-        incrementCountThunk.fulfilled(undefined, ""),
+        printTicketThunk.fulfilled(mockUser(), "", undefined),
       );
       expect(state.isLoading).toBe(false);
       expect(state.count).toBe(100);
       expect(state.error).toBeNull();
     });
 
-    it("should set error on incrementCountThunk.rejected", () => {
+    it("should set error on printTicketThunk.rejected", () => {
       const errorMessage = "Failed to increment";
       const state = ticketReducer(
         initialState,
-        incrementCountThunk.rejected(null, "", undefined, errorMessage),
+        printTicketThunk.rejected(null, "", undefined, {
+          message: errorMessage,
+        }),
       );
       expect(state.isLoading).toBe(false);
       expect(state.error).toBe(errorMessage);
@@ -185,9 +191,21 @@ describe("ticketSlice", () => {
       const stateWithCount: TicketState = { ...initialState, count: 50 };
       const state = ticketReducer(
         stateWithCount,
-        incrementCountThunk.rejected(null, "", undefined, "Error"),
+        printTicketThunk.rejected(null, "", undefined, { message: "Error" }),
       );
       expect(state.count).toBe(50);
+    });
+
+    it("should surface api error messages from rejected print operations", () => {
+      const state = ticketReducer(
+        initialState,
+        printTicketThunk.rejected(null, "", undefined, {
+          message: "Blocked",
+          code: "AUTH_REQUIRED",
+        }),
+      );
+
+      expect(state.error).toBe("Blocked");
     });
   });
 

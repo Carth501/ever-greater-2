@@ -7,6 +7,7 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { styled } from "@mui/material/styles";
 import { useState } from "react";
+import { formatApiErrorForDisplay } from "../../api/client";
 import { useAuth } from "../../hooks/useAuth";
 
 type SignupPageProps = {
@@ -30,7 +31,13 @@ const AuthCard = styled(Paper)(({ theme }) => ({
 }));
 
 export default function SignupPage({ onSwitchToLogin }: SignupPageProps) {
-  const { isLoading, error: authError, signup } = useAuth();
+  const {
+    isLoading,
+    error: authError,
+    errorCode,
+    errorDetail,
+    signup,
+  } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -53,7 +60,13 @@ export default function SignupPage({ onSwitchToLogin }: SignupPageProps) {
     signup(email, password);
   }
 
-  const displayError = authError || localError;
+  const displayError =
+    localError ||
+    formatApiErrorForDisplay({
+      message: authError || "",
+      code: errorCode ?? undefined,
+      detail: errorDetail ?? undefined,
+    });
 
   return (
     <AuthBackground>

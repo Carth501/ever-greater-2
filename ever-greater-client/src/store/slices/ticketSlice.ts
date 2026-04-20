@@ -1,6 +1,7 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+import { type ApiErrorInfo } from "../../api/client";
 import * as ticketApi from "../../api/globalTicket";
-import * as operationsApi from "../../api/operations";
+import { printTicketThunk } from "../gameOperationThunks";
 
 export interface TicketState {
   count: number;
@@ -31,25 +32,6 @@ export const fetchCountThunk = createAsyncThunk(
   },
 );
 
-export const incrementCountThunk = createAsyncThunk(
-  "ticket/incrementCount",
-  async (_, { rejectWithValue }) => {
-    try {
-      const updatedUser = await operationsApi.printTicket();
-      return {
-        printer_supplies: updatedUser.printer_supplies,
-        money: updatedUser.money,
-        gold: updatedUser.gold,
-        autoprinters: updatedUser.autoprinters ?? 0,
-      };
-    } catch (error) {
-      return rejectWithValue(
-        error instanceof Error ? error.message : "Failed to print ticket",
-      );
-    }
-  },
-);
-
 const startLoading = (state: TicketState): void => {
   state.pendingRequestCount += 1;
   state.isLoading = state.pendingRequestCount > 0;
@@ -58,6 +40,16 @@ const startLoading = (state: TicketState): void => {
 const finishLoading = (state: TicketState): void => {
   state.pendingRequestCount = Math.max(0, state.pendingRequestCount - 1);
   state.isLoading = state.pendingRequestCount > 0;
+};
+
+const getTicketErrorMessage = (
+  payload: ApiErrorInfo | string | null | undefined,
+): string => {
+  if (typeof payload === "string") {
+    return payload;
+  }
+
+  return payload?.message || "Failed to print ticket";
 };
 
 const ticketSlice = createSlice({
@@ -89,20 +81,22 @@ const ticketSlice = createSlice({
         state.error = action.payload as string;
       });
 
-    // incrementCountThunk
+    // printTicketThunk
     builder
-      .addCase(incrementCountThunk.pending, (state) => {
+      .addCase(printTicketThunk.pending, (state) => {
         startLoading(state);
         state.error = null;
       })
-      .addCase(incrementCountThunk.fulfilled, (state) => {
+      .addCase(printTicketThunk.fulfilled, (state) => {
         finishLoading(state);
         state.error = null;
         // Count will be updated via WebSocket updates
       })
-      .addCase(incrementCountThunk.rejected, (state, action) => {
+      .addCase(printTicketThunk.rejected, (state, action) => {
         finishLoading(state);
-        state.error = action.payload as string;
+        state.error = getTicketErrorMessage(
+          action.payload as ApiErrorInfo | string,
+        );
       });
   },
 });

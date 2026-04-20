@@ -1,4 +1,4 @@
-import { configureStore, type PreloadedState } from "@reduxjs/toolkit";
+import { configureStore } from "@reduxjs/toolkit";
 import { websocketMiddleware } from "../../store/middleware/websocketMiddleware";
 import authReducer from "../../store/slices/authSlice";
 import errorReducer from "../../store/slices/errorSlice";
@@ -20,6 +20,8 @@ function buildDefaultState(): RootState {
       isLoading: false,
       pendingRequestCount: 0,
       error: null,
+      errorCode: null,
+      errorDetail: null,
     },
     ticket: {
       count: 0,
@@ -31,7 +33,13 @@ function buildDefaultState(): RootState {
       message: null,
       timestamp: null,
     },
-    operations: {},
+    operations: {
+      isLoading: false,
+      pendingRequestCount: 0,
+      error: null,
+      errorCode: null,
+      errorDetail: null,
+    },
     realtime: {
       isConnected: false,
       isReconnecting: false,
@@ -77,11 +85,11 @@ export function createTestStore(options: TestStoreOptions = {}) {
       operations: operationsReducer,
       realtime: realtimeReducer,
     },
-    preloadedState: mergeState(preloadedState) as PreloadedState<RootState>,
+    preloadedState: mergeState(preloadedState),
     middleware: (getDefaultMiddleware) =>
-      includeWebsocketMiddleware
-        ? getDefaultMiddleware().concat(websocketMiddleware)
-        : getDefaultMiddleware(),
+      getDefaultMiddleware().concat(
+        ...(includeWebsocketMiddleware ? [websocketMiddleware] : []),
+      ),
   });
 }
 

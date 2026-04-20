@@ -3,11 +3,13 @@ import CircularProgress from "@mui/material/CircularProgress";
 import Container from "@mui/material/Container";
 import { styled } from "@mui/material/styles";
 import { useEffect, useState } from "react";
-import RealtimeStatusPanel from "./components/common/RealtimeStatusPanel";
+import DashboardPage from "./components/pages/DashboardPage";
 import EverGreaterMainPage from "./components/pages/EverGreaterMainPage";
 import LoginPage from "./components/pages/LoginPage";
+import PreviewIndexPage from "./components/pages/PreviewIndexPage";
 import SignupPage from "./components/pages/SignupPage";
 import cLogo from "./images/cLogo.png";
+import { getPreviewMode } from "./lib/previewMode";
 import { useAppDispatch, useAppSelector } from "./store/hooks";
 import { checkAuthThunk, logoutThunk } from "./store/slices/authSlice";
 import { fetchCountThunk } from "./store/slices/ticketSlice";
@@ -43,11 +45,32 @@ function App() {
     (state) => state.auth,
   );
   const [authPage, setAuthPage] = useState<AuthPage>("login");
+  const [previewMode, setPreviewMode] = useState(() =>
+    getPreviewMode(window.location),
+  );
+
+  const isPreviewMode = previewMode !== null;
+  const showDashboardControls =
+    previewMode?.kind === "dashboard" ? previewMode.showControls : true;
 
   // Check if user is already logged in on mount
   useEffect(() => {
     dispatch(checkAuthThunk());
   }, [dispatch]);
+
+  useEffect(() => {
+    const handleLocationChange = () => {
+      setPreviewMode(getPreviewMode(window.location));
+    };
+
+    window.addEventListener("hashchange", handleLocationChange);
+    window.addEventListener("popstate", handleLocationChange);
+
+    return () => {
+      window.removeEventListener("hashchange", handleLocationChange);
+      window.removeEventListener("popstate", handleLocationChange);
+    };
+  }, []);
 
   // Fetch initial ticket count when authenticated
   useEffect(() => {
@@ -61,7 +84,7 @@ function App() {
     setAuthPage("login");
   }
 
-  if (isCheckingAuth) {
+  if (!isPreviewMode && isCheckingAuth) {
     return (
       <Box
         display="flex"
@@ -71,6 +94,30 @@ function App() {
       >
         <CircularProgress />
       </Box>
+    );
+  }
+
+  if (isPreviewMode) {
+    const contentHeight = `calc(100vh - 56px)`;
+
+    return (
+      <AppRoot>
+        <Container
+          maxWidth={false}
+          disableGutters
+          sx={{ flex: 1, overflowY: "scroll", maxHeight: contentHeight }}
+        >
+          {previewMode?.kind === "dashboard" ? (
+            <DashboardPage showControls={showDashboardControls} />
+          ) : (
+            <PreviewIndexPage />
+          )}
+        </Container>
+
+        <AppFooter as="footer">
+          <FooterLogo src={cLogo} alt="site by C" />
+        </AppFooter>
+      </AppRoot>
     );
   }
 
@@ -90,8 +137,6 @@ function App() {
 
   return (
     <AppRoot>
-      <RealtimeStatusPanel />
-
       <Container
         maxWidth="xl"
         sx={{ flex: 1, py: 4, overflowY: "scroll", maxHeight: contentHeight }}

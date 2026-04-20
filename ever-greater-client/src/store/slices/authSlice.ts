@@ -1,16 +1,12 @@
-import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+import { createAsyncThunk, createSlice, isAnyOf } from "@reduxjs/toolkit";
 import type { User } from "../../api/auth";
 import * as authApi from "../../api/auth";
 import {
-  buyAutoBuySuppliesThunk,
-  buyAutoprinterThunk,
-  buyGoldThunk,
-  buySuppliesThunk,
-  increaseCreditCapacityThunk,
-  increaseCreditGenerationThunk,
-  toggleAutoBuySuppliesThunk,
-} from "./operationsSlice";
-import { incrementCountThunk } from "./ticketSlice";
+  getApiErrorInfo,
+  type ApiErrorCode,
+  type ApiErrorInfo,
+} from "../../api/client";
+import { userUpdateFulfilledActions } from "../gameOperationThunks";
 
 type UserUpdatePayload = Partial<
   Pick<
@@ -20,10 +16,14 @@ type UserUpdatePayload = Partial<
     | "tickets_contributed"
     | "tickets_withdrawn"
     | "gold"
+    | "gems"
     | "autoprinters"
     | "credit_value"
     | "credit_generation_level"
     | "credit_capacity_level"
+    | "ticket_batch_level"
+    | "manual_print_batch_level"
+    | "supplies_batch_level"
     | "auto_buy_supplies_purchased"
     | "auto_buy_supplies_active"
   >
@@ -35,6 +35,8 @@ export interface AuthState {
   isLoading: boolean;
   pendingRequestCount: number;
   error: string | null;
+  errorCode?: ApiErrorCode | null;
+  errorDetail?: string | null;
 }
 
 const initialState: AuthState = {
@@ -43,6 +45,8 @@ const initialState: AuthState = {
   isLoading: false,
   pendingRequestCount: 0,
   error: null,
+  errorCode: null,
+  errorDetail: null,
 };
 
 // Async thunks
@@ -54,9 +58,7 @@ export const checkAuthThunk = createAsyncThunk(
       return user;
     } catch (error) {
       return rejectWithValue(
-        error instanceof Error
-          ? error.message
-          : "Failed to check authentication",
+        getApiErrorInfo(error, "Failed to check authentication"),
       );
     }
   },
@@ -72,9 +74,7 @@ export const loginThunk = createAsyncThunk(
       const user = await authApi.login(email, password);
       return user;
     } catch (error) {
-      return rejectWithValue(
-        error instanceof Error ? error.message : "Failed to login",
-      );
+      return rejectWithValue(getApiErrorInfo(error, "Failed to login"));
     }
   },
 );
@@ -89,9 +89,7 @@ export const signupThunk = createAsyncThunk(
       const user = await authApi.register(email, password);
       return user;
     } catch (error) {
-      return rejectWithValue(
-        error instanceof Error ? error.message : "Failed to sign up",
-      );
+      return rejectWithValue(getApiErrorInfo(error, "Failed to sign up"));
     }
   },
 );
@@ -103,9 +101,7 @@ export const logoutThunk = createAsyncThunk(
       await authApi.logout();
       return null;
     } catch (error) {
-      return rejectWithValue(
-        error instanceof Error ? error.message : "Failed to logout",
-      );
+      return rejectWithValue(getApiErrorInfo(error, "Failed to logout"));
     }
   },
 );
@@ -120,12 +116,49 @@ const finishLoading = (state: AuthState): void => {
   state.isLoading = state.pendingRequestCount > 0;
 };
 
+const clearApiError = (state: AuthState): void => {
+  state.error = null;
+  state.errorCode = null;
+  state.errorDetail = null;
+};
+
+const applyApiError = (
+  state: AuthState,
+  payload: ApiErrorInfo | string | null | undefined,
+  fallbackMessage: string,
+): void => {
+  if (typeof payload === "string") {
+    state.error = payload;
+    state.errorCode = null;
+    state.errorDetail = null;
+    return;
+  }
+
+  state.error = payload?.message || fallbackMessage;
+  state.errorCode = payload?.code ?? null;
+  state.errorDetail = payload?.detail ?? null;
+};
+
+const mergeUserUpdate = (
+  state: AuthState,
+  payload: UserUpdatePayload | null | undefined,
+): void => {
+  if (!state.user || !payload) {
+    return;
+  }
+
+  state.user = {
+    ...state.user,
+    ...payload,
+  };
+};
+
 const authSlice = createSlice({
   name: "auth",
   initialState,
   reducers: {
     clearError: (state) => {
-      state.error = null;
+      clearApiError(state);
     },
     applyUserUpdate: (state, action: { payload: UserUpdatePayload }) => {
       if (state.user) {
@@ -141,199 +174,89 @@ const authSlice = createSlice({
     builder
       .addCase(checkAuthThunk.pending, (state) => {
         state.isCheckingAuth = true;
-        state.error = null;
+        clearApiError(state);
       })
       .addCase(checkAuthThunk.fulfilled, (state, action) => {
         state.isCheckingAuth = false;
         state.user = action.payload;
-        state.error = null;
+        clearApiError(state);
       })
       .addCase(checkAuthThunk.rejected, (state, action) => {
         state.isCheckingAuth = false;
         state.user = null;
-        state.error = action.payload as string;
+        applyApiError(
+          state,
+          action.payload as ApiErrorInfo | string,
+          "Failed to check authentication",
+        );
       });
 
     // loginThunk
     builder
       .addCase(loginThunk.pending, (state) => {
         startLoading(state);
-        state.error = null;
+        clearApiError(state);
       })
       .addCase(loginThunk.fulfilled, (state, action) => {
         finishLoading(state);
         state.user = action.payload;
-        state.error = null;
+        clearApiError(state);
       })
       .addCase(loginThunk.rejected, (state, action) => {
         finishLoading(state);
-        state.error = action.payload as string;
+        applyApiError(
+          state,
+          action.payload as ApiErrorInfo | string,
+          "Failed to login",
+        );
       });
 
     // signupThunk
     builder
       .addCase(signupThunk.pending, (state) => {
         startLoading(state);
-        state.error = null;
+        clearApiError(state);
       })
       .addCase(signupThunk.fulfilled, (state, action) => {
         finishLoading(state);
         state.user = action.payload;
-        state.error = null;
+        clearApiError(state);
       })
       .addCase(signupThunk.rejected, (state, action) => {
         finishLoading(state);
-        state.error = action.payload as string;
+        applyApiError(
+          state,
+          action.payload as ApiErrorInfo | string,
+          "Failed to sign up",
+        );
       });
 
     // logoutThunk
     builder
       .addCase(logoutThunk.pending, (state) => {
         startLoading(state);
-        state.error = null;
+        clearApiError(state);
       })
       .addCase(logoutThunk.fulfilled, (state) => {
         finishLoading(state);
         state.user = null;
-        state.error = null;
+        clearApiError(state);
       })
       .addCase(logoutThunk.rejected, (state, action) => {
         finishLoading(state);
-        state.error = action.payload as string;
+        applyApiError(
+          state,
+          action.payload as ApiErrorInfo | string,
+          "Failed to logout",
+        );
       });
 
-    // buySuppliesThunk
-    builder
-      .addCase(buySuppliesThunk.pending, (state) => {
-        startLoading(state);
-        state.error = null;
-      })
-      .addCase(buySuppliesThunk.fulfilled, (state, action) => {
-        finishLoading(state);
-        if (state.user) {
-          state.user = { ...state.user, ...action.payload };
-        }
-        state.error = null;
-      })
-      .addCase(buySuppliesThunk.rejected, (state, action) => {
-        finishLoading(state);
-        state.error = action.payload as string;
-      });
-
-    // buyGoldThunk
-    builder
-      .addCase(buyGoldThunk.pending, (state) => {
-        startLoading(state);
-        state.error = null;
-      })
-      .addCase(buyGoldThunk.fulfilled, (state, action) => {
-        finishLoading(state);
-        if (state.user) {
-          state.user = { ...state.user, ...action.payload };
-        }
-        state.error = null;
-      })
-      .addCase(buyGoldThunk.rejected, (state, action) => {
-        finishLoading(state);
-        state.error = action.payload as string;
-      });
-
-    // buyAutoBuySuppliesThunk
-    builder
-      .addCase(buyAutoBuySuppliesThunk.pending, (state) => {
-        startLoading(state);
-        state.error = null;
-      })
-      .addCase(buyAutoBuySuppliesThunk.fulfilled, (state, action) => {
-        finishLoading(state);
-        if (state.user) {
-          state.user = { ...state.user, ...action.payload };
-        }
-        state.error = null;
-      })
-      .addCase(buyAutoBuySuppliesThunk.rejected, (state, action) => {
-        finishLoading(state);
-        state.error = action.payload as string;
-      });
-
-    // buyAutoprinterThunk
-    builder
-      .addCase(buyAutoprinterThunk.pending, (state) => {
-        startLoading(state);
-        state.error = null;
-      })
-      .addCase(buyAutoprinterThunk.fulfilled, (state, action) => {
-        finishLoading(state);
-        if (state.user) {
-          state.user = { ...state.user, ...action.payload };
-        }
-        state.error = null;
-      })
-      .addCase(buyAutoprinterThunk.rejected, (state, action) => {
-        finishLoading(state);
-        state.error = action.payload as string;
-      });
-
-    // increaseCreditGenerationThunk
-    builder
-      .addCase(increaseCreditGenerationThunk.pending, (state) => {
-        startLoading(state);
-        state.error = null;
-      })
-      .addCase(increaseCreditGenerationThunk.fulfilled, (state, action) => {
-        finishLoading(state);
-        if (state.user) {
-          state.user = { ...state.user, ...action.payload };
-        }
-        state.error = null;
-      })
-      .addCase(increaseCreditGenerationThunk.rejected, (state, action) => {
-        finishLoading(state);
-        state.error = action.payload as string;
-      });
-
-    // increaseCreditCapacityThunk
-    builder
-      .addCase(increaseCreditCapacityThunk.pending, (state) => {
-        startLoading(state);
-        state.error = null;
-      })
-      .addCase(increaseCreditCapacityThunk.fulfilled, (state, action) => {
-        finishLoading(state);
-        if (state.user) {
-          state.user = { ...state.user, ...action.payload };
-        }
-        state.error = null;
-      })
-      .addCase(increaseCreditCapacityThunk.rejected, (state, action) => {
-        finishLoading(state);
-        state.error = action.payload as string;
-      });
-
-    // toggleAutoBuySuppliesThunk
-    builder
-      .addCase(toggleAutoBuySuppliesThunk.pending, (state) => {
-        startLoading(state);
-        state.error = null;
-      })
-      .addCase(toggleAutoBuySuppliesThunk.fulfilled, (state, action) => {
-        finishLoading(state);
-        if (state.user) {
-          state.user = { ...state.user, ...action.payload };
-        }
-        state.error = null;
-      })
-      .addCase(toggleAutoBuySuppliesThunk.rejected, (state, action) => {
-        finishLoading(state);
-        state.error = action.payload as string;
-      });
-
-    // incrementCountThunk — auth reacts to fulfilled to apply returned user fields
-    builder.addCase(incrementCountThunk.fulfilled, (state, action) => {
-      if (state.user) {
-        state.user = { ...state.user, ...action.payload };
-      }
-    });
+    builder.addMatcher(
+      isAnyOf(...userUpdateFulfilledActions),
+      (state, action) => {
+        mergeUserUpdate(state, action.payload);
+      },
+    );
   },
 });
 
