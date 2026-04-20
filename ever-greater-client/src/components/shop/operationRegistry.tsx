@@ -58,6 +58,7 @@ type RegistryEntry = {
 type GoldUpgradeDefinition = {
   key: string;
   operationIds: OperationId[];
+  isVisible?: (context: Pick<RegistryContext, "user">) => boolean;
   buildRow: (
     context: Pick<RegistryContext, "user" | "handlers">,
   ) => UpgradeGoldRowItem;
@@ -180,6 +181,7 @@ const goldUpgradeDefinitions: GoldUpgradeDefinition[] = [
       OperationId.AUTO_BUY_SUPPLIES,
       OperationId.TOGGLE_AUTO_BUY_SUPPLIES,
     ],
+    isVisible: ({ user }) => !user.auto_buy_supplies_purchased,
     buildRow: ({ user, handlers }) => {
       const autoBuyCost =
         getOperationCost(operations[OperationId.AUTO_BUY_SUPPLIES], { user })[
@@ -349,9 +351,9 @@ const upgradeRegistry: RegistryEntry[] = [
       return (
         <UpgradeGoldGroup
           gold={user.gold ?? 0}
-          rows={goldUpgradeDefinitions.map((definition) =>
-            definition.buildRow({ user, handlers }),
-          )}
+          rows={goldUpgradeDefinitions
+            .filter((definition) => definition.isVisible?.({ user }) ?? true)
+            .map((definition) => definition.buildRow({ user, handlers }))}
         />
       );
     },

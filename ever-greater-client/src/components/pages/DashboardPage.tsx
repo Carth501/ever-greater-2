@@ -127,8 +127,13 @@ function DashboardPage({
   );
 
   const visiblePanelsCount = useMemo(
-    () => Object.values(panels).filter(Boolean).length,
-    [panels],
+    () =>
+      Object.entries(panels).filter(
+        ([panelId, isVisible]) =>
+          isVisible &&
+          (panelId !== "autoBuy" || dashboardUser.auto_buy_supplies_purchased),
+      ).length,
+    [dashboardUser.auto_buy_supplies_purchased, panels],
   );
 
   function applyPreset(presetId: PresetId) {
@@ -195,7 +200,7 @@ function DashboardPage({
                 />
               )}
 
-              {panels.autoBuy && (
+              {panels.autoBuy && dashboardUser.auto_buy_supplies_purchased && (
                 <DashboardAutoBuyManagementPanel
                   hasLiveUser={hasLiveUser}
                   manualPrintQuantity={manualPrintQuantity}

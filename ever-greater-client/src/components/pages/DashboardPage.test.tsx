@@ -190,6 +190,25 @@ describe("DashboardPage", () => {
     expect(screen.queryByText(/Secondary insights/i)).toBeNull();
   });
 
+  it("hides the auto-buy management panel when the unlock has not been purchased", () => {
+    mockedUseAuth.mockReturnValue(
+      createAuthMockValue({
+        user: mockUser({
+          auto_buy_supplies_purchased: false,
+          auto_buy_supplies_active: false,
+        }),
+      }),
+    );
+
+    render(<DashboardPage />);
+
+    expect(
+      screen.queryByRole("region", {
+        name: dashboardContent.autoBuy.regionLabel,
+      }),
+    ).toBeNull();
+  });
+
   it("renders delayed realtime status when updates go stale", () => {
     mockedUseRealtime.mockReturnValue(
       createRealtimeMockValue({ lastUpdateAt: Date.now() - 8_000 }),

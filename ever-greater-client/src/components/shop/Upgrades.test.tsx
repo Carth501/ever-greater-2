@@ -92,7 +92,7 @@ describe("Upgrades", () => {
     render(<Upgrades />);
 
     expect(screen.getByRole("heading", { name: "Upgrades" })).toBeTruthy();
-    expect(screen.getByText("Auto-Buy Supplies")).toBeTruthy();
+    expect(screen.queryByText("Auto-Buy Supplies")).toBeNull();
     expect(screen.getByText("Increase Ticket Batch Scale")).toBeTruthy();
     expect(screen.getByText("Increase Manual Print Batch")).toBeTruthy();
     expect(screen.getByText("Increase Supplies Batch")).toBeTruthy();
@@ -113,12 +113,24 @@ describe("Upgrades", () => {
     render(<Upgrades />);
 
     expect(screen.queryByText("Autoprinter")).toBeNull();
-    expect(screen.getByText("Auto-Buy Supplies")).toBeTruthy();
+    expect(screen.queryByText("Auto-Buy Supplies")).toBeNull();
     expect(screen.getByText("Increase Ticket Batch Scale")).toBeTruthy();
     expect(screen.getByText("Increase Manual Print Batch")).toBeTruthy();
     expect(screen.getByText("Increase Supplies Batch")).toBeTruthy();
     expect(screen.getByText("Increase Credit Capacity")).toBeTruthy();
     expect(screen.queryByText("Buy Gem")).toBeNull();
+  });
+
+  it("shows the auto-buy upgrade when it has not been purchased yet", () => {
+    mockDependencies({
+      auto_buy_supplies_purchased: false,
+      auto_buy_supplies_active: false,
+    });
+
+    render(<Upgrades />);
+
+    expect(screen.getByText("Auto-Buy Supplies")).toBeTruthy();
+    expect(screen.getByText("Cost: 10g")).toBeTruthy();
   });
 
   it("shows the scaled general ticket batch upgrade cost for the current level", () => {

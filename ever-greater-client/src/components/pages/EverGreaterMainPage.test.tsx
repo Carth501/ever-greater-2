@@ -74,10 +74,12 @@ describe("EverGreaterMainPage", () => {
     mockedUseGame.mockReturnValue(createGameMockValue());
   });
 
-  it("renders the auto-buy management panel for shop-eligible users", () => {
+  it("hides the auto-buy management panel until the unlock is purchased", () => {
     render(<EverGreaterMainPage onLogout={vi.fn()} />);
 
-    expect(screen.getByText("Auto-buy management")).toBeTruthy();
+    expect(screen.queryByText("Auto-buy management")).toBeNull();
+    expect(screen.getByText("Shop")).toBeTruthy();
+    expect(screen.getByText("Upgrades")).toBeTruthy();
   });
 
   it("renders the auto-buy management panel for previously unlocked users even below shop threshold", () => {

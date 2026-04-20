@@ -59,8 +59,7 @@ function EverGreaterMainPage({ onLogout }: MainPageProps): JSX.Element {
     onLogout();
   };
   const hasShopAccess = (currentUser?.tickets_contributed ?? 0) > 50;
-  const showAutoBuyManagement =
-    hasShopAccess || currentUser?.auto_buy_supplies_purchased;
+  const showAutoBuyManagement = currentUser?.auto_buy_supplies_purchased;
 
   if (!currentUser) {
     return <Typography>Loading user data...</Typography>;
