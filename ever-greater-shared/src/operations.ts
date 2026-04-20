@@ -1,4 +1,8 @@
 import {
+  AutoBuyResourceKey,
+  AutoBuyScaleMode,
+  isAutoBuyResourceKey,
+  isAutoBuyScaleMode,
   RESOURCE_DB_FIELDS,
   ResourceAmount,
   ResourceType,
@@ -21,6 +25,13 @@ export type ResourceCalculator = (ctx: OperationContext) => ResourceAmount;
 
 export type OperationScope = "client" | "internal";
 
+export type ConfigureAutoBuyParams = {
+  resourceKey: AutoBuyResourceKey;
+  threshold: number;
+  scaleMode: AutoBuyScaleMode;
+  scaleValue?: number;
+};
+
 /**
  * Operation definition with static or dynamic costs and gains.
  */
@@ -41,6 +52,7 @@ export enum OperationId {
   BUY_SUPPLIES = "BUY_SUPPLIES",
   AUTO_BUY_SUPPLIES = "AUTO_BUY_SUPPLIES",
   TOGGLE_AUTO_BUY_SUPPLIES = "TOGGLE_AUTO_BUY_SUPPLIES",
+  CONFIGURE_AUTO_BUY = "CONFIGURE_AUTO_BUY",
   BUY_GOLD = "BUY_GOLD",
   BUY_GEM = "BUY_GEM",
   BUY_AUTOPRINTER = "BUY_AUTOPRINTER",
@@ -174,12 +186,31 @@ export function getMaxSuppliesPurchaseGold(user: User): number {
   return 2 ** getSuppliesBatchLevel(user);
 }
 
-export function getBuySuppliesSpend(user: User): number {
+function getRequestedSpendGold(params?: any): number | undefined {
+  if (params?.spendGold === undefined) {
+    return undefined;
+  }
+
+  if (!Number.isInteger(params.spendGold) || params.spendGold < 1) {
+    return 0;
+  }
+
+  return params.spendGold;
+}
+
+export function getBuySuppliesSpend(user: User, params?: any): number {
   if (user.gold <= 0) {
     return 0;
   }
 
-  return Math.min(user.gold, getMaxSuppliesPurchaseGold(user));
+  const maxSpend = Math.min(user.gold, getMaxSuppliesPurchaseGold(user));
+  const requestedSpend = getRequestedSpendGold(params);
+
+  if (requestedSpend === undefined) {
+    return maxSpend;
+  }
+
+  return Math.min(maxSpend, requestedSpend);
 }
 
 export function getBuySuppliesGainForGold(spendGold: number): number {
@@ -214,13 +245,13 @@ export const operations: Record<OperationId, Operation> = {
     name: "Buy Supplies",
     description: "Purchase printer supplies with gold",
     cost: (ctx: OperationContext) => {
-      const spendGold = getBuySuppliesSpend(ctx.user);
+      const spendGold = getBuySuppliesSpend(ctx.user, ctx.params);
       return {
         [ResourceType.GOLD]: spendGold,
       };
     },
     gain: (ctx: OperationContext) => {
-      const spendGold = getBuySuppliesSpend(ctx.user);
+      const spendGold = getBuySuppliesSpend(ctx.user, ctx.params);
       return {
         [ResourceType.PRINTER_SUPPLIES]: getBuySuppliesGainForGold(spendGold),
       };
@@ -241,6 +272,14 @@ export const operations: Record<OperationId, Operation> = {
     id: OperationId.TOGGLE_AUTO_BUY_SUPPLIES,
     name: "Toggle Auto-Buy Supplies",
     description: "Enable or disable automatic supplies purchasing",
+    cost: {},
+    gain: {},
+  },
+
+  [OperationId.CONFIGURE_AUTO_BUY]: {
+    id: OperationId.CONFIGURE_AUTO_BUY,
+    name: "Configure Auto-Buy",
+    description: "Update automatic purchase settings for a resource",
     cost: {},
     gain: {},
   },
@@ -520,6 +559,21 @@ export function validateOperation(
     }
   }
 
+  if (
+    operation.id === OperationId.BUY_SUPPLIES &&
+    params?.spendGold !== undefined
+  ) {
+    const spendGold = params.spendGold;
+    if (!Number.isInteger(spendGold) || spendGold < 1) {
+      return {
+        valid: false,
+        error: "'spendGold' must be a positive integer",
+        cost,
+        gain,
+      };
+    }
+  }
+
   if (operation.id === OperationId.TOGGLE_AUTO_BUY_SUPPLIES) {
     if (typeof params?.active !== "boolean") {
       return {
@@ -534,6 +588,53 @@ export function validateOperation(
       return {
         valid: false,
         error: "Auto-buy supplies not unlocked",
+        cost,
+        gain,
+      };
+    }
+  }
+
+  if (operation.id === OperationId.CONFIGURE_AUTO_BUY) {
+    if (!isAutoBuyResourceKey(params?.resourceKey)) {
+      return {
+        valid: false,
+        error: "'resourceKey' is required",
+        cost,
+        gain,
+      };
+    }
+
+    if (
+      typeof params?.threshold !== "number" ||
+      !Number.isFinite(params.threshold) ||
+      params.threshold < 0
+    ) {
+      return {
+        valid: false,
+        error: "'threshold' must be a non-negative number",
+        cost,
+        gain,
+      };
+    }
+
+    if (!isAutoBuyScaleMode(params?.scaleMode)) {
+      return {
+        valid: false,
+        error: "'scaleMode' is invalid",
+        cost,
+        gain,
+      };
+    }
+
+    if (
+      (params.scaleMode === AutoBuyScaleMode.CUSTOM_VALUE ||
+        params.scaleMode === AutoBuyScaleMode.CUSTOM_PERCENT) &&
+      (typeof params?.scaleValue !== "number" ||
+        !Number.isFinite(params.scaleValue))
+    ) {
+      return {
+        valid: false,
+        error: "'scaleValue' is required for custom scale modes",
         cost,
         gain,
       };

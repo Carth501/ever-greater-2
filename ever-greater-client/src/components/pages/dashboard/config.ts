@@ -1,10 +1,11 @@
-import type { User } from "../../../api/auth";
+import { AutoBuyScaleMode, type User } from "ever-greater-shared";
 import type { PanelLabel, PanelState, PresetId } from "./types";
 
 export const defaultPanels: PanelState = {
   account: true,
   ticket: true,
   print: true,
+  autoBuy: true,
   shop: true,
   status: true,
   insights: true,
@@ -15,6 +16,7 @@ export const presets: Record<PresetId, PanelState> = {
     account: true,
     ticket: true,
     print: true,
+    autoBuy: true,
     shop: false,
     status: true,
     insights: false,
@@ -23,6 +25,7 @@ export const presets: Record<PresetId, PanelState> = {
     account: true,
     ticket: true,
     print: true,
+    autoBuy: true,
     shop: true,
     status: true,
     insights: false,
@@ -36,6 +39,7 @@ export const panelLabels: PanelLabel[] = [
   { id: "account", label: "Account" },
   { id: "ticket", label: "Ticket Pool" },
   { id: "print", label: "Print Controls" },
+  { id: "autoBuy", label: "Auto-Buy Management" },
   { id: "shop", label: "Shop Modules" },
   { id: "status", label: "Realtime Health" },
   { id: "insights", label: "Insights" },
@@ -61,4 +65,11 @@ export const previewDashboardUser: User = {
   supplies_batch_level: 2,
   auto_buy_supplies_purchased: true,
   auto_buy_supplies_active: true,
+  auto_buy_settings: {
+    printer_supplies: {
+      threshold: 48,
+      scaleMode: AutoBuyScaleMode.CUSTOM_PERCENT,
+      scaleValue: 25,
+    },
+  },
 };

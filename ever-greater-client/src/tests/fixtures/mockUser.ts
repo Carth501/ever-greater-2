@@ -1,4 +1,4 @@
-import type { User } from "ever-greater-shared";
+import { getDefaultAutoBuySettings, type User } from "ever-greater-shared";
 
 export function mockUser(overrides: Partial<User> = {}): User {
   return {
@@ -19,6 +19,7 @@ export function mockUser(overrides: Partial<User> = {}): User {
     supplies_batch_level: 0,
     auto_buy_supplies_purchased: false,
     auto_buy_supplies_active: false,
+    auto_buy_settings: getDefaultAutoBuySettings(),
     ...overrides,
   };
 }

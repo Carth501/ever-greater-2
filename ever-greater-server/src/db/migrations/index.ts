@@ -7,6 +7,7 @@ import { addManualPrintBatchLevelMigration } from "./006-add-manual-print-batch-
 import { addTicketBatchLevelMigration } from "./007-add-ticket-batch-level.js";
 import { normalizeCreditCapacityLevelMigration } from "./008-normalize-credit-capacity-level.js";
 import { addGemsColumnMigration } from "./009-add-gems-column.js";
+import { addAutoBuySettingsColumnMigration } from "./010-add-auto-buy-settings-column.js";
 
 export { type DatabaseMigration } from "./types.js";
 
@@ -20,4 +21,5 @@ export const databaseMigrations = [
   addTicketBatchLevelMigration,
   normalizeCreditCapacityLevelMigration,
   addGemsColumnMigration,
+  addAutoBuySettingsColumnMigration,
 ] as const;

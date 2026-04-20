@@ -1,5 +1,12 @@
 import bcrypt from 'bcryptjs';
-import { clientOperationIds, OperationId, ResourceType } from 'ever-greater-shared';
+import {
+	AutoBuyResourceKey,
+	AutoBuyScaleMode,
+	clientOperationIds,
+	getDefaultAutoBuySettings,
+	OperationId,
+	ResourceType,
+} from 'ever-greater-shared';
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as db from './db.ts';
@@ -18,6 +25,7 @@ vi.mock('./db.ts', () => ({
   executeResourceTransaction: vi.fn(),
   purchaseAutoBuySupplies: vi.fn(),
   setAutoBuySuppliesActive: vi.fn(),
+  setAutoBuySettings: vi.fn(),
   getGlobalCount: vi.fn(),
   incrementGlobalCount: vi.fn(),
   cleanupOldTicketWithdrawals: vi.fn().mockResolvedValue(undefined),
@@ -34,6 +42,7 @@ vi.mock('./operations/db-access.ts', () => ({
   getUserById: vi.fn(),
   incrementGlobalCount: vi.fn(),
   purchaseAutoBuySupplies: vi.fn(),
+  setAutoBuySettings: vi.fn(),
   setAutoBuySuppliesActive: vi.fn(),
 }));
 
@@ -62,6 +71,9 @@ describe('Express API Endpoints', () => {
     );
     mockOperationDb.purchaseAutoBuySupplies.mockImplementation((...args) =>
       db.purchaseAutoBuySupplies(...args),
+    );
+    mockOperationDb.setAutoBuySettings.mockImplementation((...args) =>
+      db.setAutoBuySettings(...args),
     );
     mockOperationDb.setAutoBuySuppliesActive.mockImplementation((...args) =>
       db.setAutoBuySuppliesActive(...args),
@@ -395,6 +407,7 @@ describe('Express API Endpoints', () => {
       db.executeResourceTransaction.mockResolvedValue(testUser);
       db.purchaseAutoBuySupplies.mockResolvedValue(testUser);
       db.setAutoBuySuppliesActive.mockResolvedValue(testUser);
+      db.setAutoBuySettings.mockResolvedValue(testUser);
 
       await agent
         .post('/api/auth/login')
@@ -407,6 +420,13 @@ describe('Express API Endpoints', () => {
             ? { quantity: 1 }
             : operationId === OperationId.TOGGLE_AUTO_BUY_SUPPLIES
               ? { active: false }
+              : operationId === OperationId.CONFIGURE_AUTO_BUY
+                ? {
+                    resourceKey: AutoBuyResourceKey.PRINTER_SUPPLIES,
+                    threshold: 12,
+                    scaleMode: AutoBuyScaleMode.CUSTOM_PERCENT,
+                    scaleValue: 40,
+                  }
               : {};
 
         const response = await agent
@@ -1036,6 +1056,7 @@ describe('buildPeriodicUserUpdatePayload', () => {
       credit_capacity_level: 5,
       auto_buy_supplies_purchased: true,
       auto_buy_supplies_active: false,
+      auto_buy_settings: getDefaultAutoBuySettings(),
     };
 
     const current = {
@@ -1066,6 +1087,7 @@ describe('buildPeriodicUserUpdatePayload', () => {
       credit_capacity_level: 5,
       auto_buy_supplies_purchased: true,
       auto_buy_supplies_active: false,
+      auto_buy_settings: getDefaultAutoBuySettings(),
     };
 
     const payload = buildPeriodicUserUpdatePayload(current, undefined);

@@ -10,6 +10,7 @@ import PrintControls from "../game/PrintControls";
 import TicketSummary from "../game/TicketSummary";
 import Shop from "../shop/Shop";
 import Upgrades from "../shop/Upgrades";
+import { DashboardAutoBuyManagementPanel } from "./dashboard";
 
 type MainPageProps = {
   onLogout: () => void;
@@ -57,6 +58,9 @@ function EverGreaterMainPage({ onLogout }: MainPageProps): JSX.Element {
     logout();
     onLogout();
   };
+  const hasShopAccess = (currentUser?.tickets_contributed ?? 0) > 50;
+  const showAutoBuyManagement =
+    hasShopAccess || currentUser?.auto_buy_supplies_purchased;
 
   if (!currentUser) {
     return <Typography>Loading user data...</Typography>;
@@ -76,10 +80,18 @@ function EverGreaterMainPage({ onLogout }: MainPageProps): JSX.Element {
             isDisabled={isPrintDisabled}
             onPrintClick={printTicket}
           />
+
+          {showAutoBuyManagement && (
+            <DashboardAutoBuyManagementPanel
+              hasLiveUser
+              manualPrintQuantity={manualPrintQuantity}
+              user={currentUser}
+            />
+          )}
         </PrimaryColumn>
 
         <SecondaryColumn>
-          {currentUser.tickets_contributed > 50 && (
+          {hasShopAccess && (
             <>
               <Shop />
               <Upgrades />

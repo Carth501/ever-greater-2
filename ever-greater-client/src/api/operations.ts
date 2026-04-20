@@ -1,4 +1,8 @@
-import { OperationId, type User } from "ever-greater-shared";
+import {
+  OperationId,
+  type ConfigureAutoBuyParams,
+  type User,
+} from "ever-greater-shared";
 import { apiFetch } from "./client";
 
 const DEFAULT_API_BASE = "http://localhost:4000";
@@ -59,6 +63,15 @@ export async function buyAutoBuySupplies(): Promise<User> {
  */
 export async function toggleAutoBuySupplies(active: boolean): Promise<User> {
   return executeOperation(OperationId.TOGGLE_AUTO_BUY_SUPPLIES, { active });
+}
+
+/**
+ * Update auto-buy settings for a managed resource.
+ */
+export async function configureAutoBuy(
+  params: ConfigureAutoBuyParams,
+): Promise<User> {
+  return executeOperation(OperationId.CONFIGURE_AUTO_BUY, params);
 }
 
 /**

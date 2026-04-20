@@ -4,6 +4,7 @@ import cors from "cors";
 import { randomUUID } from "crypto";
 import "dotenv/config";
 import {
+  areAutoBuySettingsEqual,
   CLIENT_USER_STATE_FIELDS,
   isClientOperationId,
   OperationId,
@@ -87,7 +88,12 @@ function buildPeriodicUserUpdatePayload(
     if (
       !previous ||
       ALWAYS_INCLUDED_PERIODIC_FIELDS.has(field) ||
-      previous[field] !== current[field]
+      (field === "auto_buy_settings"
+        ? !areAutoBuySettingsEqual(
+            previous.auto_buy_settings,
+            current.auto_buy_settings,
+          )
+        : previous[field] !== current[field])
     ) {
       applyFieldUpdate(field);
     }
@@ -188,7 +194,12 @@ function sendOperationValidationError(
 
   if (
     validation.error === "Quantity must be a positive integer" ||
-    validation.error === "'active' boolean is required"
+    validation.error === "'active' boolean is required" ||
+    validation.error === "'spendGold' must be a positive integer" ||
+    validation.error === "'resourceKey' is required" ||
+    validation.error === "'threshold' must be a non-negative number" ||
+    validation.error === "'scaleMode' is invalid" ||
+    validation.error === "'scaleValue' is required for custom scale modes"
   ) {
     return sendError(res, 400, {
       error: "INVALID_REQUEST",
@@ -196,7 +207,9 @@ function sendOperationValidationError(
       detail:
         validation.error === "Quantity must be a positive integer"
           ? "quantity must be a positive integer"
-          : validation.error,
+          : validation.error === "'spendGold' must be a positive integer"
+            ? "spendGold must be a positive integer"
+            : validation.error,
     });
   }
 
@@ -578,6 +591,7 @@ function createApp(): Express {
         supplies_batch_level: result.user.supplies_batch_level,
         auto_buy_supplies_purchased: result.user.auto_buy_supplies_purchased,
         auto_buy_supplies_active: result.user.auto_buy_supplies_active,
+        auto_buy_settings: result.user.auto_buy_settings,
       });
 
       return res.json({

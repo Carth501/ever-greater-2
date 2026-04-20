@@ -6,6 +6,11 @@ export {
 } from "./db/core.js";
 export { initializeDatabase, prepareDatabaseForRuntime } from "./db/schema.js";
 export {
+  executeResourceTransaction,
+  processAutoprinters,
+  updateAllUsersCreditValues,
+} from "./db/transactions.js";
+export {
   cleanupOldTicketWithdrawals,
   createUser,
   enrichUserWithWithdrawals,
@@ -16,10 +21,6 @@ export {
   incrementGlobalCount,
   purchaseAutoBuySupplies,
   recordTicketWithdrawal,
+  setAutoBuySettings,
   setAutoBuySuppliesActive,
 } from "./db/users.js";
-export {
-  executeResourceTransaction,
-  processAutoprinters,
-  updateAllUsersCreditValues,
-} from "./db/transactions.js";

@@ -1,4 +1,5 @@
 export { DashboardAccountPanel } from "./DashboardAccountPanel";
+export { DashboardAutoBuyManagementPanel } from "./DashboardAutoBuyManagementPanel";
 export { DashboardHeroSection } from "./DashboardHeroSection";
 export { DashboardInsightsPanel } from "./DashboardInsightsPanel";
 export { DashboardPrintPanel } from "./DashboardPrintPanel";

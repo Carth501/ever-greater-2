@@ -5,6 +5,7 @@
 
 import {
   CLIENT_USER_STATE_FIELD_TYPES,
+  isAutoBuySettings,
   type ClientUserState,
 } from "./resources.js";
 
@@ -38,6 +39,10 @@ export function isUserResourceFields(
       CLIENT_USER_STATE_FIELD_TYPES[
         key as keyof typeof CLIENT_USER_STATE_FIELD_TYPES
       ];
+
+    if (expectedType === "object") {
+      return isAutoBuySettings(fieldValue);
+    }
 
     return expectedType !== undefined && typeof fieldValue === expectedType;
   });

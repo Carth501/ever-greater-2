@@ -1,8 +1,13 @@
 import {
+  AutoBuyResourceKey,
   CREDIT_CAPACITY_UPGRADE_AMOUNT,
+  getAutoBuyRule,
   getAutoprinterPrintQuantity,
+  getMaxSuppliesPurchaseGold,
   OperationId,
+  resolveAutoBuySpendAmount,
   ResourceType,
+  shouldTriggerAutoBuy,
   type User,
 } from "ever-greater-shared";
 import {
@@ -49,29 +54,48 @@ export async function processAutoprinters(): Promise<{
     for (const user of users) {
       let currentUser = user;
       const desiredPrintQuantity = getAutoprinterPrintQuantity(currentUser);
+      const autoBuyRule = getAutoBuyRule(
+        currentUser.auto_buy_settings,
+        AutoBuyResourceKey.PRINTER_SUPPLIES,
+      );
 
       const needsAutoBuyRefill =
         currentUser.auto_buy_supplies_active &&
         currentUser.auto_buy_supplies_purchased &&
-        currentUser.printer_supplies < desiredPrintQuantity;
+        shouldTriggerAutoBuy(
+          currentUser.printer_supplies ?? 0,
+          desiredPrintQuantity,
+          autoBuyRule.threshold,
+        );
 
       if (needsAutoBuyRefill) {
-        try {
-          const refillResult = await executeOperationForUser(
-            currentUser.id,
-            OperationId.BUY_SUPPLIES,
-            undefined,
-            {
-              client,
-              currentUser,
-              globalTicketCount: 0,
-              allowPrintAutoBuyFallback: false,
-            },
-          );
-          currentUser = refillResult.user;
-        } catch (error) {
-          if (!(error instanceof OperationValidationError)) {
-            throw error;
+        const spendGold = resolveAutoBuySpendAmount(
+          autoBuyRule,
+          currentUser.gold ?? 0,
+          Math.min(
+            currentUser.gold ?? 0,
+            getMaxSuppliesPurchaseGold(currentUser),
+          ),
+        );
+
+        if (spendGold >= 1) {
+          try {
+            const refillResult = await executeOperationForUser(
+              currentUser.id,
+              OperationId.BUY_SUPPLIES,
+              { spendGold },
+              {
+                client,
+                currentUser,
+                globalTicketCount: 0,
+                allowPrintAutoBuyFallback: false,
+              },
+            );
+            currentUser = refillResult.user;
+          } catch (error) {
+            if (!(error instanceof OperationValidationError)) {
+              throw error;
+            }
           }
         }
       }

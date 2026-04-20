@@ -1,8 +1,16 @@
 import {
+  AutoBuyResourceKey,
+  getAutoBuyRule,
+  getManualPrintQuantity,
+  getMaxSuppliesPurchaseGold,
   OperationId,
   operations,
+  resolveAutoBuySpendAmount,
   ResourceType,
+  setAutoBuyRule,
+  shouldTriggerAutoBuy,
   validateOperation,
+  type ConfigureAutoBuyParams,
   type ResourceAmount,
   type User,
   type ValidationResult,
@@ -14,6 +22,7 @@ import {
   getUserById,
   incrementGlobalCount,
   purchaseAutoBuySupplies,
+  setAutoBuySettings,
   setAutoBuySuppliesActive,
 } from "./db-access.js";
 
@@ -49,14 +58,16 @@ export interface ExecutedOperationResult {
   user: User;
 }
 
-function isMissingPrinterSupplies(validation: ValidationResult): boolean {
-  return (
-    !validation.valid &&
-    validation.error === "Insufficient resources" &&
-    (validation.insufficientResources?.includes(
-      ResourceType.PRINTER_SUPPLIES,
-    ) ??
-      false)
+function getAutoBuySuppliesSpend(user: User): number {
+  const rule = getAutoBuyRule(
+    user.auto_buy_settings,
+    AutoBuyResourceKey.PRINTER_SUPPLIES,
+  );
+
+  return resolveAutoBuySpendAmount(
+    rule,
+    user.gold ?? 0,
+    Math.min(user.gold ?? 0, getMaxSuppliesPurchaseGold(user)),
   );
 }
 
@@ -66,14 +77,25 @@ async function maybeAutoBuyForPrint(
   globalTicketCount: number,
   client?: PoolClient,
 ): Promise<User> {
-  const printValidation = validateOperation(
-    currentUser,
-    operations[OperationId.PRINT_TICKET],
-    undefined,
-    globalTicketCount,
+  const printQuantity = getManualPrintQuantity(currentUser);
+  const autoBuyRule = getAutoBuyRule(
+    currentUser.auto_buy_settings,
+    AutoBuyResourceKey.PRINTER_SUPPLIES,
   );
 
-  if (!isMissingPrinterSupplies(printValidation)) {
+  if (
+    !shouldTriggerAutoBuy(
+      currentUser.printer_supplies ?? 0,
+      printQuantity,
+      autoBuyRule.threshold,
+    )
+  ) {
+    return currentUser;
+  }
+
+  const spendGold = getAutoBuySuppliesSpend(currentUser);
+
+  if (spendGold < 1) {
     return currentUser;
   }
 
@@ -81,7 +103,7 @@ async function maybeAutoBuyForPrint(
     const result = await executeOperationForUser(
       userId,
       OperationId.BUY_SUPPLIES,
-      undefined,
+      { spendGold },
       {
         client,
         currentUser,
@@ -103,6 +125,7 @@ async function applyValidatedOperation(
   userId: number,
   operationId: OperationId,
   params: Record<string, unknown> | undefined,
+  currentUser: User,
   cost: ResourceAmount,
   gain: ResourceAmount,
   client?: PoolClient,
@@ -117,6 +140,20 @@ async function applyValidatedOperation(
 
   if (operationId === OperationId.TOGGLE_AUTO_BUY_SUPPLIES) {
     return setAutoBuySuppliesActive(userId, params?.active as boolean, client);
+  }
+
+  if (operationId === OperationId.CONFIGURE_AUTO_BUY) {
+    const configureParams = params as ConfigureAutoBuyParams;
+
+    return setAutoBuySettings(
+      userId,
+      setAutoBuyRule(
+        currentUser.auto_buy_settings,
+        configureParams.resourceKey,
+        configureParams,
+      ),
+      client,
+    );
   }
 
   return executeResourceTransaction(userId, cost, gain, client);
@@ -169,6 +206,7 @@ export async function executeOperationForUser(
     userId,
     operationId,
     params,
+    userForValidation,
     validation.cost,
     validation.gain,
     options.client,

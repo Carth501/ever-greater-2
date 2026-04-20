@@ -5,6 +5,7 @@ import { useGame } from "../../hooks/useGame";
 import { useRealtime } from "../../hooks/useRealtime";
 import {
   DashboardAccountPanel,
+  DashboardAutoBuyManagementPanel,
   DashboardHeroSection,
   DashboardInsightsPanel,
   DashboardPrintPanel,
@@ -191,6 +192,14 @@ function DashboardPage({
                   onPrintTicket={printTicket}
                   printButtonDisabled={printButtonDisabled}
                   visibleSupplies={visibleSupplies}
+                />
+              )}
+
+              {panels.autoBuy && (
+                <DashboardAutoBuyManagementPanel
+                  hasLiveUser={hasLiveUser}
+                  manualPrintQuantity={manualPrintQuantity}
+                  user={dashboardUser}
                 />
               )}
 

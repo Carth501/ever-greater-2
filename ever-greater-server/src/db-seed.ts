@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import { getDefaultAutoBuySettings } from "ever-greater-shared";
 import { assertSeedCommandAllowed } from "./db-script-utils.js";
 import {
   closePool,
@@ -33,9 +34,10 @@ async function runSeedCommand(): Promise<void> {
           credit_capacity_level,
           ticket_batch_level,
           auto_buy_supplies_purchased,
-          auto_buy_supplies_active
+          auto_buy_supplies_active,
+          auto_buy_settings
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
         ON CONFLICT (email)
         DO UPDATE SET
           password_hash = EXCLUDED.password_hash,
@@ -50,7 +52,8 @@ async function runSeedCommand(): Promise<void> {
           credit_capacity_level = EXCLUDED.credit_capacity_level,
           ticket_batch_level = EXCLUDED.ticket_batch_level,
           auto_buy_supplies_purchased = EXCLUDED.auto_buy_supplies_purchased,
-          auto_buy_supplies_active = EXCLUDED.auto_buy_supplies_active
+          auto_buy_supplies_active = EXCLUDED.auto_buy_supplies_active,
+          auto_buy_settings = EXCLUDED.auto_buy_settings
         RETURNING id, email
       `,
       [
@@ -68,6 +71,7 @@ async function runSeedCommand(): Promise<void> {
         0,
         true,
         true,
+        getDefaultAutoBuySettings(),
       ],
     );
 

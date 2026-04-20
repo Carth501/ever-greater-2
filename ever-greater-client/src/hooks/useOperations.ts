@@ -1,3 +1,4 @@
+import type { ConfigureAutoBuyParams } from "ever-greater-shared";
 import { formatApiErrorForDisplay, type ApiErrorInfo } from "../api/client";
 import { operationHookDefinitions } from "../store/gameOperationThunks";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
@@ -9,6 +10,7 @@ type HookOperationHandlers = {
   buyAutoprinter: () => void;
   buyAutoBuySupplies: () => void;
   toggleAutoBuySupplies: (active: boolean) => void;
+  configureAutoBuy: (params: ConfigureAutoBuyParams) => void;
   increaseCreditGeneration: () => void;
   increaseTicketBatch: () => void;
   increaseManualPrintBatch: () => void;

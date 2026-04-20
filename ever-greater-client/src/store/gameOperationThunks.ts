@@ -1,4 +1,8 @@
 import { createAsyncThunk, type AsyncThunk } from "@reduxjs/toolkit";
+import {
+  AutoBuyScaleMode,
+  type ConfigureAutoBuyParams,
+} from "ever-greater-shared";
 import type { User } from "../api/auth";
 import { getApiErrorInfo } from "../api/client";
 import * as operationsApi from "../api/operations";
@@ -69,6 +73,9 @@ function defineGameOperationConfig<
 }
 
 const invalidQuantityMessage = "Invalid quantity. Must be a positive integer.";
+const invalidThresholdMessage = "Threshold must be a non-negative number.";
+const invalidAutoBuyScaleMessage =
+  "Custom auto-buy scale requires a numeric value.";
 
 const gameOperationConfigs = {
   buySupplies: defineGameOperationConfig({
@@ -163,6 +170,31 @@ const gameOperationConfigs = {
     mergesIntoAuthUser: true,
     exposeInOperationsHook: true,
   }),
+  configureAutoBuy: defineGameOperationConfig<ConfigureAutoBuyParams>({
+    typePrefix: "operations/configureAutoBuy",
+    execute: (params: ConfigureAutoBuyParams) =>
+      operationsApi.configureAutoBuy(params),
+    fallbackMessage: "Failed to update auto-buy settings",
+    tracksOperationsState: true,
+    mergesIntoAuthUser: true,
+    exposeInOperationsHook: true,
+    validate: (params: ConfigureAutoBuyParams) => {
+      if (!Number.isFinite(params.threshold) || params.threshold < 0) {
+        return invalidThresholdMessage;
+      }
+
+      if (
+        (params.scaleMode === AutoBuyScaleMode.CUSTOM_VALUE ||
+          params.scaleMode === AutoBuyScaleMode.CUSTOM_PERCENT) &&
+        (typeof params.scaleValue !== "number" ||
+          !Number.isFinite(params.scaleValue))
+      ) {
+        return invalidAutoBuyScaleMessage;
+      }
+
+      return null;
+    },
+  }),
   printTicket: defineGameOperationConfig({
     typePrefix: "operations/printTicket",
     execute: () => operationsApi.printTicket(),
@@ -215,6 +247,7 @@ export const increaseCreditCapacityThunk =
   gameOperationThunks.increaseCreditCapacity;
 export const toggleAutoBuySuppliesThunk =
   gameOperationThunks.toggleAutoBuySupplies;
+export const configureAutoBuyThunk = gameOperationThunks.configureAutoBuy;
 export const printTicketThunk = gameOperationThunks.printTicket;
 
 export const operationsStateThunks = selectGameOperationThunks(

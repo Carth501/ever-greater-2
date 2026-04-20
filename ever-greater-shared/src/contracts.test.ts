@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   applyTransaction,
+  AutoBuyResourceKey,
+  AutoBuyScaleMode,
   canAfford,
   clientOperationIds,
   getAutoprinterCost,
@@ -8,6 +10,7 @@ import {
   getCreditCapacityUpgradeCost,
   getCreditGenerationAmount,
   getCreditGenerationUpgradeCost,
+  getDefaultAutoBuySettings,
   getManualPrintBatchUpgradeCost,
   getManualPrintQuantity,
   getMaxCreditValue,
@@ -21,8 +24,10 @@ import {
   OperationId,
   operations,
   parseWebSocketMessage,
+  resolveAutoBuySpendAmount,
   type ResourceAmount,
   ResourceType,
+  shouldTriggerAutoBuy,
   type User,
   validateOperation,
   type WebSocketMessage,
@@ -47,6 +52,7 @@ function makeUser(overrides: Partial<User> = {}): User {
     supplies_batch_level: 0,
     auto_buy_supplies_purchased: false,
     auto_buy_supplies_active: false,
+    auto_buy_settings: getDefaultAutoBuySettings(),
     ...overrides,
   };
 }
@@ -91,7 +97,14 @@ describe("shared operation contracts", () => {
             ? { quantity: 3 }
             : operationId === OperationId.TOGGLE_AUTO_BUY_SUPPLIES
               ? { active: false }
-              : undefined;
+              : operationId === OperationId.CONFIGURE_AUTO_BUY
+                ? {
+                    resourceKey: AutoBuyResourceKey.PRINTER_SUPPLIES,
+                    threshold: 24,
+                    scaleMode: AutoBuyScaleMode.CUSTOM_PERCENT,
+                    scaleValue: 35,
+                  }
+                : undefined;
       const globalTicketCount =
         operationId === OperationId.INCREASE_CREDIT_CAPACITY ||
         operationId === OperationId.BUY_GEM
@@ -222,6 +235,114 @@ describe("shared operation contracts", () => {
       cost: {},
       gain: {},
     });
+  });
+
+  it("validates and normalizes configurable auto-buy rules", () => {
+    const user = makeUser();
+
+    expect(
+      validateOperation(user, operations[OperationId.CONFIGURE_AUTO_BUY], {
+        resourceKey: AutoBuyResourceKey.PRINTER_SUPPLIES,
+        threshold: 20,
+        scaleMode: AutoBuyScaleMode.CUSTOM_VALUE,
+        scaleValue: 3,
+      }),
+    ).toMatchObject({ valid: true, cost: {}, gain: {} });
+
+    expect(
+      validateOperation(user, operations[OperationId.CONFIGURE_AUTO_BUY], {
+        resourceKey: "unknown",
+        threshold: 20,
+        scaleMode: AutoBuyScaleMode.MAX,
+      }),
+    ).toMatchObject({
+      valid: false,
+      error: "'resourceKey' is required",
+    });
+
+    expect(
+      validateOperation(user, operations[OperationId.CONFIGURE_AUTO_BUY], {
+        resourceKey: AutoBuyResourceKey.PRINTER_SUPPLIES,
+        threshold: -1,
+        scaleMode: AutoBuyScaleMode.MAX,
+      }),
+    ).toMatchObject({
+      valid: false,
+      error: "'threshold' must be a non-negative number",
+    });
+  });
+
+  it("supports explicit auto-buy spend control for supplies purchases", () => {
+    const user = makeUser({ gold: 8, supplies_batch_level: 2 });
+
+    expect(
+      getOperationCost(operations[OperationId.BUY_SUPPLIES], {
+        user,
+        params: { spendGold: 2 },
+      }),
+    ).toEqual({ [ResourceType.GOLD]: 2 });
+    expect(
+      getOperationGain(operations[OperationId.BUY_SUPPLIES], {
+        user,
+        params: { spendGold: 2 },
+      }),
+    ).toEqual({ [ResourceType.PRINTER_SUPPLIES]: 400 });
+  });
+
+  it("resolves auto-buy spend scales against available gold", () => {
+    expect(
+      resolveAutoBuySpendAmount(
+        {
+          threshold: 0,
+          scaleMode: AutoBuyScaleMode.MIN,
+          scaleValue: 0,
+        },
+        12,
+        4,
+      ),
+    ).toBe(1);
+
+    expect(
+      resolveAutoBuySpendAmount(
+        {
+          threshold: 0,
+          scaleMode: AutoBuyScaleMode.CUSTOM_VALUE,
+          scaleValue: 6,
+        },
+        12,
+        4,
+      ),
+    ).toBe(4);
+
+    expect(
+      resolveAutoBuySpendAmount(
+        {
+          threshold: 0,
+          scaleMode: AutoBuyScaleMode.CUSTOM_PERCENT,
+          scaleValue: 26,
+        },
+        12,
+        6,
+      ),
+    ).toBe(3);
+
+    expect(
+      resolveAutoBuySpendAmount(
+        {
+          threshold: 0,
+          scaleMode: AutoBuyScaleMode.MAX,
+          scaleValue: 0,
+        },
+        12,
+        6,
+      ),
+    ).toBe(6);
+  });
+
+  it("triggers auto-buy when either threshold or required quantity is crossed", () => {
+    expect(shouldTriggerAutoBuy(5, 1, 8)).toBe(true);
+    expect(shouldTriggerAutoBuy(5, 6, 2)).toBe(true);
+    expect(shouldTriggerAutoBuy(8, 4, 6)).toBe(false);
   });
 
   it("scales supplies purchases with batch upgrades", () => {
@@ -530,6 +651,32 @@ describe("shared websocket contracts", () => {
     expect(
       parseWebSocketMessage({
         type: "USER_RESOURCE_UPDATE",
+        user_update: {
+          auto_buy_settings: {
+            printer_supplies: {
+              threshold: 12,
+              scaleMode: AutoBuyScaleMode.CUSTOM_PERCENT,
+              scaleValue: 40,
+            },
+          },
+        },
+      }),
+    ).toEqual({
+      type: "USER_RESOURCE_UPDATE",
+      user_update: {
+        auto_buy_settings: {
+          printer_supplies: {
+            threshold: 12,
+            scaleMode: AutoBuyScaleMode.CUSTOM_PERCENT,
+            scaleValue: 40,
+          },
+        },
+      },
+    });
+
+    expect(
+      parseWebSocketMessage({
+        type: "USER_RESOURCE_UPDATE",
         user_update: { credit_value: "3" },
       }),
     ).toBeNull();
@@ -541,6 +688,11 @@ describe("shared websocket contracts", () => {
       isUserResourceFields({
         credit_capacity_level: 4,
         auto_buy_supplies_purchased: false,
+      }),
+    ).toBe(true);
+    expect(
+      isUserResourceFields({
+        auto_buy_settings: getDefaultAutoBuySettings(),
       }),
     ).toBe(true);
     expect(isUserResourceFields({ unknown: 1 })).toBe(false);

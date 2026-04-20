@@ -1,4 +1,5 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
+import { AutoBuyResourceKey, AutoBuyScaleMode } from "ever-greater-shared";
 import type { PropsWithChildren } from "react";
 import { Provider } from "react-redux";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -56,6 +57,27 @@ describe("useOperations", () => {
       "Invalid quantity. Must be a positive integer.",
     );
     expect(mockOperationsApi.buyGold).not.toHaveBeenCalled();
+  });
+
+  it("dispatches configureAutoBuy through the shared runner", async () => {
+    mockOperationsApi.configureAutoBuy.mockResolvedValueOnce(mockUser());
+
+    const { result } = renderHook(() => useOperations(), {
+      wrapper: createWrapper(),
+    });
+
+    act(() => {
+      result.current.configureAutoBuy({
+        resourceKey: AutoBuyResourceKey.PRINTER_SUPPLIES,
+        threshold: 18,
+        scaleMode: AutoBuyScaleMode.CUSTOM_PERCENT,
+        scaleValue: 35,
+      });
+    });
+
+    await waitFor(() => {
+      expect(mockOperationsApi.configureAutoBuy).toHaveBeenCalledOnce();
+    });
   });
 
   it("surfaces rejected operation errors through the shared runner", async () => {

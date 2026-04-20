@@ -21,6 +21,7 @@ export type DashboardContent = {
     liveChipLabel: string;
     previewChipLabel: string;
   };
+  autoBuy: DashboardContentSection;
   shop: DashboardContentSection & {
     dockableGroupsLabel: string;
   };
@@ -65,6 +66,12 @@ export const dashboardContent: DashboardContent = {
       "The primary action stays obvious even when more panels are enabled.",
     liveChipLabel: "Live action",
     previewChipLabel: "Preview only",
+  },
+  autoBuy: {
+    regionLabel: "Auto-buy management",
+    heading: "Auto-buy management",
+    description:
+      "Tune the refill floor and spend scale without going back into the shop flow.",
   },
   shop: {
     regionLabel: "Shop overview",

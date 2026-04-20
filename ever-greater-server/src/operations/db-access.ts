@@ -4,5 +4,6 @@ export {
   getUserById,
   incrementGlobalCount,
   purchaseAutoBuySupplies,
+  setAutoBuySettings,
   setAutoBuySuppliesActive,
 } from "../db/users.js";

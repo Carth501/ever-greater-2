@@ -2,6 +2,7 @@ export type PanelId =
   | "account"
   | "ticket"
   | "print"
+  | "autoBuy"
   | "shop"
   | "status"
   | "insights";

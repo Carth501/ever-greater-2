@@ -7,18 +7,22 @@ import DashboardPage from "./DashboardPage";
 
 vi.mock("../../hooks/useAuth", () => ({ useAuth: vi.fn() }));
 vi.mock("../../hooks/useGame", () => ({ useGame: vi.fn() }));
+vi.mock("../../hooks/useOperations", () => ({ useOperations: vi.fn() }));
 vi.mock("../../hooks/useRealtime", () => ({ useRealtime: vi.fn() }));
 
 import { useAuth } from "../../hooks/useAuth";
 import { useGame } from "../../hooks/useGame";
+import { useOperations } from "../../hooks/useOperations";
 import { useRealtime } from "../../hooks/useRealtime";
 
 const mockedUseAuth = vi.mocked(useAuth);
 const mockedUseGame = vi.mocked(useGame);
+const mockedUseOperations = vi.mocked(useOperations);
 const mockedUseRealtime = vi.mocked(useRealtime);
 
 type AuthHookValue = ReturnType<typeof useAuth>;
 type GameHookValue = ReturnType<typeof useGame>;
+type OperationsHookValue = ReturnType<typeof useOperations>;
 type RealtimeHookValue = ReturnType<typeof useRealtime>;
 
 let printTicketSpy: GameHookValue["printTicket"];
@@ -73,11 +77,45 @@ function createRealtimeMockValue(
   };
 }
 
+function createOperationsMockValue(
+  overrides: Partial<OperationsHookValue> = {},
+): OperationsHookValue {
+  return {
+    isLoading: false,
+    error: null,
+    errorCode: null,
+    errorDetail: null,
+    buySupplies: vi.fn<() => void>(),
+    buyGold: vi.fn<(quantity: number) => void>(),
+    buyGem: vi.fn<() => void>(),
+    buyAutoprinter: vi.fn<() => void>(),
+    buyAutoBuySupplies: vi.fn<() => void>(),
+    toggleAutoBuySupplies: vi.fn<(active: boolean) => void>(),
+    configureAutoBuy:
+      vi.fn<
+        (
+          params: OperationsHookValue["configureAutoBuy"] extends (
+            arg: infer Arg,
+          ) => void
+            ? Arg
+            : never,
+        ) => void
+      >(),
+    increaseCreditGeneration: vi.fn<() => void>(),
+    increaseTicketBatch: vi.fn<() => void>(),
+    increaseManualPrintBatch: vi.fn<() => void>(),
+    increaseSuppliesBatch: vi.fn<() => void>(),
+    increaseCreditCapacity: vi.fn<() => void>(),
+    ...overrides,
+  };
+}
+
 describe("DashboardPage accessibility gate", () => {
   beforeEach(() => {
     printTicketSpy = vi.fn<() => void>();
     mockedUseAuth.mockReturnValue(createAuthMockValue());
     mockedUseGame.mockReturnValue(createGameMockValue());
+    mockedUseOperations.mockReturnValue(createOperationsMockValue());
     mockedUseRealtime.mockReturnValue(createRealtimeMockValue());
   });
 
@@ -108,6 +146,11 @@ describe("DashboardPage accessibility gate", () => {
       screen.getByRole("region", { name: dashboardContent.print.regionLabel }),
     ).toBeTruthy();
     expect(
+      screen.getByRole("region", {
+        name: dashboardContent.autoBuy.regionLabel,
+      }),
+    ).toBeTruthy();
+    expect(
       screen.getByRole("region", { name: dashboardContent.shop.regionLabel }),
     ).toBeTruthy();
     expect(
@@ -136,6 +179,11 @@ describe("DashboardPage accessibility gate", () => {
     ).toBeTruthy();
     expect(
       screen.getByRole("checkbox", { name: /print controls visibility/i }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("checkbox", {
+        name: /auto-buy management visibility/i,
+      }),
     ).toBeTruthy();
     expect(
       screen.getByRole("checkbox", { name: /shop modules visibility/i }),

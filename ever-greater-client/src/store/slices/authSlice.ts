@@ -26,6 +26,7 @@ type UserUpdatePayload = Partial<
     | "supplies_batch_level"
     | "auto_buy_supplies_purchased"
     | "auto_buy_supplies_active"
+    | "auto_buy_settings"
   >
 >;
 

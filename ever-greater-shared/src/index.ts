@@ -1,18 +1,34 @@
 // Export all resources types and utilities
 export {
+  areAutoBuySettingsEqual,
+  AutoBuyResourceKey,
+  AutoBuyScaleMode,
   CLIENT_USER_STATE_DEFAULTS,
   CLIENT_USER_STATE_FIELD_TYPES,
   CLIENT_USER_STATE_FIELDS,
   DB_FIELD_TO_RESOURCE,
+  getAutoBuyRule,
+  getDefaultAutoBuySettings,
   getUserResource,
   hasResources,
+  isAutoBuyResourceKey,
+  isAutoBuyRule,
+  isAutoBuyScaleMode,
+  isAutoBuySettings,
+  normalizeAutoBuyRule,
+  normalizeAutoBuySettings,
+  resolveAutoBuySpendAmount,
   RESOURCE_DB_FIELDS,
   ResourceType,
+  setAutoBuyRule,
   setUserResource,
+  shouldTriggerAutoBuy,
   toClientUserState,
 } from "./resources.js";
 
 export type {
+  AutoBuyRule,
+  AutoBuySettings,
   ClientUserState,
   ClientUserStateField,
   ResourceAmount,
@@ -60,6 +76,7 @@ export {
 } from "./operations.js";
 
 export type {
+  ConfigureAutoBuyParams,
   Operation,
   OperationContext,
   ResourceCalculator,

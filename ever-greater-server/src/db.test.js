@@ -107,7 +107,7 @@ describe('Database Functions', () => {
       const migrationInsertCalls = mockClient.query.mock.calls.filter((call) =>
         call[0].includes('INSERT INTO schema_migrations')
       );
-      expect(migrationInsertCalls).toHaveLength(9);
+      expect(migrationInsertCalls).toHaveLength(10);
       expect(mockClient.release).toHaveBeenCalled();
     });
 
@@ -205,7 +205,7 @@ describe('Database Functions', () => {
       mockClient.query.mockImplementation(async (query) => {
         if (query.includes('SELECT id FROM schema_migrations')) {
           return {
-            rows: [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }, { id: 5 }, { id: 6 }, { id: 7 }, { id: 8 }, { id: 9 }],
+            rows: [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }, { id: 5 }, { id: 6 }, { id: 7 }, { id: 8 }, { id: 9 }, { id: 10 }],
           };
         }
 
@@ -286,7 +286,7 @@ describe('Database Functions', () => {
 
         if (query.includes('SELECT id FROM schema_migrations')) {
           return {
-            rows: [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }, { id: 5 }, { id: 6 }, { id: 7 }, { id: 8 }, { id: 9 }],
+            rows: [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }, { id: 5 }, { id: 6 }, { id: 7 }, { id: 8 }, { id: 9 }, { id: 10 }],
           };
         }
 
@@ -457,6 +457,7 @@ describe('Database Functions', () => {
           0,
           false,
           false,
+          expect.any(Object),
         ]
       );
     });
@@ -794,7 +795,7 @@ describe('Database Functions', () => {
         1,
         1,
         OperationId.BUY_SUPPLIES,
-        undefined,
+        { spendGold: 1 },
         expect.objectContaining({
           client: mockClient,
           globalTicketCount: 0,

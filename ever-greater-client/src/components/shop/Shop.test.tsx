@@ -71,6 +71,7 @@ describe("Shop", () => {
       buyAutoprinter: vi.fn<() => void>(),
       buyAutoBuySupplies: vi.fn<() => void>(),
       toggleAutoBuySupplies: vi.fn<(active: boolean) => void>(),
+      configureAutoBuy: vi.fn<(params: unknown) => void>(),
       increaseCreditGeneration: vi.fn<() => void>(),
       increaseTicketBatch: vi.fn<() => void>(),
       increaseManualPrintBatch: vi.fn<() => void>(),

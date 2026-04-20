@@ -1,4 +1,11 @@
-import { OperationId, ResourceType, type User } from "ever-greater-shared";
+import {
+  AutoBuyResourceKey,
+  AutoBuyScaleMode,
+  getDefaultAutoBuySettings,
+  OperationId,
+  ResourceType,
+  type User,
+} from "ever-greater-shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as dbAccess from "./db-access.js";
 import {
@@ -13,6 +20,7 @@ vi.mock("./db-access.js", () => ({
   getUserById: vi.fn(),
   incrementGlobalCount: vi.fn(),
   purchaseAutoBuySupplies: vi.fn(),
+  setAutoBuySettings: vi.fn(),
   setAutoBuySuppliesActive: vi.fn(),
 }));
 
@@ -37,6 +45,7 @@ function makeUser(overrides: Partial<User> = {}): User {
     supplies_batch_level: 0,
     auto_buy_supplies_purchased: false,
     auto_buy_supplies_active: false,
+    auto_buy_settings: getDefaultAutoBuySettings(),
     ...overrides,
   };
 }
@@ -162,6 +171,47 @@ describe("executeOperationForUser", () => {
     expect(mockDbAccess.setAutoBuySuppliesActive).toHaveBeenCalledWith(
       1,
       false,
+      undefined,
+    );
+    expect(result.user).toEqual(updatedUser);
+  });
+
+  it("uses the special settings executor for CONFIGURE_AUTO_BUY", async () => {
+    const user = makeUser();
+    const updatedUser = makeUser({
+      auto_buy_settings: {
+        printer_supplies: {
+          threshold: 18,
+          scaleMode: AutoBuyScaleMode.CUSTOM_PERCENT,
+          scaleValue: 40,
+        },
+      },
+    });
+
+    mockDbAccess.getUserById.mockResolvedValue(user);
+    mockDbAccess.getGlobalCount.mockResolvedValue(100);
+    mockDbAccess.setAutoBuySettings.mockResolvedValue(updatedUser);
+
+    const result = await executeOperationForUser(
+      1,
+      OperationId.CONFIGURE_AUTO_BUY,
+      {
+        resourceKey: AutoBuyResourceKey.PRINTER_SUPPLIES,
+        threshold: 18,
+        scaleMode: AutoBuyScaleMode.CUSTOM_PERCENT,
+        scaleValue: 40,
+      },
+    );
+
+    expect(mockDbAccess.setAutoBuySettings).toHaveBeenCalledWith(
+      1,
+      {
+        printer_supplies: {
+          threshold: 18,
+          scaleMode: AutoBuyScaleMode.CUSTOM_PERCENT,
+          scaleValue: 40,
+        },
+      },
       undefined,
     );
     expect(result.user).toEqual(updatedUser);

@@ -1,4 +1,4 @@
-import { User } from "ever-greater-shared";
+import { normalizeAutoBuySettings, User } from "ever-greater-shared";
 import { Pool, type PoolClient } from "pg";
 import { getServerConfig } from "../config.js";
 
@@ -19,6 +19,7 @@ const USER_RESOURCE_COLUMNS = [
   "supplies_batch_level",
   "auto_buy_supplies_purchased",
   "auto_buy_supplies_active",
+  "auto_buy_settings",
 ] as const;
 
 const USER_NUMERIC_FIELDS = [
@@ -37,7 +38,7 @@ const USER_NUMERIC_FIELDS = [
 ] as const;
 
 type CoercibleUserRow = Partial<
-  Pick<User, (typeof USER_NUMERIC_FIELDS)[number]>
+  Pick<User, (typeof USER_NUMERIC_FIELDS)[number] | "auto_buy_settings">
 >;
 
 export type DbUser = User & {
@@ -101,6 +102,12 @@ export function coerceUserRowNumbersInPlace(userRow: CoercibleUserRow): void {
       userRow[field] = toNumber(userRow[field]);
     }
   });
+
+  if ("auto_buy_settings" in userRow) {
+    userRow.auto_buy_settings = normalizeAutoBuySettings(
+      userRow.auto_buy_settings,
+    );
+  }
 }
 
 export async function withPoolClient<T>(

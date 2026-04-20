@@ -1,13 +1,17 @@
-import type { User } from "ever-greater-shared";
+import {
+  getDefaultAutoBuySettings,
+  type AutoBuySettings,
+  type User,
+} from "ever-greater-shared";
 import type { PoolClient } from "pg";
 import {
   coerceUserRowNumbersInPlace,
-  type DbUser,
   pool,
   STARTING_PRINTER_SUPPLIES,
   toNumber,
   USER_AUTH_SELECT_COLUMNS,
   USER_SELECT_COLUMNS,
+  type DbUser,
 } from "./core.js";
 
 type QueryClient = PoolClient | typeof pool;
@@ -105,7 +109,7 @@ export async function createUser(
   passwordHash: string,
 ): Promise<User> {
   const result = await pool.query(
-    `INSERT INTO users (email, password_hash, printer_supplies, money, gold, gems, autoprinters, credit_value, credit_generation_level, credit_capacity_level, ticket_batch_level, manual_print_batch_level, supplies_batch_level, auto_buy_supplies_purchased, auto_buy_supplies_active) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING ${USER_SELECT_COLUMNS}`,
+    `INSERT INTO users (email, password_hash, printer_supplies, money, gold, gems, autoprinters, credit_value, credit_generation_level, credit_capacity_level, ticket_batch_level, manual_print_batch_level, supplies_batch_level, auto_buy_supplies_purchased, auto_buy_supplies_active, auto_buy_settings) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) RETURNING ${USER_SELECT_COLUMNS}`,
     [
       email,
       passwordHash,
@@ -122,6 +126,7 @@ export async function createUser(
       0,
       false,
       false,
+      getDefaultAutoBuySettings(),
     ],
   );
 
@@ -191,6 +196,29 @@ export async function setAutoBuySuppliesActive(
 
   if (!result.rows[0]) {
     throw new Error("Auto-buy supplies not unlocked");
+  }
+
+  return hydrateUserWithWithdrawals(result.rows[0] as User, client);
+}
+
+export async function setAutoBuySettings(
+  userId: number,
+  autoBuySettings: AutoBuySettings,
+  client?: PoolClient,
+): Promise<User> {
+  const dbClient: QueryClient = client ?? pool;
+  const result = await dbClient.query(
+    `
+      UPDATE users
+      SET auto_buy_settings = $1
+      WHERE id = $2
+      RETURNING ${USER_SELECT_COLUMNS}
+    `,
+    [autoBuySettings, userId],
+  );
+
+  if (!result.rows[0]) {
+    throw new Error("User not found");
   }
 
   return hydrateUserWithWithdrawals(result.rows[0] as User, client);
