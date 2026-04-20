@@ -105,8 +105,8 @@ describe("DashboardAutoBuyManagementPanel", () => {
     });
     fireEvent.mouseDown(screen.getByRole("combobox", { name: "Gold scale" }));
     fireEvent.click(screen.getByRole("option", { name: "Custom Value" }));
-    fireEvent.change(screen.getByLabelText("Gold custom value"), {
-      target: { value: "3" },
+    fireEvent.change(screen.getByLabelText("Money custom value"), {
+      target: { value: "300" },
     });
     fireEvent.click(
       screen.getByRole("button", { name: /save gold settings/i }),
@@ -118,6 +118,33 @@ describe("DashboardAutoBuyManagementPanel", () => {
       scaleMode: AutoBuyScaleMode.CUSTOM_VALUE,
       scaleValue: 3,
     });
+  });
+
+  it("shows the gold custom value field using the automated operation spend resource", () => {
+    render(
+      <DashboardAutoBuyManagementPanel
+        hasLiveUser
+        manualPrintQuantity={4}
+        user={mockUser({
+          money: 1200,
+          gold: 2,
+          auto_buy_supplies_purchased: true,
+          auto_buy_supplies_active: true,
+          auto_buy_settings: {
+            ...getDefaultAutoBuySettings(),
+            gold: {
+              threshold: 5,
+              scaleMode: AutoBuyScaleMode.CUSTOM_VALUE,
+              scaleValue: 3,
+            },
+          },
+        })}
+      />,
+    );
+
+    expect(
+      (screen.getByLabelText("Money custom value") as HTMLInputElement).value,
+    ).toBe("300");
   });
 
   it("shows gold preview action with money first and gold second", () => {

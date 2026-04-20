@@ -13,6 +13,7 @@ import {
   getMaxAffordableGoldQuantity,
   getMaxSuppliesPurchaseGold,
   getOperationCost,
+  getOperationGain,
   OperationId,
   operations,
   resolveAutoBuySpendAmount,
@@ -64,6 +65,11 @@ const managedResourceKeys = [
   AutoBuyResourceKey.PRINTER_SUPPLIES,
   AutoBuyResourceKey.GOLD,
 ] as const;
+
+const automatedOperationIds: Record<AutoBuyResourceKey, OperationId> = {
+  [AutoBuyResourceKey.PRINTER_SUPPLIES]: OperationId.BUY_SUPPLIES,
+  [AutoBuyResourceKey.GOLD]: OperationId.BUY_GOLD,
+};
 
 const scaleOptions = [
   { value: AutoBuyScaleMode.MIN, label: "Min" },
@@ -124,6 +130,135 @@ function isCustomScaleMode(scaleMode: AutoBuyScaleMode): boolean {
   );
 }
 
+function getPrimaryResourceType(
+  amount: Partial<Record<ResourceType, number>>,
+): ResourceType | null {
+  const [resourceType] = Object.keys(amount) as ResourceType[];
+
+  return resourceType ?? null;
+}
+
+function getResourceDisplayLabel(resourceType: ResourceType | null): string {
+  switch (resourceType) {
+    case ResourceType.PRINTER_SUPPLIES:
+      return "Printer supplies";
+    case ResourceType.MONEY:
+      return "Money";
+    case ResourceType.GOLD:
+      return "Gold";
+    case ResourceType.GEMS:
+      return "Gems";
+    case ResourceType.CREDIT:
+      return "Credit";
+    case ResourceType.GLOBAL_TICKETS:
+      return "Tickets";
+    case ResourceType.AUTOPRINTERS:
+      return "Autoprinters";
+    default:
+      return "Resource";
+  }
+}
+
+function getResourceDisplayNoun(resourceType: ResourceType | null): string {
+  return getResourceDisplayLabel(resourceType).toLowerCase();
+}
+
+function getAutomatedOperationId(resourceKey: AutoBuyResourceKey): OperationId {
+  return automatedOperationIds[resourceKey];
+}
+
+function getSpendResourceType(
+  resourceKey: AutoBuyResourceKey,
+  user: User,
+): ResourceType | null {
+  return getPrimaryResourceType(
+    getOperationCost(operations[getAutomatedOperationId(resourceKey)], {
+      user,
+      params: { quantity: 1 },
+    }),
+  );
+}
+
+function getManagedResourceType(
+  resourceKey: AutoBuyResourceKey,
+  user: User,
+): ResourceType | null {
+  return getPrimaryResourceType(
+    getOperationGain(operations[getAutomatedOperationId(resourceKey)], {
+      user,
+      params: { quantity: 1 },
+    }),
+  );
+}
+
+function getGoldUnitMoneyCost(user: User): number {
+  return (
+    getOperationCost(operations[OperationId.BUY_GOLD], {
+      user,
+      params: { quantity: 1 },
+    })[ResourceType.MONEY] ?? 100
+  );
+}
+
+function toDisplayedScaleValue(
+  resourceKey: AutoBuyResourceKey,
+  user: User,
+  scaleMode: AutoBuyScaleMode,
+  internalScaleValue: number,
+): string {
+  if (!isCustomScaleMode(scaleMode)) {
+    return "";
+  }
+
+  if (
+    resourceKey === AutoBuyResourceKey.GOLD &&
+    scaleMode === AutoBuyScaleMode.CUSTOM_VALUE
+  ) {
+    return String(internalScaleValue * getGoldUnitMoneyCost(user));
+  }
+
+  return String(internalScaleValue);
+}
+
+function toInternalScaleValue(
+  resourceKey: AutoBuyResourceKey,
+  user: User,
+  scaleMode: AutoBuyScaleMode,
+  displayScaleValue: string,
+): number {
+  const normalizedDisplayValue = clampScaleValueInput(
+    displayScaleValue,
+    scaleMode,
+  );
+
+  if (
+    resourceKey === AutoBuyResourceKey.GOLD &&
+    scaleMode === AutoBuyScaleMode.CUSTOM_VALUE
+  ) {
+    return Math.max(
+      1,
+      Math.floor(normalizedDisplayValue / getGoldUnitMoneyCost(user)),
+    );
+  }
+
+  return normalizedDisplayValue;
+}
+
+function getCustomValueMinimum(
+  resourceKey: AutoBuyResourceKey,
+  user: User,
+  scaleMode: AutoBuyScaleMode,
+): number {
+  if (
+    resourceKey === AutoBuyResourceKey.GOLD &&
+    scaleMode === AutoBuyScaleMode.CUSTOM_VALUE
+  ) {
+    return getGoldUnitMoneyCost(user);
+  }
+
+  return 1;
+}
+
 function buildRuleDraft(
   resourceKey: AutoBuyResourceKey,
   user: User,
@@ -133,7 +268,12 @@ function buildRuleDraft(
   return {
     thresholdInput: String(rule.threshold),
     scaleMode: rule.scaleMode,
-    scaleValueInput: getScaleValueInputValue(rule.scaleMode, rule.scaleValue),
+    scaleValueInput: toDisplayedScaleValue(
+      resourceKey,
+      user,
+      rule.scaleMode,
+      rule.scaleValue,
+    ),
   };
 }
 
@@ -153,10 +293,17 @@ function buildManagedAutoBuyResource(
   draft: AutoBuyRuleDraft,
 ): ManagedAutoBuyResource {
   const currentRule = getAutoBuyRule(user.auto_buy_settings, resourceKey);
+  const spendResourceType = getSpendResourceType(resourceKey, user);
+  const spendResourceLabel = getResourceDisplayLabel(spendResourceType);
+  const spendResourceNoun = getResourceDisplayNoun(spendResourceType);
+  const managedResourceType = getManagedResourceType(resourceKey, user);
+  const managedResourceLabel = getResourceDisplayLabel(managedResourceType);
   const normalizedThreshold = clampThresholdInput(draft.thresholdInput);
-  const normalizedScaleValue = clampScaleValueInput(
-    draft.scaleValueInput,
+  const normalizedScaleValue = toInternalScaleValue(
+    resourceKey,
+    user,
     draft.scaleMode,
+    draft.scaleValueInput,
   );
   const usesCustomScaleValue = isCustomScaleMode(draft.scaleMode);
   const hasDraftChanges =
@@ -183,20 +330,20 @@ function buildManagedAutoBuyResource(
 
     return {
       key: resourceKey,
-      title: "Printer supplies",
-      thresholdLabel: "Printer supplies threshold",
-      scaleLabel: "Printer supplies scale",
+      title: managedResourceLabel,
+      thresholdLabel: `${managedResourceLabel} threshold`,
+      scaleLabel: `${managedResourceLabel} scale`,
       customScaleLabel:
         draft.scaleMode === AutoBuyScaleMode.CUSTOM_PERCENT
-          ? "Printer supplies custom percent"
-          : "Printer supplies custom value",
+          ? `${spendResourceLabel} custom percent`
+          : `${spendResourceLabel} custom value`,
       thresholdHelperText:
         "Attempt a refill once supplies dip below this floor.",
-      scaleHelperText: "Choose how aggressively auto-buy spends gold.",
+      scaleHelperText: `Choose how aggressively auto-buy spends ${spendResourceNoun}.`,
       customHelperText:
         draft.scaleMode === AutoBuyScaleMode.CUSTOM_PERCENT
-          ? "Rounded and clamped to 1-100% of current gold."
-          : "Spend a fixed amount of gold when the rule triggers.",
+          ? `Rounded and clamped to 1-100% of available ${spendResourceNoun}.`
+          : `Spend a fixed amount of ${spendResourceNoun} when the rule triggers.`,
       currentValue: user.printer_supplies,
       currentValueSuffix: "supplies",
       triggerFloor,
@@ -230,20 +377,20 @@ function buildManagedAutoBuyResource(
 
   return {
     key: resourceKey,
-    title: "Gold",
-    thresholdLabel: "Gold threshold",
-    scaleLabel: "Gold scale",
+    title: managedResourceLabel,
+    thresholdLabel: `${managedResourceLabel} threshold`,
+    scaleLabel: `${managedResourceLabel} scale`,
     customScaleLabel:
       draft.scaleMode === AutoBuyScaleMode.CUSTOM_PERCENT
-        ? "Gold custom percent"
-        : "Gold custom value",
+        ? `${spendResourceLabel} custom percent`
+        : `${spendResourceLabel} custom value`,
     thresholdHelperText:
       "Attempt a gold purchase once reserves dip below this floor.",
-    scaleHelperText: "Choose how aggressively auto-buy buys gold.",
+    scaleHelperText: `Choose how aggressively auto-buy spends ${spendResourceNoun}.`,
     customHelperText:
       draft.scaleMode === AutoBuyScaleMode.CUSTOM_PERCENT
-        ? "Rounded and clamped to 1-100% of the gold you can currently afford."
-        : "Buy a fixed amount of gold when the rule triggers.",
+        ? `Rounded to whole purchases and clamped to 1-100% of available ${spendResourceNoun}.`
+        : `Spend a fixed amount of ${spendResourceNoun} when the rule triggers.`,
     currentValue: user.gold,
     currentValueSuffix: "gold",
     triggerFloor: normalizedThreshold,
@@ -472,7 +619,11 @@ export function DashboardAutoBuyManagementPanel({
                         })
                       }
                       inputProps={{
-                        min: 1,
+                        min: getCustomValueMinimum(
+                          resource.key,
+                          user,
+                          drafts[resource.key].scaleMode,
+                        ),
                         max:
                           drafts[resource.key].scaleMode ===
                           AutoBuyScaleMode.CUSTOM_PERCENT
