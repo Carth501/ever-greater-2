@@ -286,6 +286,21 @@ function buildDrafts(user: User): Record<AutoBuyResourceKey, AutoBuyRuleDraft> {
   ) as Record<AutoBuyResourceKey, AutoBuyRuleDraft>;
 }
 
+function getAutoBuySettingsSignature(
+  settings: User["auto_buy_settings"],
+): string {
+  const printerSuppliesRule = getAutoBuyRule(
+    settings,
+    AutoBuyResourceKey.PRINTER_SUPPLIES,
+  );
+  const goldRule = getAutoBuyRule(settings, AutoBuyResourceKey.GOLD);
+
+  return [
+    `${AutoBuyResourceKey.PRINTER_SUPPLIES}:${printerSuppliesRule.threshold}:${printerSuppliesRule.scaleMode}:${printerSuppliesRule.scaleValue}`,
+    `${AutoBuyResourceKey.GOLD}:${goldRule.threshold}:${goldRule.scaleMode}:${goldRule.scaleValue}`,
+  ].join("|");
+}
+
 function buildManagedAutoBuyResource(
   resourceKey: AutoBuyResourceKey,
   user: User,
@@ -413,6 +428,9 @@ export function DashboardAutoBuyManagementPanel({
 }: DashboardAutoBuyManagementPanelProps) {
   const headingId = useId();
   const descriptionId = useId();
+  const autoBuySettingsSignature = getAutoBuySettingsSignature(
+    user.auto_buy_settings,
+  );
   const [drafts, setDrafts] = useState<
     Record<AutoBuyResourceKey, AutoBuyRuleDraft>
   >(() => buildDrafts(user));
@@ -421,7 +439,7 @@ export function DashboardAutoBuyManagementPanel({
 
   useEffect(() => {
     setDrafts(buildDrafts(user));
-  }, [user.auto_buy_settings]);
+  }, [autoBuySettingsSignature, user.id]);
 
   const managedResources = managedResourceKeys.map((resourceKey) =>
     buildManagedAutoBuyResource(

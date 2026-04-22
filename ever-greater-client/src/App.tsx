@@ -72,12 +72,12 @@ function App() {
     };
   }, []);
 
-  // Fetch initial ticket count when authenticated
+  // Fetch initial ticket count when the authenticated user changes
   useEffect(() => {
     if (currentUser) {
       dispatch(fetchCountThunk());
     }
-  }, [currentUser, dispatch]);
+  }, [currentUser?.id, dispatch]);
 
   async function handleLogout() {
     dispatch(logoutThunk());

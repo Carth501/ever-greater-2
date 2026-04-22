@@ -45,6 +45,90 @@ describe("DashboardAutoBuyManagementPanel", () => {
     mockedUseOperations.mockReturnValue(createOperationsMockValue());
   });
 
+  it("preserves unsaved edits when auto-buy settings values are unchanged", () => {
+    const baseUser = mockUser({
+      gold: 12,
+      auto_buy_supplies_purchased: true,
+      auto_buy_supplies_active: true,
+      auto_buy_settings: getDefaultAutoBuySettings(),
+    });
+    const { rerender } = render(
+      <DashboardAutoBuyManagementPanel
+        hasLiveUser
+        manualPrintQuantity={4}
+        user={baseUser}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Printer supplies threshold"), {
+      target: { value: "18" },
+    });
+
+    rerender(
+      <DashboardAutoBuyManagementPanel
+        hasLiveUser
+        manualPrintQuantity={4}
+        user={{
+          ...baseUser,
+          money: 250,
+          auto_buy_settings: {
+            printer_supplies: {
+              ...baseUser.auto_buy_settings.printer_supplies,
+            },
+            gold: { ...baseUser.auto_buy_settings.gold },
+          },
+        }}
+      />,
+    );
+
+    expect(
+      (screen.getByLabelText("Printer supplies threshold") as HTMLInputElement)
+        .value,
+    ).toBe("18");
+  });
+
+  it("resets drafts when auto-buy settings values actually change", () => {
+    const baseUser = mockUser({
+      gold: 12,
+      auto_buy_supplies_purchased: true,
+      auto_buy_supplies_active: true,
+      auto_buy_settings: getDefaultAutoBuySettings(),
+    });
+    const { rerender } = render(
+      <DashboardAutoBuyManagementPanel
+        hasLiveUser
+        manualPrintQuantity={4}
+        user={baseUser}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Printer supplies threshold"), {
+      target: { value: "18" },
+    });
+
+    rerender(
+      <DashboardAutoBuyManagementPanel
+        hasLiveUser
+        manualPrintQuantity={4}
+        user={{
+          ...baseUser,
+          auto_buy_settings: {
+            ...baseUser.auto_buy_settings,
+            printer_supplies: {
+              ...baseUser.auto_buy_settings.printer_supplies,
+              threshold: 9,
+            },
+          },
+        }}
+      />,
+    );
+
+    expect(
+      (screen.getByLabelText("Printer supplies threshold") as HTMLInputElement)
+        .value,
+    ).toBe("9");
+  });
+
   it("saves updated printer supplies rules through configureAutoBuy", () => {
     const configureAutoBuy = vi.fn<(params: unknown) => void>();
     mockedUseOperations.mockReturnValue(
