@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { createEvent, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { useAuth } from "../../hooks/useAuth";
 import { useGame } from "../../hooks/useGame";
@@ -85,6 +85,8 @@ describe("Shop", () => {
     vi.mocked(useOperations).mockReturnValue({
       ...operationsValue,
     });
+
+    return { authValue, gameValue, operationsValue };
   }
 
   it("renders consumable purchases only", () => {
@@ -131,5 +133,94 @@ describe("Shop", () => {
     expect(
       screen.getByText("Current purchase: 600 supplies for 3g"),
     ).toBeTruthy();
+  });
+
+  it("enables gold buying only when the entered quantity is affordable", () => {
+    const { operationsValue } = mockDependencies();
+
+    render(<Shop />);
+
+    const quantityInput = screen.getByLabelText("Gold quantity");
+    const buyGoldButton = screen.getByRole("button", { name: "Buy Gold" });
+
+    fireEvent.change(quantityInput, { target: { value: "11" } });
+    expect((buyGoldButton as HTMLButtonElement).disabled).toBe(true);
+
+    fireEvent.change(quantityInput, { target: { value: "10" } });
+    expect((buyGoldButton as HTMLButtonElement).disabled).toBe(false);
+
+    fireEvent.click(buyGoldButton);
+
+    expect(operationsValue.buyGold).toHaveBeenCalledWith(10);
+  });
+
+  it("keeps the entered gold quantity after a purchase rerender", () => {
+    const { authValue, operationsValue } = mockDependencies();
+
+    const { rerender } = render(<Shop />);
+    const quantityInput = screen.getByLabelText(
+      "Gold quantity",
+    ) as HTMLInputElement;
+
+    fireEvent.change(quantityInput, { target: { value: "7" } });
+    fireEvent.click(screen.getByRole("button", { name: "Buy Gold" }));
+
+    expect(operationsValue.buyGold).toHaveBeenCalledWith(7);
+
+    vi.mocked(useAuth).mockReturnValue({
+      ...authValue,
+      user: mockUser({
+        ...authValue.user,
+        money: 300,
+        gold: (authValue.user.gold ?? 0) + 7,
+      }),
+    });
+
+    rerender(<Shop />);
+
+    expect(
+      (screen.getByLabelText("Gold quantity") as HTMLInputElement).value,
+    ).toBe("7");
+    expect(
+      (screen.getByRole("button", { name: "Buy Gold" }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+  });
+
+  it("adjusts the gold quantity and consumes mouse wheel scrolling while hovered", () => {
+    mockDependencies();
+
+    render(<Shop />);
+
+    const quantityInput = screen.getByLabelText(
+      "Gold quantity",
+    ) as HTMLInputElement;
+
+    const increaseWheelEvent = createEvent.wheel(quantityInput, {
+      deltaY: -100,
+      cancelable: true,
+    });
+    const increasePreventDefault = vi.fn();
+    increaseWheelEvent.preventDefault = increasePreventDefault;
+
+    fireEvent(quantityInput, increaseWheelEvent);
+
+    expect(increasePreventDefault).toHaveBeenCalled();
+    expect(quantityInput.value).toBe("2");
+
+    const decreaseWheelEvent = createEvent.wheel(quantityInput, {
+      deltaY: 100,
+      cancelable: true,
+    });
+    const decreasePreventDefault = vi.fn();
+    decreaseWheelEvent.preventDefault = decreasePreventDefault;
+
+    fireEvent(quantityInput, decreaseWheelEvent);
+
+    expect(decreasePreventDefault).toHaveBeenCalled();
+    expect(quantityInput.value).toBe("1");
+
+    fireEvent.wheel(quantityInput, { deltaY: 100 });
+    expect(quantityInput.value).toBe("1");
   });
 });

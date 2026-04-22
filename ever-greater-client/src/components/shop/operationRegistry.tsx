@@ -94,27 +94,6 @@ const shopRegistry: RegistryEntry[] = [
         <ShopMoneyGroup
           money={money}
           goldCostPerUnit={goldCostPerUnit}
-          canAffordGold1={canAfford(user, {
-            [ResourceType.MONEY]:
-              getOperationCost(buyGoldOperation, {
-                user,
-                params: { quantity: 1 },
-              })[ResourceType.MONEY] ?? 0,
-          })}
-          canAffordGold10={canAfford(user, {
-            [ResourceType.MONEY]:
-              getOperationCost(buyGoldOperation, {
-                user,
-                params: { quantity: 10 },
-              })[ResourceType.MONEY] ?? 0,
-          })}
-          canAffordGold100={canAfford(user, {
-            [ResourceType.MONEY]:
-              getOperationCost(buyGoldOperation, {
-                user,
-                params: { quantity: 100 },
-              })[ResourceType.MONEY] ?? 0,
-          })}
           onBuyGold={handlers.buyGold}
         />
       );

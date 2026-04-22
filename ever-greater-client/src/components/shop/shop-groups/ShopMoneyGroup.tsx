@@ -1,26 +1,74 @@
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
-import { JSX } from "react";
+import { JSX, useState, type WheelEvent } from "react";
 import { ShopGroup, ShopRow } from "./ShopGroupLayout";
 
 type ShopMoneyGroupProps = {
   money: number;
   goldCostPerUnit: number;
-  canAffordGold1: boolean;
-  canAffordGold10: boolean;
-  canAffordGold100: boolean;
   onBuyGold: (quantity: number) => void;
 };
+
+function parseGoldQuantity(value: string): number | null {
+  const trimmedValue = value.trim();
+
+  if (trimmedValue === "") {
+    return null;
+  }
+
+  const parsedValue = Number(trimmedValue);
+
+  if (!Number.isSafeInteger(parsedValue) || parsedValue < 1) {
+    return null;
+  }
+
+  return parsedValue;
+}
+
+function getScrolledGoldQuantity(value: string, deltaY: number): string {
+  const currentQuantity = parseGoldQuantity(value);
+
+  if (deltaY === 0) {
+    return value;
+  }
+
+  if (currentQuantity === null) {
+    return "1";
+  }
+
+  const nextQuantity =
+    deltaY < 0 ? currentQuantity + 1 : Math.max(1, currentQuantity - 1);
+
+  return String(nextQuantity);
+}
 
 function ShopMoneyGroup({
   money,
   goldCostPerUnit,
-  canAffordGold1,
-  canAffordGold10,
-  canAffordGold100,
   onBuyGold,
 }: ShopMoneyGroupProps): JSX.Element {
+  const [goldQuantityInput, setGoldQuantityInput] = useState("1");
+  const goldQuantity = parseGoldQuantity(goldQuantityInput);
+  const maxAffordableGoldQuantity =
+    goldCostPerUnit > 0
+      ? Math.floor(money / goldCostPerUnit)
+      : Number.MAX_SAFE_INTEGER;
+  const canBuyGold =
+    goldQuantity !== null && goldQuantity <= maxAffordableGoldQuantity;
+
+  const handleGoldQuantityWheel = (event: WheelEvent<HTMLDivElement>) => {
+    if (!(event.target instanceof HTMLInputElement)) {
+      return;
+    }
+
+    event.preventDefault();
+    setGoldQuantityInput((currentValue) =>
+      getScrolledGoldQuantity(currentValue, event.deltaY),
+    );
+  };
+
   return (
     <ShopGroup>
       <Typography variant="body2" color="text.secondary">
@@ -44,29 +92,29 @@ function ShopMoneyGroup({
             flexWrap: "wrap",
           }}
         >
+          <TextField
+            label="Gold quantity"
+            type="number"
+            value={goldQuantityInput}
+            onChange={(event) => setGoldQuantityInput(event.target.value)}
+            onWheelCapture={handleGoldQuantityWheel}
+            inputProps={{ min: 1, step: 1 }}
+            size="small"
+            sx={{ width: 144 }}
+          />
           <Button
-            onClick={() => onBuyGold(1)}
+            onClick={() => {
+              if (goldQuantity === null || !canBuyGold) {
+                return;
+              }
+
+              onBuyGold(goldQuantity);
+            }}
             variant="contained"
-            disabled={!canAffordGold1}
+            disabled={!canBuyGold}
             size="small"
           >
-            Buy 1
-          </Button>
-          <Button
-            onClick={() => onBuyGold(10)}
-            variant="contained"
-            disabled={!canAffordGold10}
-            size="small"
-          >
-            Buy 10
-          </Button>
-          <Button
-            onClick={() => onBuyGold(100)}
-            variant="contained"
-            disabled={!canAffordGold100}
-            size="small"
-          >
-            Buy 100
+            Buy Gold
           </Button>
         </Box>
       </ShopRow>
