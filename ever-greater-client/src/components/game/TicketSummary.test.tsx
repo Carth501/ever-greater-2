@@ -22,6 +22,17 @@ describe("TicketSummary", () => {
     printer_supplies: 10,
     money: 100,
     gold: 50,
+    money_per_ticket_level: 2,
+    credit_value: 100,
+    credit_capacity_level: 200,
+    credit_generation_level: 1,
+  });
+  const baseUser = mockUser({
+    tickets_contributed: 250,
+    printer_supplies: 10,
+    money: 100,
+    gold: 50,
+    money_per_ticket_level: 0,
     credit_value: 100,
     credit_capacity_level: 200,
     credit_generation_level: 1,
@@ -55,5 +66,18 @@ describe("TicketSummary", () => {
     render(<TicketSummary user={user} scalingNumber={1000} />);
 
     expect(screen.getByTestId("ticket-draw-capacity")).toBeTruthy();
+  });
+
+  it("should display the current money earned per ticket", () => {
+    render(<TicketSummary user={user} scalingNumber={1000} />);
+
+    expect(screen.getByText("Money per Ticket")).toBeTruthy();
+    expect(screen.getByText("3")).toBeTruthy();
+  });
+
+  it("should hide money per ticket before the first upgrade is purchased", () => {
+    render(<TicketSummary user={baseUser} scalingNumber={1000} />);
+
+    expect(screen.queryByText("Money per Ticket")).toBeNull();
   });
 });

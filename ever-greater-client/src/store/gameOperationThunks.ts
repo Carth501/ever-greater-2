@@ -154,6 +154,14 @@ const gameOperationConfigs = {
     mergesIntoAuthUser: true,
     exposeInOperationsHook: true,
   }),
+  increaseMoneyPerTicket: defineGameOperationConfig({
+    typePrefix: "operations/increaseMoneyPerTicket",
+    execute: () => operationsApi.increaseMoneyPerTicket(),
+    fallbackMessage: "Failed to increase money per ticket",
+    tracksOperationsState: true,
+    mergesIntoAuthUser: true,
+    exposeInOperationsHook: true,
+  }),
   increaseCreditCapacity: defineGameOperationConfig({
     typePrefix: "operations/increaseCreditCapacity",
     execute: () => operationsApi.increaseCreditCapacity(),
@@ -243,6 +251,8 @@ export const increaseManualPrintBatchThunk =
   gameOperationThunks.increaseManualPrintBatch;
 export const increaseSuppliesBatchThunk =
   gameOperationThunks.increaseSuppliesBatch;
+export const increaseMoneyPerTicketThunk =
+  gameOperationThunks.increaseMoneyPerTicket;
 export const increaseCreditCapacityThunk =
   gameOperationThunks.increaseCreditCapacity;
 export const toggleAutoBuySuppliesThunk =

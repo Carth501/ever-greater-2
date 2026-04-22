@@ -105,6 +105,7 @@ function createOperationsMockValue(
     increaseTicketBatch: vi.fn<() => void>(),
     increaseManualPrintBatch: vi.fn<() => void>(),
     increaseSuppliesBatch: vi.fn<() => void>(),
+    increaseMoneyPerTicket: vi.fn<() => void>(),
     increaseCreditCapacity: vi.fn<() => void>(),
     ...overrides,
   };

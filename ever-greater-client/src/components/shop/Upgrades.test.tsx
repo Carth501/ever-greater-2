@@ -76,6 +76,7 @@ describe("Upgrades", () => {
       increaseTicketBatch: vi.fn<() => void>(),
       increaseManualPrintBatch: vi.fn<() => void>(),
       increaseSuppliesBatch: vi.fn<() => void>(),
+      increaseMoneyPerTicket: vi.fn<() => void>(),
       increaseCreditCapacity: vi.fn<() => void>(),
     };
 
@@ -105,6 +106,7 @@ describe("Upgrades", () => {
     expect(screen.queryByText("200 Supplies")).toBeNull();
     expect(screen.queryByText("Gold", { exact: true })).toBeNull();
     expect(screen.queryByText("Buy Gem")).toBeNull();
+    expect(screen.queryByText("Increase Money Per Ticket")).toBeNull();
   });
 
   it("keeps the autoprinter upgrade behind the existing late-game threshold", () => {
@@ -119,6 +121,19 @@ describe("Upgrades", () => {
     expect(screen.getByText("Increase Supplies Batch")).toBeTruthy();
     expect(screen.getByText("Increase Credit Capacity")).toBeTruthy();
     expect(screen.queryByText("Buy Gem")).toBeNull();
+    expect(screen.queryByText("Increase Money Per Ticket")).toBeNull();
+  });
+
+  it("unlocks gem upgrades once the player reaches 2000 ticket capacity", () => {
+    mockDependencies({ tickets_contributed: 2000, gems: 12 });
+
+    render(<Upgrades />);
+
+    expect(screen.getByText("Increase Money Per Ticket")).toBeTruthy();
+    expect(screen.getByText("Cost: 3 gems · Lvl 0")).toBeTruthy();
+    expect(
+      screen.getByText("Raises each printed ticket from 1 money to 2 money."),
+    ).toBeTruthy();
   });
 
   it("shows the auto-buy upgrade when it has not been purchased yet", () => {
@@ -180,5 +195,20 @@ describe("Upgrades", () => {
 
     expect(screen.getByText("Cost: 7g")).toBeTruthy();
     expect(screen.getByText("Cost: 228 tickets")).toBeTruthy();
+  });
+
+  it("shows the scaled gem upgrade cost for the current level", () => {
+    mockDependencies({
+      tickets_contributed: 2000,
+      gems: 100,
+      money_per_ticket_level: 2,
+    });
+
+    render(<Upgrades />);
+
+    expect(screen.getByText("Cost: 27 gems · Lvl 2")).toBeTruthy();
+    expect(
+      screen.getByText("Raises each printed ticket from 3 money to 4 money."),
+    ).toBeTruthy();
   });
 });

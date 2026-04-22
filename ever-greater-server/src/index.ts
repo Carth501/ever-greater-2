@@ -585,6 +585,7 @@ function createApp(): Express {
         tickets_contributed: result.user.tickets_contributed,
         tickets_withdrawn: result.user.tickets_withdrawn,
         credit_value: result.user.credit_value,
+        money_per_ticket_level: result.user.money_per_ticket_level,
         credit_generation_level: result.user.credit_generation_level,
         credit_capacity_level: result.user.credit_capacity_level,
         manual_print_batch_level: result.user.manual_print_batch_level,

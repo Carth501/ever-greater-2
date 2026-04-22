@@ -85,6 +85,7 @@ describe('Database Functions', () => {
               { column_name: 'autoprinters' },
               { column_name: 'milk' },
               { column_name: 'credit_value' },
+              { column_name: 'money_per_ticket_level' },
               { column_name: 'credit_generation_level' },
               { column_name: 'credit_capacity_level' },
               { column_name: 'ticket_batch_level' },
@@ -113,7 +114,7 @@ describe('Database Functions', () => {
       const migrationInsertCalls = mockClient.query.mock.calls.filter((call) =>
         call[0].includes('INSERT INTO schema_migrations')
       );
-      expect(migrationInsertCalls).toHaveLength(10);
+      expect(migrationInsertCalls).toHaveLength(11);
       expect(mockClient.release).toHaveBeenCalled();
     });
 
@@ -134,6 +135,7 @@ describe('Database Functions', () => {
               { column_name: 'autoprinters' },
               { column_name: 'milk' },
               { column_name: 'credit_value' },
+              { column_name: 'money_per_ticket_level' },
               { column_name: 'credit_generation_level' },
               { column_name: 'credit_capacity_level' },
               { column_name: 'ticket_batch_level' },
@@ -180,6 +182,7 @@ describe('Database Functions', () => {
               { column_name: 'autoprinters' },
               { column_name: 'milk' },
               { column_name: 'credit_value' },
+              { column_name: 'money_per_ticket_level' },
               { column_name: 'credit_generation_level' },
               { column_name: 'credit_capacity_level' },
               { column_name: 'ticket_batch_level' },
@@ -225,6 +228,7 @@ describe('Database Functions', () => {
               { column_name: 'gems' },
               { column_name: 'autoprinters' },
               { column_name: 'credit_value' },
+              { column_name: 'money_per_ticket_level' },
               { column_name: 'credit_generation_level' },
               { column_name: 'credit_capacity_level' },
               { column_name: 'ticket_batch_level' },
@@ -292,7 +296,7 @@ describe('Database Functions', () => {
 
         if (query.includes('SELECT id FROM schema_migrations')) {
           return {
-            rows: [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }, { id: 5 }, { id: 6 }, { id: 7 }, { id: 8 }, { id: 9 }, { id: 10 }],
+            rows: [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }, { id: 5 }, { id: 6 }, { id: 7 }, { id: 8 }, { id: 9 }, { id: 10 }, { id: 11 }],
           };
         }
 
@@ -306,6 +310,7 @@ describe('Database Functions', () => {
               { column_name: 'gems' },
               { column_name: 'autoprinters' },
               { column_name: 'credit_value' },
+              { column_name: 'money_per_ticket_level' },
               { column_name: 'credit_generation_level' },
               { column_name: 'credit_capacity_level' },
               { column_name: 'ticket_batch_level' },

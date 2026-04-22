@@ -30,6 +30,7 @@ async function runSeedCommand(): Promise<void> {
           gems,
           autoprinters,
           credit_value,
+          money_per_ticket_level,
           credit_generation_level,
           credit_capacity_level,
           ticket_batch_level,
@@ -37,7 +38,7 @@ async function runSeedCommand(): Promise<void> {
           auto_buy_supplies_active,
           auto_buy_settings
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
         ON CONFLICT (email)
         DO UPDATE SET
           password_hash = EXCLUDED.password_hash,
@@ -48,6 +49,7 @@ async function runSeedCommand(): Promise<void> {
           gems = EXCLUDED.gems,
           autoprinters = EXCLUDED.autoprinters,
           credit_value = EXCLUDED.credit_value,
+          money_per_ticket_level = EXCLUDED.money_per_ticket_level,
           credit_generation_level = EXCLUDED.credit_generation_level,
           credit_capacity_level = EXCLUDED.credit_capacity_level,
           ticket_batch_level = EXCLUDED.ticket_batch_level,
@@ -66,6 +68,7 @@ async function runSeedCommand(): Promise<void> {
         0,
         4,
         6,
+        0,
         8,
         12,
         0,

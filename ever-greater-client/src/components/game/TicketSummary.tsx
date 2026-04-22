@@ -3,6 +3,7 @@ import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { alpha, styled } from "@mui/material/styles";
+import { getMoneyPerTicket } from "ever-greater-shared";
 import { JSX } from "react";
 import type { User } from "../../api/auth";
 import GlobalTicketDisplay from "./GlobalTicketDisplay";
@@ -48,6 +49,8 @@ function TicketSummary({
   const ticketsContributed = user.tickets_contributed ?? 0;
   const ticketsWithdrawn = user.tickets_withdrawn ?? 0;
   const remainingCapacity = Math.max(0, ticketsContributed - ticketsWithdrawn);
+  const moneyPerTicketLevel = user.money_per_ticket_level ?? 0;
+  const moneyPerTicket = getMoneyPerTicket(user);
 
   return (
     <TicketCard elevation={0}>
@@ -85,6 +88,17 @@ function TicketSummary({
               {remainingCapacity.toLocaleString()}
             </Typography>
           </MetricCard>
+
+          {moneyPerTicketLevel > 0 && (
+            <MetricCard>
+              <Typography variant="subtitle2" color="text.secondary">
+                Money per Ticket
+              </Typography>
+              <Typography variant="h5" fontWeight={700}>
+                {moneyPerTicket.toLocaleString()}
+              </Typography>
+            </MetricCard>
+          )}
         </MetricsRow>
 
         {ticketsContributed > 200 && <TicketDrawCapacity user={user} />}

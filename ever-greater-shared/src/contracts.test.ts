@@ -16,6 +16,8 @@ import {
   getMaxAffordableGoldQuantity,
   getMaxCreditValue,
   getMaxSuppliesPurchaseGold,
+  getMoneyPerTicket,
+  getMoneyPerTicketUpgradeCost,
   getOperationCost,
   getOperationGain,
   getSuppliesBatchUpgradeCost,
@@ -46,6 +48,7 @@ function makeUser(overrides: Partial<User> = {}): User {
     gems: 0,
     autoprinters: 2,
     credit_value: 0,
+    money_per_ticket_level: 0,
     credit_generation_level: 0,
     credit_capacity_level: 0,
     ticket_batch_level: 0,
@@ -185,6 +188,31 @@ describe("shared operation contracts", () => {
 
     expect(validation.valid).toBe(false);
     expect(validation.error).toBe("Quantity must be a positive integer");
+  });
+
+  it("scales printed money by the user's money-per-ticket level", () => {
+    const user = makeUser({ money_per_ticket_level: 2 });
+
+    const gain = getOperationGain(operations[OperationId.PRINT_TICKET], {
+      user,
+      params: { quantity: 4 },
+    });
+
+    expect(getMoneyPerTicket(user)).toBe(3);
+    expect(gain).toMatchObject({
+      [ResourceType.MONEY]: 12,
+      [ResourceType.TICKETS_CONTRIBUTED]: 4,
+    });
+  });
+
+  it("scales the money-per-ticket upgrade cost by powers of 3", () => {
+    expect(getMoneyPerTicketUpgradeCost(makeUser())).toBe(3);
+    expect(
+      getMoneyPerTicketUpgradeCost(makeUser({ money_per_ticket_level: 1 })),
+    ).toBe(9);
+    expect(
+      getMoneyPerTicketUpgradeCost(makeUser({ money_per_ticket_level: 3 })),
+    ).toBe(81);
   });
 
   it("rejects auto-buy unlock when already purchased", () => {

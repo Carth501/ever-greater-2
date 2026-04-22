@@ -76,6 +76,7 @@ describe("Shop", () => {
       increaseTicketBatch: vi.fn<() => void>(),
       increaseManualPrintBatch: vi.fn<() => void>(),
       increaseSuppliesBatch: vi.fn<() => void>(),
+      increaseMoneyPerTicket: vi.fn<() => void>(),
       increaseCreditCapacity: vi.fn<() => void>(),
     };
 
@@ -94,13 +95,21 @@ describe("Shop", () => {
     expect(screen.getByRole("heading", { name: "Shop" })).toBeTruthy();
     expect(screen.getByText("Gold", { exact: true })).toBeTruthy();
     expect(screen.getByText("Up to 200 Supplies")).toBeTruthy();
-    expect(screen.getByText("Buy Gem")).toBeTruthy();
-    expect(screen.getByText(/Gems Owned:/)).toBeTruthy();
-    expect(screen.getByText("Cost: 2000 tickets")).toBeTruthy();
+    expect(screen.queryByText("Buy Gem")).toBeNull();
     expect(screen.queryByText("Auto-Buy Supplies")).toBeNull();
     expect(screen.queryByText("Increase Credit Generation")).toBeNull();
     expect(screen.queryByText("Increase Credit Capacity")).toBeNull();
     expect(screen.queryByText("Autoprinter")).toBeNull();
+  });
+
+  it("unlocks the gem shop after reaching 2000 ticket capacity", () => {
+    mockDependencies({ tickets_contributed: 2000, tickets_withdrawn: 50 });
+
+    render(<Shop />);
+
+    expect(screen.getByText("Buy Gem")).toBeTruthy();
+    expect(screen.getByText(/Gems Owned:/)).toBeTruthy();
+    expect(screen.getByText("Cost: 2000 tickets")).toBeTruthy();
   });
 
   it("keeps money-to-gold purchases locked behind the existing threshold", () => {
@@ -110,7 +119,7 @@ describe("Shop", () => {
 
     expect(screen.queryByText("Gold", { exact: true })).toBeNull();
     expect(screen.getByText("Up to 200 Supplies")).toBeTruthy();
-    expect(screen.getByText("Buy Gem")).toBeTruthy();
+    expect(screen.queryByText("Buy Gem")).toBeNull();
   });
 
   it("shows partial supplies purchases when gold is below the upgraded batch cap", () => {

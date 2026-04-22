@@ -60,6 +60,7 @@ export enum OperationId {
   INCREASE_TICKET_BATCH = "INCREASE_TICKET_BATCH",
   INCREASE_MANUAL_PRINT_BATCH = "INCREASE_MANUAL_PRINT_BATCH",
   INCREASE_SUPPLIES_BATCH = "INCREASE_SUPPLIES_BATCH",
+  INCREASE_MONEY_PER_TICKET = "INCREASE_MONEY_PER_TICKET",
   INCREASE_CREDIT_GENERATION = "INCREASE_CREDIT_GENERATION",
   INCREASE_CREDIT_CAPACITY = "INCREASE_CREDIT_CAPACITY",
   GENERATE_CREDIT = "GENERATE_CREDIT",
@@ -72,6 +73,7 @@ export const SUPPLIES_BATCH_UPGRADE_COST = 10;
 export const AUTOPRINTER_COST_MULTIPLIER = 20;
 export const CREDIT_CAPACITY_UPGRADE_AMOUNT = 20;
 export const GEM_TICKET_COST = 2000;
+export const GEM_SHOP_UNLOCK_TICKETS = 2000;
 const GOLD_COST_PER_UNIT = 100;
 
 function getOperationQuantity(params?: any): number {
@@ -171,6 +173,16 @@ export function getCreditGenerationUpgradeCost(user: User): number {
   const level = getLevel(user.credit_generation_level);
 
   return Math.floor(1 + Math.pow(level, 1.2));
+}
+
+export function getMoneyPerTicket(user: User): number {
+  return 1 + getLevel(user.money_per_ticket_level);
+}
+
+export function getMoneyPerTicketUpgradeCost(user: User): number {
+  const nextUpgradeNumber = getLevel(user.money_per_ticket_level) + 1;
+
+  return 3 ** nextUpgradeNumber;
 }
 
 export function getCreditCapacityUpgradeCost(user: User): number {
@@ -344,7 +356,7 @@ export const operations: Record<OperationId, Operation> = {
     gain: (ctx: OperationContext) => {
       const quantity = getPrintTicketQuantity(ctx);
       return {
-        [ResourceType.MONEY]: quantity,
+        [ResourceType.MONEY]: quantity * getMoneyPerTicket(ctx.user),
         [ResourceType.TICKETS_CONTRIBUTED]: quantity,
       };
     },
@@ -383,6 +395,18 @@ export const operations: Record<OperationId, Operation> = {
     }),
     gain: {
       [ResourceType.SUPPLIES_BATCH_LEVEL]: 1,
+    },
+  },
+
+  [OperationId.INCREASE_MONEY_PER_TICKET]: {
+    id: OperationId.INCREASE_MONEY_PER_TICKET,
+    name: "Increase Money Per Ticket",
+    description: "Increase the money earned by each printed ticket by 1",
+    cost: (ctx: OperationContext) => ({
+      [ResourceType.GEMS]: getMoneyPerTicketUpgradeCost(ctx.user),
+    }),
+    gain: {
+      [ResourceType.MONEY_PER_TICKET_LEVEL]: 1,
     },
   },
 

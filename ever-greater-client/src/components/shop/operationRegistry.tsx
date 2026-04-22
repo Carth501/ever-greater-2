@@ -1,9 +1,11 @@
 import {
   canAfford,
+  GEM_SHOP_UNLOCK_TICKETS,
   getAutoprinterPrintQuantity,
   getBuySuppliesGainForGold,
   getManualPrintQuantity,
   getMaxSuppliesPurchaseGold,
+  getMoneyPerTicket,
   getOperationCost,
   getOperationGain,
   OperationId,
@@ -18,6 +20,7 @@ import ShopGemGroup from "./shop-groups/ShopGemGroup";
 import ShopGlobalTicketsGroup from "./shop-groups/ShopGlobalTicketsGroup";
 import ShopMoneyGroup from "./shop-groups/ShopMoneyGroup";
 import ShopSuppliesGroup from "./shop-groups/ShopSuppliesGroup";
+import UpgradeGemGroup from "./shop-groups/UpgradeGemGroup";
 import UpgradeGoldGroup, {
   type UpgradeGoldRowItem,
 } from "./shop-groups/UpgradeGoldGroup";
@@ -34,6 +37,7 @@ type OperationHandlers = Pick<
   | "increaseTicketBatch"
   | "increaseManualPrintBatch"
   | "increaseSuppliesBatch"
+  | "increaseMoneyPerTicket"
   | "increaseCreditCapacity"
 >;
 
@@ -66,6 +70,10 @@ type GoldUpgradeDefinition = {
 
 function formatTicketCount(count: number): string {
   return `${count} ticket${count === 1 ? "" : "s"}`;
+}
+
+function hasGemUnlock(user: User): boolean {
+  return (user.tickets_contributed ?? 0) >= GEM_SHOP_UNLOCK_TICKETS;
 }
 
 const shopRegistry: RegistryEntry[] = [
@@ -145,7 +153,7 @@ const shopRegistry: RegistryEntry[] = [
   {
     key: "buy-gem",
     operationIds: [OperationId.BUY_GEM],
-    isVisible: () => true,
+    isVisible: ({ user }) => hasGemUnlock(user),
     render: ({ user, globalTicketCount, handlers }) => {
       const ticketsContributed = user.tickets_contributed ?? 0;
       const ticketsWithdrawn = user.tickets_withdrawn ?? 0;
@@ -354,6 +362,32 @@ const upgradeRegistry: RegistryEntry[] = [
           rows={goldUpgradeDefinitions
             .filter((definition) => definition.isVisible?.({ user }) ?? true)
             .map((definition) => definition.buildRow({ user, handlers }))}
+        />
+      );
+    },
+  },
+  {
+    key: "increase-money-per-ticket",
+    operationIds: [OperationId.INCREASE_MONEY_PER_TICKET],
+    isVisible: ({ user }) => hasGemUnlock(user),
+    render: ({ user, handlers }) => {
+      const gemCost =
+        getOperationCost(operations[OperationId.INCREASE_MONEY_PER_TICKET], {
+          user,
+        })[ResourceType.GEMS] ?? 0;
+      const currentMoneyPerTicket = getMoneyPerTicket(user);
+
+      return (
+        <UpgradeGemGroup
+          gems={user.gems ?? 0}
+          currentMoneyPerTicket={currentMoneyPerTicket}
+          nextMoneyPerTicket={currentMoneyPerTicket + 1}
+          cost={gemCost}
+          level={user.money_per_ticket_level ?? 0}
+          canAfford={canAfford(user, {
+            [ResourceType.GEMS]: gemCost,
+          })}
+          onIncreaseMoneyPerTicket={handlers.increaseMoneyPerTicket}
         />
       );
     },

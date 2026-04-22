@@ -132,6 +132,13 @@ export async function increaseSuppliesBatch(): Promise<User> {
 }
 
 /**
+ * Increase the money earned by each printed ticket by 1
+ */
+export async function increaseMoneyPerTicket(): Promise<User> {
+  return executeOperation(OperationId.INCREASE_MONEY_PER_TICKET);
+}
+
+/**
  * Increase credit capacity maximum by 20
  */
 export async function increaseCreditCapacity(): Promise<User> {

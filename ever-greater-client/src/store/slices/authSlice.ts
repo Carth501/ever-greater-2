@@ -19,6 +19,7 @@ type UserUpdatePayload = Partial<
     | "gems"
     | "autoprinters"
     | "credit_value"
+    | "money_per_ticket_level"
     | "credit_generation_level"
     | "credit_capacity_level"
     | "ticket_batch_level"
