@@ -296,6 +296,7 @@ export interface User {
   ticket_batch_level: number;
   manual_print_batch_level: number;
   supplies_batch_level: number;
+  first_gem_purchased: boolean;
   auto_buy_supplies_purchased: boolean;
   auto_buy_supplies_active: boolean;
   auto_buy_settings: AutoBuySettings;
@@ -317,6 +318,7 @@ export const CLIENT_USER_STATE_DEFAULTS = {
   ticket_batch_level: 0,
   manual_print_batch_level: 0,
   supplies_batch_level: 0,
+  first_gem_purchased: false,
   auto_buy_supplies_purchased: false,
   auto_buy_supplies_active: false,
   auto_buy_settings: getDefaultAutoBuySettings(),

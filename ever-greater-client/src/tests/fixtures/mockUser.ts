@@ -19,6 +19,7 @@ export function mockUser(overrides: Partial<User> = {}): User {
     ticket_batch_level: 0,
     manual_print_batch_level: 0,
     supplies_batch_level: 0,
+    first_gem_purchased: false,
     auto_buy_supplies_purchased: false,
     auto_buy_supplies_active: false,
     auto_buy_settings: getDefaultAutoBuySettings(),

@@ -1,4 +1,4 @@
-export { executeResourceTransaction } from "../db/resource-transactions.js";
+export { executeResourceTransaction, purchaseGem } from "../db/transactions.js";
 export {
   getGlobalCount,
   getUserById,

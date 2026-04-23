@@ -351,7 +351,7 @@ const upgradeRegistry: RegistryEntry[] = [
   {
     key: "increase-credit-capacity-amount",
     operationIds: [OperationId.INCREASE_CREDIT_CAPACITY_AMOUNT],
-    isVisible: () => true,
+    isVisible: ({ user }) => user.first_gem_purchased,
     render: ({ user, handlers }) => {
       const creditCapacityAmountCost = getOperationCost(
         operations[OperationId.INCREASE_CREDIT_CAPACITY_AMOUNT],

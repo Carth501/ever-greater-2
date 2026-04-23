@@ -1,4 +1,7 @@
-export { executeResourceTransaction } from "./resource-transactions.js";
+export {
+  executeResourceTransaction,
+  purchaseGem,
+} from "./resource-transactions.js";
 export {
   processAutoprinters,
   updateAllUsersCreditValues,

@@ -57,6 +57,7 @@ function makeUser(overrides: Partial<User> = {}): User {
     ticket_batch_level: 0,
     manual_print_batch_level: 0,
     supplies_batch_level: 0,
+    first_gem_purchased: false,
     auto_buy_supplies_purchased: false,
     auto_buy_supplies_active: false,
     auto_buy_settings: getDefaultAutoBuySettings(),
@@ -581,7 +582,7 @@ describe("shared operation contracts", () => {
     expect(getMaxCreditValue(boostedCapacityUser)).toBe(66);
     expect(getCreditCapacityAmountUpgradeCost(boostedCapacityUser)).toEqual({
       [ResourceType.GOLD]: 22,
-      [ResourceType.GEMS]: 20,
+      [ResourceType.GEMS]: 45,
     });
 
     expect(
@@ -607,7 +608,7 @@ describe("shared operation contracts", () => {
       ),
     ).toEqual({
       [ResourceType.GOLD]: 22,
-      [ResourceType.GEMS]: 20,
+      [ResourceType.GEMS]: 45,
     });
 
     expect(

@@ -92,6 +92,7 @@ describe('Database Functions', () => {
               { column_name: 'ticket_batch_level' },
               { column_name: 'manual_print_batch_level' },
               { column_name: 'supplies_batch_level' },
+              { column_name: 'first_gem_purchased' },
             ],
           };
         }
@@ -115,7 +116,7 @@ describe('Database Functions', () => {
       const migrationInsertCalls = mockClient.query.mock.calls.filter((call) =>
         call[0].includes('INSERT INTO schema_migrations')
       );
-      expect(migrationInsertCalls).toHaveLength(12);
+      expect(migrationInsertCalls).toHaveLength(13);
       expect(mockClient.release).toHaveBeenCalled();
     });
 
@@ -143,6 +144,7 @@ describe('Database Functions', () => {
               { column_name: 'ticket_batch_level' },
               { column_name: 'manual_print_batch_level' },
               { column_name: 'supplies_batch_level' },
+              { column_name: 'first_gem_purchased' },
             ],
           };
         }
@@ -191,6 +193,7 @@ describe('Database Functions', () => {
               { column_name: 'ticket_batch_level' },
               { column_name: 'manual_print_batch_level' },
               { column_name: 'supplies_batch_level' },
+              { column_name: 'first_gem_purchased' },
             ],
           };
         }
@@ -238,6 +241,7 @@ describe('Database Functions', () => {
               { column_name: 'ticket_batch_level' },
               { column_name: 'manual_print_batch_level' },
               { column_name: 'supplies_batch_level' },
+              { column_name: 'first_gem_purchased' },
             ],
           };
         }
@@ -300,7 +304,7 @@ describe('Database Functions', () => {
 
         if (query.includes('SELECT id FROM schema_migrations')) {
           return {
-            rows: [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }, { id: 5 }, { id: 6 }, { id: 7 }, { id: 8 }, { id: 9 }, { id: 10 }, { id: 11 }, { id: 12 }],
+            rows: [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }, { id: 5 }, { id: 6 }, { id: 7 }, { id: 8 }, { id: 9 }, { id: 10 }, { id: 11 }, { id: 12 }, { id: 13 }],
           };
         }
 
@@ -321,6 +325,7 @@ describe('Database Functions', () => {
               { column_name: 'ticket_batch_level' },
               { column_name: 'manual_print_batch_level' },
               { column_name: 'supplies_batch_level' },
+              { column_name: 'first_gem_purchased' },
             ],
           };
         }
@@ -443,6 +448,7 @@ describe('Database Functions', () => {
         credit_value: 0,
         credit_generation_level: 0,
         credit_capacity_level: 0,
+        first_gem_purchased: false,
         ticket_batch_level: 0,
         manual_print_batch_level: 0,
         supplies_batch_level: 0,
@@ -471,6 +477,7 @@ describe('Database Functions', () => {
           0,
           0,
           0,
+          false,
           false,
           false,
           expect.any(Object),

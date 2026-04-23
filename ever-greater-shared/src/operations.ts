@@ -200,10 +200,11 @@ export function getCreditCapacityUpgradeAmount(user: User): number {
 
 export function getCreditCapacityAmountUpgradeCost(user: User): ResourceAmount {
   const level = getLevel(user.credit_capacity_amount_level);
+  const nextUpgradeNumber = level + 1;
 
   return {
     [ResourceType.GOLD]: 20 + level,
-    [ResourceType.GEMS]: 5 * level ** 2,
+    [ResourceType.GEMS]: 5 * nextUpgradeNumber ** 2,
   };
 }
 

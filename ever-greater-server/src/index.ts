@@ -591,6 +591,7 @@ function createApp(): Express {
         credit_capacity_amount_level: result.user.credit_capacity_amount_level,
         manual_print_batch_level: result.user.manual_print_batch_level,
         supplies_batch_level: result.user.supplies_batch_level,
+        first_gem_purchased: result.user.first_gem_purchased,
         auto_buy_supplies_purchased: result.user.auto_buy_supplies_purchased,
         auto_buy_supplies_active: result.user.auto_buy_supplies_active,
         auto_buy_settings: result.user.auto_buy_settings,

@@ -23,6 +23,7 @@ import {
   getUserById,
   incrementGlobalCount,
   purchaseAutoBuySupplies,
+  purchaseGem,
   setAutoBuySettings,
   setAutoBuySuppliesActive,
 } from "./db-access.js";
@@ -248,6 +249,10 @@ async function applyValidatedOperation(
       ),
       client,
     );
+  }
+
+  if (operationId === OperationId.BUY_GEM) {
+    return purchaseGem(userId, cost[ResourceType.GLOBAL_TICKETS] ?? 0, client);
   }
 
   return executeResourceTransaction(userId, cost, gain, client);

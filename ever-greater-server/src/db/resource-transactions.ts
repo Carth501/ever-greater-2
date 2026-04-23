@@ -180,3 +180,47 @@ export async function executeResourceTransaction(
     executeResourceTransactionOnClient(dbClient, userId, cost, gain),
   );
 }
+
+async function purchaseGemOnClient(
+  dbClient: PoolClient,
+  userId: number,
+  globalTicketCost: number,
+): Promise<User> {
+  await executeResourceTransactionOnClient(
+    dbClient,
+    userId,
+    { [ResourceType.GLOBAL_TICKETS]: globalTicketCost },
+    { [ResourceType.GEMS]: 1 },
+  );
+
+  const result = await dbClient.query(
+    `
+      UPDATE users
+      SET first_gem_purchased = TRUE
+      WHERE id = $1
+      RETURNING ${USER_SELECT_COLUMNS}
+    `,
+    [userId],
+  );
+
+  if (result.rows.length === 0) {
+    throw new Error("User not found");
+  }
+
+  coerceUserRowNumbersInPlace(result.rows[0] as User);
+  return hydrateUserWithWithdrawals(result.rows[0] as User, dbClient);
+}
+
+export async function purchaseGem(
+  userId: number,
+  globalTicketCost: number,
+  client?: PoolClient,
+): Promise<User> {
+  if (client) {
+    return purchaseGemOnClient(client, userId, globalTicketCost);
+  }
+
+  return withTransaction((dbClient) =>
+    purchaseGemOnClient(dbClient, userId, globalTicketCost),
+  );
+}

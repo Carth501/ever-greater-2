@@ -10,6 +10,7 @@ import { addGemsColumnMigration } from "./009-add-gems-column.js";
 import { addAutoBuySettingsColumnMigration } from "./010-add-auto-buy-settings-column.js";
 import { addMoneyPerTicketLevelColumnMigration } from "./011-add-money-per-ticket-level-column.js";
 import { addCreditCapacityAmountLevelColumnMigration } from "./012-add-credit-capacity-amount-level-column.js";
+import { addFirstGemPurchasedFlagMigration } from "./013-add-first-gem-purchased-flag.js";
 
 export { type DatabaseMigration } from "./types.js";
 
@@ -26,4 +27,5 @@ export const databaseMigrations = [
   addAutoBuySettingsColumnMigration,
   addMoneyPerTicketLevelColumnMigration,
   addCreditCapacityAmountLevelColumnMigration,
+  addFirstGemPurchasedFlagMigration,
 ] as const;

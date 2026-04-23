@@ -1,11 +1,11 @@
 import bcrypt from 'bcryptjs';
 import {
-	AutoBuyResourceKey,
-	AutoBuyScaleMode,
-	clientOperationIds,
-	getDefaultAutoBuySettings,
-	OperationId,
-	ResourceType,
+    AutoBuyResourceKey,
+    AutoBuyScaleMode,
+    clientOperationIds,
+    getDefaultAutoBuySettings,
+    OperationId,
+    ResourceType,
 } from 'ever-greater-shared';
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -23,6 +23,7 @@ vi.mock('./db.ts', () => ({
   getUserById: vi.fn(),
   updateUserPassword: vi.fn(),
   executeResourceTransaction: vi.fn(),
+  purchaseGem: vi.fn(),
   purchaseAutoBuySupplies: vi.fn(),
   setAutoBuySuppliesActive: vi.fn(),
   setAutoBuySettings: vi.fn(),
@@ -41,6 +42,7 @@ vi.mock('./operations/db-access.ts', () => ({
   getGlobalCount: vi.fn(),
   getUserById: vi.fn(),
   incrementGlobalCount: vi.fn(),
+  purchaseGem: vi.fn(),
   purchaseAutoBuySupplies: vi.fn(),
   setAutoBuySettings: vi.fn(),
   setAutoBuySuppliesActive: vi.fn(),
@@ -68,6 +70,9 @@ describe('Express API Endpoints', () => {
     );
     mockOperationDb.incrementGlobalCount.mockImplementation((...args) =>
       db.incrementGlobalCount(...args),
+    );
+    mockOperationDb.purchaseGem.mockImplementation((...args) =>
+      db.purchaseGem(...args),
     );
     mockOperationDb.purchaseAutoBuySupplies.mockImplementation((...args) =>
       db.purchaseAutoBuySupplies(...args),
@@ -1010,6 +1015,55 @@ describe('Express API Endpoints', () => {
       expect(response.body.code).toBe('INVALID_REQUEST');
       expect(response.body.detail).toBe("'active' boolean is required");
     });
+
+    it('should persist the first gem purchase flag in BUY_GEM responses', async () => {
+      const testUser = {
+        id: 1,
+        email: 'test@example.com',
+        password_hash: await bcrypt.hash('password123', 10),
+        printer_supplies: 100,
+        money: 0,
+        gold: 0,
+        gems: 0,
+        autoprinters: 0,
+        tickets_contributed: 5000,
+        tickets_withdrawn: 0,
+        credit_value: 0,
+        money_per_ticket_level: 0,
+        credit_generation_level: 0,
+        credit_capacity_level: 0,
+        credit_capacity_amount_level: 0,
+        first_gem_purchased: false,
+        auto_buy_supplies_purchased: false,
+        auto_buy_supplies_active: false,
+        auto_buy_settings: getDefaultAutoBuySettings(),
+      };
+
+      const updatedUser = {
+        ...testUser,
+        gems: 1,
+        first_gem_purchased: true,
+      };
+
+      db.getUserByEmail.mockResolvedValue(testUser);
+      db.getUserById.mockResolvedValue(testUser);
+      db.getGlobalCount.mockResolvedValueOnce(5000).mockResolvedValueOnce(3000);
+      db.purchaseGem.mockResolvedValue(updatedUser);
+
+      await agent
+        .post('/api/auth/login')
+        .send({ email: 'test@example.com', password: 'password123' })
+        .expect(200);
+
+      const response = await agent
+        .post('/api/operations/BUY_GEM')
+        .send({})
+        .expect(200);
+
+      expect(db.purchaseGem).toHaveBeenCalledWith(1, 2000, undefined);
+      expect(response.body.user.gems).toBe(1);
+      expect(response.body.user.first_gem_purchased).toBe(true);
+    });
   });
 });
 
@@ -1025,6 +1079,7 @@ describe('buildPeriodicUserUpdatePayload', () => {
       credit_value: 25,
       credit_generation_level: 1,
       credit_capacity_level: 5,
+      first_gem_purchased: false,
       auto_buy_supplies_purchased: true,
       auto_buy_supplies_active: false,
     };
@@ -1054,6 +1109,7 @@ describe('buildPeriodicUserUpdatePayload', () => {
       credit_value: 25,
       credit_generation_level: 1,
       credit_capacity_level: 5,
+      first_gem_purchased: false,
       auto_buy_supplies_purchased: true,
       auto_buy_supplies_active: false,
       auto_buy_settings: getDefaultAutoBuySettings(),
@@ -1085,6 +1141,7 @@ describe('buildPeriodicUserUpdatePayload', () => {
       credit_value: 25,
       credit_generation_level: 1,
       credit_capacity_level: 5,
+      first_gem_purchased: false,
       auto_buy_supplies_purchased: true,
       auto_buy_supplies_active: false,
       auto_buy_settings: getDefaultAutoBuySettings(),

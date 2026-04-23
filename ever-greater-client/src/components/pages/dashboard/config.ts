@@ -65,6 +65,7 @@ export const previewDashboardUser: User = {
   ticket_batch_level: 0,
   manual_print_batch_level: 0,
   supplies_batch_level: 2,
+  first_gem_purchased: false,
   auto_buy_supplies_purchased: true,
   auto_buy_supplies_active: true,
   auto_buy_settings: {

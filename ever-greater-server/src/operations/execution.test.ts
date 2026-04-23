@@ -20,6 +20,7 @@ vi.mock("./db-access.js", () => ({
   getUserById: vi.fn(),
   incrementGlobalCount: vi.fn(),
   purchaseAutoBuySupplies: vi.fn(),
+  purchaseGem: vi.fn(),
   setAutoBuySettings: vi.fn(),
   setAutoBuySuppliesActive: vi.fn(),
 }));
@@ -44,6 +45,7 @@ function makeUser(overrides: Partial<User> = {}): User {
     ticket_batch_level: 0,
     manual_print_batch_level: 0,
     supplies_batch_level: 0,
+    first_gem_purchased: false,
     auto_buy_supplies_purchased: false,
     auto_buy_supplies_active: false,
     auto_buy_settings: getDefaultAutoBuySettings(),
@@ -383,12 +385,12 @@ describe("executeOperationForUser", () => {
   it("charges gold and gems for credit capacity amount upgrades", async () => {
     const user = makeUser({
       gold: 30,
-      gems: 30,
+      gems: 50,
       credit_capacity_amount_level: 2,
     });
     const updatedUser = makeUser({
       gold: 8,
-      gems: 10,
+      gems: 5,
       credit_capacity_amount_level: 3,
     });
 
@@ -403,7 +405,7 @@ describe("executeOperationForUser", () => {
 
     expect(mockDbAccess.executeResourceTransaction).toHaveBeenCalledWith(
       1,
-      { [ResourceType.GOLD]: 22, [ResourceType.GEMS]: 20 },
+      { [ResourceType.GOLD]: 22, [ResourceType.GEMS]: 45 },
       { [ResourceType.CREDIT_CAPACITY_AMOUNT_LEVEL]: 1 },
       undefined,
     );
@@ -416,22 +418,18 @@ describe("executeOperationForUser", () => {
       tickets_contributed: 5000,
       tickets_withdrawn: 0,
       gems: 1,
+      first_gem_purchased: true,
     });
 
     mockDbAccess.getUserById.mockResolvedValue(user);
     mockDbAccess.getGlobalCount
       .mockResolvedValueOnce(5000)
       .mockResolvedValueOnce(3000);
-    mockDbAccess.executeResourceTransaction.mockResolvedValue(updatedUser);
+    mockDbAccess.purchaseGem.mockResolvedValue(updatedUser);
 
     const result = await executeOperationForUser(1, OperationId.BUY_GEM);
 
-    expect(mockDbAccess.executeResourceTransaction).toHaveBeenCalledWith(
-      1,
-      { [ResourceType.GLOBAL_TICKETS]: 2000 },
-      { [ResourceType.GEMS]: 1 },
-      undefined,
-    );
+    expect(mockDbAccess.purchaseGem).toHaveBeenCalledWith(1, 2000, undefined);
     expect(mockDbAccess.getGlobalCount).toHaveBeenCalledTimes(2);
     expect(result.count).toBe(3000);
     expect(result.user).toEqual(updatedUser);

@@ -99,10 +99,9 @@ describe("Upgrades", () => {
     expect(screen.getByText("Increase Manual Print Batch")).toBeTruthy();
     expect(screen.getByText("Increase Supplies Batch")).toBeTruthy();
     expect(screen.getByText("Increase Credit Generation")).toBeTruthy();
-    expect(screen.getByText("Increase Credit Capacity Amount")).toBeTruthy();
+    expect(screen.queryByText("Increase Credit Capacity Amount")).toBeNull();
     expect(screen.getByText("Increase Credit Capacity")).toBeTruthy();
     expect(screen.getByText("Cost: 3g")).toBeTruthy();
-    expect(screen.getByText("Cost: 20g + 0 gems · Lvl 0")).toBeTruthy();
     expect(screen.getByText("Cost: 251 tickets")).toBeTruthy();
     expect(screen.getByText("Autoprinter")).toBeTruthy();
     expect(screen.getByText("Cost: 320 credit")).toBeTruthy();
@@ -122,17 +121,23 @@ describe("Upgrades", () => {
     expect(screen.getByText("Increase Ticket Batch Scale")).toBeTruthy();
     expect(screen.getByText("Increase Manual Print Batch")).toBeTruthy();
     expect(screen.getByText("Increase Supplies Batch")).toBeTruthy();
-    expect(screen.getByText("Increase Credit Capacity Amount")).toBeTruthy();
+    expect(screen.queryByText("Increase Credit Capacity Amount")).toBeNull();
     expect(screen.getByText("Increase Credit Capacity")).toBeTruthy();
     expect(screen.queryByText("Buy Gem")).toBeNull();
     expect(screen.queryByText("Increase Money Per Ticket")).toBeNull();
   });
 
   it("unlocks gem upgrades once the player reaches 2000 ticket capacity", () => {
-    mockDependencies({ tickets_contributed: 2000, gems: 12 });
+    mockDependencies({
+      tickets_contributed: 2000,
+      gems: 12,
+      first_gem_purchased: true,
+    });
 
     render(<Upgrades />);
 
+    expect(screen.getByText("Increase Credit Capacity Amount")).toBeTruthy();
+    expect(screen.getByText("Cost: 20g + 5 gems · Lvl 0")).toBeTruthy();
     expect(screen.getByText("Increase Money Per Ticket")).toBeTruthy();
     expect(screen.getByText("Cost: 3 gems · Lvl 0")).toBeTruthy();
     expect(
@@ -192,7 +197,8 @@ describe("Upgrades", () => {
       credit_capacity_level: 2,
       credit_capacity_amount_level: 2,
       gold: 50,
-      gems: 20,
+      gems: 50,
+      first_gem_purchased: true,
       tickets_contributed: 800,
       tickets_withdrawn: 0,
     });
@@ -200,8 +206,21 @@ describe("Upgrades", () => {
     render(<Upgrades />);
 
     expect(screen.getByText("Cost: 7g")).toBeTruthy();
-    expect(screen.getByText("Cost: 22g + 20 gems · Lvl 2")).toBeTruthy();
+    expect(screen.getByText("Cost: 22g + 45 gems · Lvl 2")).toBeTruthy();
     expect(screen.getByText("Cost: 228 tickets")).toBeTruthy();
+  });
+
+  it("keeps the credit capacity amount upgrade hidden until the first gem is purchased", () => {
+    mockDependencies({
+      tickets_contributed: 2000,
+      gems: 0,
+      first_gem_purchased: false,
+    });
+
+    render(<Upgrades />);
+
+    expect(screen.getByText("Increase Money Per Ticket")).toBeTruthy();
+    expect(screen.queryByText("Increase Credit Capacity Amount")).toBeNull();
   });
 
   it("shows the scaled gem upgrade cost for the current level", () => {

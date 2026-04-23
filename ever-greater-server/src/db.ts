@@ -8,6 +8,7 @@ export { initializeDatabase, prepareDatabaseForRuntime } from "./db/schema.js";
 export {
   executeResourceTransaction,
   processAutoprinters,
+  purchaseGem,
   updateAllUsersCreditValues,
 } from "./db/transactions.js";
 export {
