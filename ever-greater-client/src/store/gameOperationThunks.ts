@@ -162,6 +162,14 @@ const gameOperationConfigs = {
     mergesIntoAuthUser: true,
     exposeInOperationsHook: true,
   }),
+  increaseCreditCapacityAmount: defineGameOperationConfig({
+    typePrefix: "operations/increaseCreditCapacityAmount",
+    execute: () => operationsApi.increaseCreditCapacityAmount(),
+    fallbackMessage: "Failed to increase credit capacity amount",
+    tracksOperationsState: true,
+    mergesIntoAuthUser: true,
+    exposeInOperationsHook: true,
+  }),
   increaseCreditCapacity: defineGameOperationConfig({
     typePrefix: "operations/increaseCreditCapacity",
     execute: () => operationsApi.increaseCreditCapacity(),
@@ -253,6 +261,8 @@ export const increaseSuppliesBatchThunk =
   gameOperationThunks.increaseSuppliesBatch;
 export const increaseMoneyPerTicketThunk =
   gameOperationThunks.increaseMoneyPerTicket;
+export const increaseCreditCapacityAmountThunk =
+  gameOperationThunks.increaseCreditCapacityAmount;
 export const increaseCreditCapacityThunk =
   gameOperationThunks.increaseCreditCapacity;
 export const toggleAutoBuySuppliesThunk =

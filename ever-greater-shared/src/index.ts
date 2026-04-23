@@ -49,6 +49,8 @@ export {
   getAutoprinterPrintQuantity,
   getBuySuppliesGainForGold,
   getBuySuppliesSpend,
+  getCreditCapacityAmountUpgradeCost,
+  getCreditCapacityUpgradeAmount,
   getCreditCapacityUpgradeCost,
   getCreditGenerationAmount,
   getCreditGenerationUpgradeCost,

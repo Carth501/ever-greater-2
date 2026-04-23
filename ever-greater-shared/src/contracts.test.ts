@@ -7,6 +7,8 @@ import {
   clientOperationIds,
   getAutoprinterCost,
   getBuySuppliesGainForGold,
+  getCreditCapacityAmountUpgradeCost,
+  getCreditCapacityUpgradeAmount,
   getCreditCapacityUpgradeCost,
   getCreditGenerationAmount,
   getCreditGenerationUpgradeCost,
@@ -45,12 +47,13 @@ function makeUser(overrides: Partial<User> = {}): User {
     printer_supplies: 500,
     money: 10000,
     gold: 100,
-    gems: 0,
+    gems: 100,
     autoprinters: 2,
     credit_value: 0,
     money_per_ticket_level: 0,
     credit_generation_level: 0,
     credit_capacity_level: 0,
+    credit_capacity_amount_level: 0,
     ticket_batch_level: 0,
     manual_print_batch_level: 0,
     supplies_batch_level: 0,
@@ -561,12 +564,25 @@ describe("shared operation contracts", () => {
     const oneUpgradeUser = makeUser({ credit_capacity_level: 1 });
     const twoUpgradeUser = makeUser({ credit_capacity_level: 2 });
     const threeUpgradeUser = makeUser({ credit_capacity_level: 3 });
+    const boostedCapacityUser = makeUser({
+      credit_capacity_level: 3,
+      credit_capacity_amount_level: 2,
+      gold: 50,
+      gems: 50,
+    });
 
     expect(getCreditCapacityUpgradeCost(baseLevelUser)).toBe(200);
     expect(getCreditCapacityUpgradeCost(oneUpgradeUser)).toBe(210);
     expect(getCreditCapacityUpgradeCost(twoUpgradeUser)).toBe(228);
     expect(getCreditCapacityUpgradeCost(threeUpgradeUser)).toBe(251);
+    expect(getCreditCapacityUpgradeAmount(threeUpgradeUser)).toBe(20);
+    expect(getCreditCapacityUpgradeAmount(boostedCapacityUser)).toBe(22);
     expect(getMaxCreditValue(threeUpgradeUser)).toBe(60);
+    expect(getMaxCreditValue(boostedCapacityUser)).toBe(66);
+    expect(getCreditCapacityAmountUpgradeCost(boostedCapacityUser)).toEqual({
+      [ResourceType.GOLD]: 22,
+      [ResourceType.GEMS]: 20,
+    });
 
     expect(
       getOperationCost(operations[OperationId.INCREASE_CREDIT_CAPACITY], {
@@ -580,6 +596,29 @@ describe("shared operation contracts", () => {
       }),
     ).toEqual({
       [ResourceType.CREDIT_CAPACITY_LEVEL]: 1,
+    });
+
+    expect(
+      getOperationCost(
+        operations[OperationId.INCREASE_CREDIT_CAPACITY_AMOUNT],
+        {
+          user: boostedCapacityUser,
+        },
+      ),
+    ).toEqual({
+      [ResourceType.GOLD]: 22,
+      [ResourceType.GEMS]: 20,
+    });
+
+    expect(
+      getOperationGain(
+        operations[OperationId.INCREASE_CREDIT_CAPACITY_AMOUNT],
+        {
+          user: boostedCapacityUser,
+        },
+      ),
+    ).toEqual({
+      [ResourceType.CREDIT_CAPACITY_AMOUNT_LEVEL]: 1,
     });
   });
 
@@ -764,6 +803,8 @@ function resourceField(resourceType: ResourceType): keyof User | null {
       return "credit_generation_level";
     case ResourceType.CREDIT_CAPACITY_LEVEL:
       return "credit_capacity_level";
+    case ResourceType.CREDIT_CAPACITY_AMOUNT_LEVEL:
+      return "credit_capacity_amount_level";
     case ResourceType.TICKET_BATCH_LEVEL:
       return "ticket_batch_level";
     case ResourceType.MANUAL_PRINT_BATCH_LEVEL:

@@ -15,6 +15,7 @@ export function mockUser(overrides: Partial<User> = {}): User {
     money_per_ticket_level: 0,
     credit_generation_level: 0,
     credit_capacity_level: 0,
+    credit_capacity_amount_level: 0,
     ticket_batch_level: 0,
     manual_print_batch_level: 0,
     supplies_batch_level: 0,

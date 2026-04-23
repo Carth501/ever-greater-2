@@ -16,6 +16,7 @@ type HookOperationHandlers = {
   increaseManualPrintBatch: () => void;
   increaseSuppliesBatch: () => void;
   increaseMoneyPerTicket: () => void;
+  increaseCreditCapacityAmount: () => void;
   increaseCreditCapacity: () => void;
 };
 

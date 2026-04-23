@@ -139,8 +139,15 @@ export async function increaseMoneyPerTicket(): Promise<User> {
 }
 
 /**
- * Increase credit capacity maximum by 20
+ * Increase the maximum credit capacity.
  */
 export async function increaseCreditCapacity(): Promise<User> {
   return executeOperation(OperationId.INCREASE_CREDIT_CAPACITY);
+}
+
+/**
+ * Increase how much max credit each capacity level provides by 1.
+ */
+export async function increaseCreditCapacityAmount(): Promise<User> {
+  return executeOperation(OperationId.INCREASE_CREDIT_CAPACITY_AMOUNT);
 }

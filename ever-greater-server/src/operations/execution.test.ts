@@ -40,6 +40,7 @@ function makeUser(overrides: Partial<User> = {}): User {
     credit_value: 0,
     credit_generation_level: 0,
     credit_capacity_level: 0,
+    credit_capacity_amount_level: 0,
     ticket_batch_level: 0,
     manual_print_batch_level: 0,
     supplies_batch_level: 0,
@@ -376,6 +377,36 @@ describe("executeOperationForUser", () => {
     );
     expect(mockDbAccess.getGlobalCount).toHaveBeenCalledTimes(2);
     expect(result.count).toBe(749);
+    expect(result.user).toEqual(updatedUser);
+  });
+
+  it("charges gold and gems for credit capacity amount upgrades", async () => {
+    const user = makeUser({
+      gold: 30,
+      gems: 30,
+      credit_capacity_amount_level: 2,
+    });
+    const updatedUser = makeUser({
+      gold: 8,
+      gems: 10,
+      credit_capacity_amount_level: 3,
+    });
+
+    mockDbAccess.getUserById.mockResolvedValue(user);
+    mockDbAccess.getGlobalCount.mockResolvedValue(100);
+    mockDbAccess.executeResourceTransaction.mockResolvedValue(updatedUser);
+
+    const result = await executeOperationForUser(
+      1,
+      OperationId.INCREASE_CREDIT_CAPACITY_AMOUNT,
+    );
+
+    expect(mockDbAccess.executeResourceTransaction).toHaveBeenCalledWith(
+      1,
+      { [ResourceType.GOLD]: 22, [ResourceType.GEMS]: 20 },
+      { [ResourceType.CREDIT_CAPACITY_AMOUNT_LEVEL]: 1 },
+      undefined,
+    );
     expect(result.user).toEqual(updatedUser);
   });
 

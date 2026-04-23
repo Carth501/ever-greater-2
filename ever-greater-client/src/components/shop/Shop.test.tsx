@@ -77,6 +77,7 @@ describe("Shop", () => {
       increaseManualPrintBatch: vi.fn<() => void>(),
       increaseSuppliesBatch: vi.fn<() => void>(),
       increaseMoneyPerTicket: vi.fn<() => void>(),
+      increaseCreditCapacityAmount: vi.fn<() => void>(),
       increaseCreditCapacity: vi.fn<() => void>(),
     };
 
@@ -167,12 +168,17 @@ describe("Shop", () => {
 
     expect(operationsValue.buyGold).toHaveBeenCalledWith(7);
 
+    const currentUser = authValue.user;
+    if (!currentUser) {
+      throw new Error("Expected auth user for rerender test");
+    }
+
     vi.mocked(useAuth).mockReturnValue({
       ...authValue,
       user: mockUser({
-        ...authValue.user,
+        ...currentUser,
         money: 300,
-        gold: (authValue.user.gold ?? 0) + 7,
+        gold: (currentUser.gold ?? 0) + 7,
       }),
     });
 

@@ -3,6 +3,7 @@ import {
   GEM_SHOP_UNLOCK_TICKETS,
   getAutoprinterPrintQuantity,
   getBuySuppliesGainForGold,
+  getCreditCapacityUpgradeAmount,
   getManualPrintQuantity,
   getMaxSuppliesPurchaseGold,
   getMoneyPerTicket,
@@ -21,6 +22,7 @@ import ShopGlobalTicketsGroup from "./shop-groups/ShopGlobalTicketsGroup";
 import ShopMoneyGroup from "./shop-groups/ShopMoneyGroup";
 import ShopSuppliesGroup from "./shop-groups/ShopSuppliesGroup";
 import UpgradeGemGroup from "./shop-groups/UpgradeGemGroup";
+import UpgradeGoldGemGroup from "./shop-groups/UpgradeGoldGemGroup";
 import UpgradeGoldGroup, {
   type UpgradeGoldRowItem,
 } from "./shop-groups/UpgradeGoldGroup";
@@ -38,6 +40,7 @@ type OperationHandlers = Pick<
   | "increaseManualPrintBatch"
   | "increaseSuppliesBatch"
   | "increaseMoneyPerTicket"
+  | "increaseCreditCapacityAmount"
   | "increaseCreditCapacity"
 >;
 
@@ -346,6 +349,42 @@ const upgradeRegistry: RegistryEntry[] = [
     },
   },
   {
+    key: "increase-credit-capacity-amount",
+    operationIds: [OperationId.INCREASE_CREDIT_CAPACITY_AMOUNT],
+    isVisible: () => true,
+    render: ({ user, handlers }) => {
+      const creditCapacityAmountCost = getOperationCost(
+        operations[OperationId.INCREASE_CREDIT_CAPACITY_AMOUNT],
+        { user },
+      );
+      const goldCost = creditCapacityAmountCost[ResourceType.GOLD] ?? 0;
+      const gemCost = creditCapacityAmountCost[ResourceType.GEMS] ?? 0;
+      const currentCreditCapacityAmount = getCreditCapacityUpgradeAmount(user);
+      const nextCreditCapacityAmount = getCreditCapacityUpgradeAmount({
+        ...user,
+        credit_capacity_amount_level:
+          (user.credit_capacity_amount_level ?? 0) + 1,
+      });
+
+      return (
+        <UpgradeGoldGemGroup
+          gold={user.gold ?? 0}
+          gems={user.gems ?? 0}
+          level={user.credit_capacity_amount_level ?? 0}
+          currentCreditCapacityAmount={currentCreditCapacityAmount}
+          nextCreditCapacityAmount={nextCreditCapacityAmount}
+          goldCost={goldCost}
+          gemCost={gemCost}
+          canAfford={canAfford(user, {
+            [ResourceType.GOLD]: goldCost,
+            [ResourceType.GEMS]: gemCost,
+          })}
+          onIncreaseCreditCapacityAmount={handlers.increaseCreditCapacityAmount}
+        />
+      );
+    },
+  },
+  {
     key: "increase-money-per-ticket",
     operationIds: [OperationId.INCREASE_MONEY_PER_TICKET],
     isVisible: ({ user }) => hasGemUnlock(user),
@@ -418,6 +457,7 @@ const upgradeRegistry: RegistryEntry[] = [
           globalTicketCount={globalTicketCount}
           remainingCapacity={remainingCapacity}
           creditCapacityCost={creditCapacityCost}
+          creditCapacityGain={getCreditCapacityUpgradeAmount(user)}
           canAffordCreditCapacity={canAffordCreditCapacity}
           onIncreaseCreditCapacity={handlers.increaseCreditCapacity}
         />

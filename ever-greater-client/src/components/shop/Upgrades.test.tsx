@@ -77,6 +77,7 @@ describe("Upgrades", () => {
       increaseManualPrintBatch: vi.fn<() => void>(),
       increaseSuppliesBatch: vi.fn<() => void>(),
       increaseMoneyPerTicket: vi.fn<() => void>(),
+      increaseCreditCapacityAmount: vi.fn<() => void>(),
       increaseCreditCapacity: vi.fn<() => void>(),
     };
 
@@ -98,8 +99,10 @@ describe("Upgrades", () => {
     expect(screen.getByText("Increase Manual Print Batch")).toBeTruthy();
     expect(screen.getByText("Increase Supplies Batch")).toBeTruthy();
     expect(screen.getByText("Increase Credit Generation")).toBeTruthy();
+    expect(screen.getByText("Increase Credit Capacity Amount")).toBeTruthy();
     expect(screen.getByText("Increase Credit Capacity")).toBeTruthy();
     expect(screen.getByText("Cost: 3g")).toBeTruthy();
+    expect(screen.getByText("Cost: 20g + 0 gems · Lvl 0")).toBeTruthy();
     expect(screen.getByText("Cost: 251 tickets")).toBeTruthy();
     expect(screen.getByText("Autoprinter")).toBeTruthy();
     expect(screen.getByText("Cost: 320 credit")).toBeTruthy();
@@ -119,6 +122,7 @@ describe("Upgrades", () => {
     expect(screen.getByText("Increase Ticket Batch Scale")).toBeTruthy();
     expect(screen.getByText("Increase Manual Print Batch")).toBeTruthy();
     expect(screen.getByText("Increase Supplies Batch")).toBeTruthy();
+    expect(screen.getByText("Increase Credit Capacity Amount")).toBeTruthy();
     expect(screen.getByText("Increase Credit Capacity")).toBeTruthy();
     expect(screen.queryByText("Buy Gem")).toBeNull();
     expect(screen.queryByText("Increase Money Per Ticket")).toBeNull();
@@ -186,7 +190,9 @@ describe("Upgrades", () => {
     mockDependencies({
       credit_generation_level: 5,
       credit_capacity_level: 2,
-      gold: 20,
+      credit_capacity_amount_level: 2,
+      gold: 50,
+      gems: 20,
       tickets_contributed: 800,
       tickets_withdrawn: 0,
     });
@@ -194,6 +200,7 @@ describe("Upgrades", () => {
     render(<Upgrades />);
 
     expect(screen.getByText("Cost: 7g")).toBeTruthy();
+    expect(screen.getByText("Cost: 22g + 20 gems · Lvl 2")).toBeTruthy();
     expect(screen.getByText("Cost: 228 tickets")).toBeTruthy();
   });
 

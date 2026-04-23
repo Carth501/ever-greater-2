@@ -63,6 +63,7 @@ export enum OperationId {
   INCREASE_MONEY_PER_TICKET = "INCREASE_MONEY_PER_TICKET",
   INCREASE_CREDIT_GENERATION = "INCREASE_CREDIT_GENERATION",
   INCREASE_CREDIT_CAPACITY = "INCREASE_CREDIT_CAPACITY",
+  INCREASE_CREDIT_CAPACITY_AMOUNT = "INCREASE_CREDIT_CAPACITY_AMOUNT",
   GENERATE_CREDIT = "GENERATE_CREDIT",
 }
 
@@ -191,8 +192,25 @@ export function getCreditCapacityUpgradeCost(user: User): number {
   return Math.floor(200 + Math.pow(level, 1.5) * 10);
 }
 
+export function getCreditCapacityUpgradeAmount(user: User): number {
+  return (
+    CREDIT_CAPACITY_UPGRADE_AMOUNT + getLevel(user.credit_capacity_amount_level)
+  );
+}
+
+export function getCreditCapacityAmountUpgradeCost(user: User): ResourceAmount {
+  const level = getLevel(user.credit_capacity_amount_level);
+
+  return {
+    [ResourceType.GOLD]: 20 + level,
+    [ResourceType.GEMS]: 5 * level ** 2,
+  };
+}
+
 export function getMaxCreditValue(user: User): number {
-  return getLevel(user.credit_capacity_level) * CREDIT_CAPACITY_UPGRADE_AMOUNT;
+  return (
+    getLevel(user.credit_capacity_level) * getCreditCapacityUpgradeAmount(user)
+  );
 }
 
 export function getMaxSuppliesPurchaseGold(user: User): number {
@@ -425,12 +443,24 @@ export const operations: Record<OperationId, Operation> = {
   [OperationId.INCREASE_CREDIT_CAPACITY]: {
     id: OperationId.INCREASE_CREDIT_CAPACITY,
     name: "Increase Credit Capacity",
-    description: `Increase your capacity level by 1 (+${CREDIT_CAPACITY_UPGRADE_AMOUNT} max credit)`,
+    description: "Increase your capacity level by 1",
     cost: (ctx: OperationContext) => ({
       [ResourceType.GLOBAL_TICKETS]: getCreditCapacityUpgradeCost(ctx.user),
     }),
     gain: {
       [ResourceType.CREDIT_CAPACITY_LEVEL]: 1,
+    },
+  },
+
+  [OperationId.INCREASE_CREDIT_CAPACITY_AMOUNT]: {
+    id: OperationId.INCREASE_CREDIT_CAPACITY_AMOUNT,
+    name: "Increase Credit Capacity Amount",
+    description:
+      "Increase how much max credit each capacity level provides by 1",
+    cost: (ctx: OperationContext) =>
+      getCreditCapacityAmountUpgradeCost(ctx.user),
+    gain: {
+      [ResourceType.CREDIT_CAPACITY_AMOUNT_LEVEL]: 1,
     },
   },
 

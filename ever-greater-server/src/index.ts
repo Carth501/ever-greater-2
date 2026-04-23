@@ -588,6 +588,7 @@ function createApp(): Express {
         money_per_ticket_level: result.user.money_per_ticket_level,
         credit_generation_level: result.user.credit_generation_level,
         credit_capacity_level: result.user.credit_capacity_level,
+        credit_capacity_amount_level: result.user.credit_capacity_amount_level,
         manual_print_batch_level: result.user.manual_print_batch_level,
         supplies_batch_level: result.user.supplies_batch_level,
         auto_buy_supplies_purchased: result.user.auto_buy_supplies_purchased,

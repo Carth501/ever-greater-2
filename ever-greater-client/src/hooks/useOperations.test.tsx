@@ -80,6 +80,26 @@ describe("useOperations", () => {
     });
   });
 
+  it("binds credit capacity amount upgrades to dispatch", async () => {
+    mockOperationsApi.increaseCreditCapacityAmount.mockResolvedValueOnce(
+      mockUser(),
+    );
+
+    const { result } = renderHook(() => useOperations(), {
+      wrapper: createWrapper(),
+    });
+
+    act(() => {
+      result.current.increaseCreditCapacityAmount();
+    });
+
+    await waitFor(() => {
+      expect(
+        mockOperationsApi.increaseCreditCapacityAmount,
+      ).toHaveBeenCalledOnce();
+    });
+  });
+
   it("surfaces rejected operation errors through the shared runner", async () => {
     const onError = vi.fn<(message: string) => void>();
     mockOperationsApi.increaseCreditCapacity.mockRejectedValueOnce(

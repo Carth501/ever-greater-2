@@ -13,6 +13,7 @@ export enum ResourceType {
   MONEY_PER_TICKET_LEVEL = "MONEY_PER_TICKET_LEVEL",
   CREDIT_GENERATION_LEVEL = "CREDIT_GENERATION_LEVEL",
   CREDIT_CAPACITY_LEVEL = "CREDIT_CAPACITY_LEVEL",
+  CREDIT_CAPACITY_AMOUNT_LEVEL = "CREDIT_CAPACITY_AMOUNT_LEVEL",
   TICKET_BATCH_LEVEL = "TICKET_BATCH_LEVEL",
   MANUAL_PRINT_BATCH_LEVEL = "MANUAL_PRINT_BATCH_LEVEL",
   SUPPLIES_BATCH_LEVEL = "SUPPLIES_BATCH_LEVEL",
@@ -35,6 +36,7 @@ export const RESOURCE_DB_FIELDS: Partial<Record<ResourceType, string>> = {
   [ResourceType.MONEY_PER_TICKET_LEVEL]: "money_per_ticket_level",
   [ResourceType.CREDIT_GENERATION_LEVEL]: "credit_generation_level",
   [ResourceType.CREDIT_CAPACITY_LEVEL]: "credit_capacity_level",
+  [ResourceType.CREDIT_CAPACITY_AMOUNT_LEVEL]: "credit_capacity_amount_level",
   [ResourceType.TICKET_BATCH_LEVEL]: "ticket_batch_level",
   [ResourceType.MANUAL_PRINT_BATCH_LEVEL]: "manual_print_batch_level",
   [ResourceType.SUPPLIES_BATCH_LEVEL]: "supplies_batch_level",
@@ -55,6 +57,7 @@ export const DB_FIELD_TO_RESOURCE: Record<string, ResourceType> = {
   money_per_ticket_level: ResourceType.MONEY_PER_TICKET_LEVEL,
   credit_generation_level: ResourceType.CREDIT_GENERATION_LEVEL,
   credit_capacity_level: ResourceType.CREDIT_CAPACITY_LEVEL,
+  credit_capacity_amount_level: ResourceType.CREDIT_CAPACITY_AMOUNT_LEVEL,
   ticket_batch_level: ResourceType.TICKET_BATCH_LEVEL,
   manual_print_batch_level: ResourceType.MANUAL_PRINT_BATCH_LEVEL,
   supplies_batch_level: ResourceType.SUPPLIES_BATCH_LEVEL,
@@ -289,6 +292,7 @@ export interface User {
   money_per_ticket_level: number;
   credit_generation_level: number;
   credit_capacity_level: number;
+  credit_capacity_amount_level: number;
   ticket_batch_level: number;
   manual_print_batch_level: number;
   supplies_batch_level: number;
@@ -309,6 +313,7 @@ export const CLIENT_USER_STATE_DEFAULTS = {
   money_per_ticket_level: 0,
   credit_generation_level: 0,
   credit_capacity_level: 0,
+  credit_capacity_amount_level: 0,
   ticket_batch_level: 0,
   manual_print_batch_level: 0,
   supplies_batch_level: 0,
