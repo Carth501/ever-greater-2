@@ -79,6 +79,10 @@ function hasGemUnlock(user: User): boolean {
   return (user.tickets_contributed ?? 0) >= GEM_SHOP_UNLOCK_TICKETS;
 }
 
+function hasGoldUpgradeUnlock(user: User): boolean {
+  return user.first_gold_purchased;
+}
+
 const shopRegistry: RegistryEntry[] = [
   {
     key: "buy-gold",
@@ -209,6 +213,7 @@ const goldUpgradeDefinitions: GoldUpgradeDefinition[] = [
   {
     key: "increase-ticket-batch",
     operationIds: [OperationId.INCREASE_TICKET_BATCH],
+    isVisible: ({ user }) => hasGoldUpgradeUnlock(user),
     buildRow: ({ user, handlers }) => {
       const ticketBatchCost =
         getOperationCost(operations[OperationId.INCREASE_TICKET_BATCH], {
@@ -241,6 +246,7 @@ const goldUpgradeDefinitions: GoldUpgradeDefinition[] = [
   {
     key: "increase-manual-print-batch",
     operationIds: [OperationId.INCREASE_MANUAL_PRINT_BATCH],
+    isVisible: ({ user }) => hasGoldUpgradeUnlock(user),
     buildRow: ({ user, handlers }) => {
       const manualPrintBatchCost =
         getOperationCost(operations[OperationId.INCREASE_MANUAL_PRINT_BATCH], {

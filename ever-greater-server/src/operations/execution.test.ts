@@ -20,6 +20,7 @@ vi.mock("./db-access.js", () => ({
   getUserById: vi.fn(),
   incrementGlobalCount: vi.fn(),
   purchaseAutoBuySupplies: vi.fn(),
+  purchaseGold: vi.fn(),
   purchaseGem: vi.fn(),
   setAutoBuySettings: vi.fn(),
   setAutoBuySuppliesActive: vi.fn(),
@@ -45,6 +46,7 @@ function makeUser(overrides: Partial<User> = {}): User {
     ticket_batch_level: 0,
     manual_print_batch_level: 0,
     supplies_batch_level: 0,
+    first_gold_purchased: false,
     first_gem_purchased: false,
     auto_buy_supplies_purchased: false,
     auto_buy_supplies_active: false,
@@ -151,6 +153,32 @@ describe("executeOperationForUser", () => {
     expect(result.user).toEqual(updatedUser);
   });
 
+  it("uses the special purchase executor for BUY_GOLD", async () => {
+    const user = makeUser({ money: 500, gold: 0, first_gold_purchased: false });
+    const updatedUser = makeUser({
+      money: 300,
+      gold: 2,
+      first_gold_purchased: true,
+    });
+
+    mockDbAccess.getUserById.mockResolvedValue(user);
+    mockDbAccess.getGlobalCount.mockResolvedValue(100);
+    mockDbAccess.purchaseGold.mockResolvedValue(updatedUser);
+
+    const result = await executeOperationForUser(1, OperationId.BUY_GOLD, {
+      quantity: 2,
+    });
+
+    expect(mockDbAccess.purchaseGold).toHaveBeenCalledWith(
+      1,
+      200,
+      2,
+      undefined,
+    );
+    expect(mockDbAccess.executeResourceTransaction).not.toHaveBeenCalled();
+    expect(result.user).toEqual(updatedUser);
+  });
+
   it("uses the special toggle executor for TOGGLE_AUTO_BUY_SUPPLIES", async () => {
     const user = makeUser({
       auto_buy_supplies_purchased: true,
@@ -242,6 +270,7 @@ describe("executeOperationForUser", () => {
       printer_supplies: 0,
       money: 0,
       gold: 2,
+      first_gold_purchased: true,
       auto_buy_supplies_purchased: true,
       auto_buy_supplies_active: true,
     });
@@ -263,8 +292,8 @@ describe("executeOperationForUser", () => {
 
     mockDbAccess.getUserById.mockResolvedValue(user);
     mockDbAccess.getGlobalCount.mockResolvedValue(100);
+    mockDbAccess.purchaseGold.mockResolvedValue(goldPurchasedUser);
     mockDbAccess.executeResourceTransaction
-      .mockResolvedValueOnce(goldPurchasedUser)
       .mockResolvedValueOnce(refilledUser)
       .mockResolvedValueOnce(printedUser);
     mockDbAccess.incrementGlobalCount.mockResolvedValue(101);
@@ -278,22 +307,21 @@ describe("executeOperationForUser", () => {
       },
     );
 
-    expect(mockDbAccess.executeResourceTransaction).toHaveBeenNthCalledWith(
+    expect(mockDbAccess.purchaseGold).toHaveBeenCalledWith(
       1,
-      1,
-      { [ResourceType.MONEY]: 200 },
-      { [ResourceType.GOLD]: 2 },
+      200,
+      2,
       undefined,
     );
     expect(mockDbAccess.executeResourceTransaction).toHaveBeenNthCalledWith(
-      2,
+      1,
       1,
       { [ResourceType.GOLD]: 1 },
       { [ResourceType.PRINTER_SUPPLIES]: 200 },
       undefined,
     );
     expect(mockDbAccess.executeResourceTransaction).toHaveBeenNthCalledWith(
-      3,
+      2,
       1,
       { [ResourceType.PRINTER_SUPPLIES]: 1 },
       {

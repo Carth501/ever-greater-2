@@ -57,6 +57,7 @@ function makeUser(overrides: Partial<User> = {}): User {
     ticket_batch_level: 0,
     manual_print_batch_level: 0,
     supplies_batch_level: 0,
+    first_gold_purchased: false,
     first_gem_purchased: false,
     auto_buy_supplies_purchased: false,
     auto_buy_supplies_active: false,

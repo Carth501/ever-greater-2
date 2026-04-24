@@ -2,11 +2,13 @@ import { OperationId, ResourceType } from 'ever-greater-shared';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const FINAL_SCHEMA_BASELINE_MIGRATION_ID = 13;
-const BASELINE_ONLY_MIGRATION_ROWS = [
+const FIRST_GOLD_PURCHASED_MIGRATION_ID = 14;
+const CURRENT_MIGRATION_ROWS = [
   { id: FINAL_SCHEMA_BASELINE_MIGRATION_ID },
+  { id: FIRST_GOLD_PURCHASED_MIGRATION_ID },
 ];
 const HISTORICAL_MIGRATION_ROWS = Array.from(
-  { length: FINAL_SCHEMA_BASELINE_MIGRATION_ID },
+  { length: FIRST_GOLD_PURCHASED_MIGRATION_ID },
   (_, index) => ({ id: index + 1 })
 );
 const PRE_BASELINE_MIGRATION_ROWS = HISTORICAL_MIGRATION_ROWS.slice(0, -1);
@@ -172,10 +174,14 @@ describe('Database Functions', () => {
       const migrationInsertCalls = mockClient.query.mock.calls.filter((call) =>
         call[0].includes('INSERT INTO schema_migrations')
       );
-      expect(migrationInsertCalls).toHaveLength(1);
+      expect(migrationInsertCalls).toHaveLength(2);
       expect(migrationInsertCalls[0][1]).toEqual([
         FINAL_SCHEMA_BASELINE_MIGRATION_ID,
         'create-final-schema-baseline',
+      ]);
+      expect(migrationInsertCalls[1][1]).toEqual([
+        FIRST_GOLD_PURCHASED_MIGRATION_ID,
+        'add-first-gold-purchased',
       ]);
       expect(mockClient.release).toHaveBeenCalled();
     });
@@ -326,7 +332,7 @@ describe('Database Functions', () => {
       mockClient.query.mockImplementation(async (query) => {
         if (query.includes('SELECT id FROM schema_migrations')) {
           return {
-            rows: BASELINE_ONLY_MIGRATION_ROWS,
+            rows: CURRENT_MIGRATION_ROWS,
           };
         }
 
@@ -457,7 +463,7 @@ describe('Database Functions', () => {
 
         if (query.includes('SELECT id FROM schema_migrations')) {
           return {
-            rows: BASELINE_ONLY_MIGRATION_ROWS,
+            rows: CURRENT_MIGRATION_ROWS,
           };
         }
 
@@ -665,6 +671,7 @@ describe('Database Functions', () => {
         credit_value: 0,
         credit_generation_level: 0,
         credit_capacity_level: 0,
+        first_gold_purchased: false,
         first_gem_purchased: false,
         ticket_batch_level: 0,
         manual_print_batch_level: 0,
@@ -694,6 +701,7 @@ describe('Database Functions', () => {
           0,
           0,
           0,
+          false,
           false,
           false,
           false,

@@ -4,6 +4,7 @@ export {
   getUserById,
   incrementGlobalCount,
   purchaseAutoBuySupplies,
+  purchaseGold,
   setAutoBuySettings,
   setAutoBuySuppliesActive,
 } from "../db/users.js";

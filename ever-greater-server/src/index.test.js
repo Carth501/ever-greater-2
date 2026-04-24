@@ -27,6 +27,7 @@ vi.mock('./db.ts', () => ({
   getUserById: vi.fn(),
   updateUserPassword: vi.fn(),
   executeResourceTransaction: vi.fn(),
+  purchaseGold: vi.fn(),
   purchaseGem: vi.fn(),
   purchaseAutoBuySupplies: vi.fn(),
   setAutoBuySuppliesActive: vi.fn(),
@@ -44,6 +45,7 @@ vi.mock('./operations/db-access.ts', () => ({
   getGlobalCount: vi.fn(),
   getUserById: vi.fn(),
   incrementGlobalCount: vi.fn(),
+  purchaseGold: vi.fn(),
   purchaseGem: vi.fn(),
   purchaseAutoBuySupplies: vi.fn(),
   setAutoBuySettings: vi.fn(),
@@ -72,6 +74,9 @@ describe('Express API Endpoints', () => {
     );
     mockOperationDb.incrementGlobalCount.mockImplementation((...args) =>
       db.incrementGlobalCount(...args),
+    );
+    mockOperationDb.purchaseGold.mockImplementation((...args) =>
+      db.purchaseGold(...args),
     );
     mockOperationDb.purchaseGem.mockImplementation((...args) =>
       db.purchaseGem(...args),
@@ -412,6 +417,7 @@ describe('Express API Endpoints', () => {
       db.getGlobalCount.mockResolvedValue(100);
       db.incrementGlobalCount.mockResolvedValue(101);
       db.executeResourceTransaction.mockResolvedValue(testUser);
+      db.purchaseGold.mockResolvedValue(testUser);
       db.purchaseAutoBuySupplies.mockResolvedValue(testUser);
       db.setAutoBuySuppliesActive.mockResolvedValue(testUser);
       db.setAutoBuySettings.mockResolvedValue(testUser);

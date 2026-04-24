@@ -33,6 +33,7 @@ describe("Upgrades", () => {
       credit_value: 200,
       credit_generation_level: 2,
       credit_capacity_level: 3,
+      first_gold_purchased: true,
       auto_buy_supplies_purchased: true,
       auto_buy_supplies_active: true,
       ...userOverrides,
@@ -155,6 +156,32 @@ describe("Upgrades", () => {
 
     expect(screen.getByText("Auto-Buy Supplies")).toBeTruthy();
     expect(screen.getByText("Cost: 10g")).toBeTruthy();
+  });
+
+  it("hides ticket batch scale and manual print batch until the first gold purchase", () => {
+    mockDependencies({
+      gold: 0,
+      first_gold_purchased: false,
+    });
+
+    render(<Upgrades />);
+
+    expect(screen.queryByText("Increase Ticket Batch Scale")).toBeNull();
+    expect(screen.queryByText("Increase Manual Print Batch")).toBeNull();
+    expect(screen.getByText("Increase Supplies Batch")).toBeTruthy();
+    expect(screen.getByText("Increase Credit Generation")).toBeTruthy();
+  });
+
+  it("keeps ticket batch scale and manual print batch visible after the unlock is persisted", () => {
+    mockDependencies({
+      gold: 0,
+      first_gold_purchased: true,
+    });
+
+    render(<Upgrades />);
+
+    expect(screen.getByText("Increase Ticket Batch Scale")).toBeTruthy();
+    expect(screen.getByText("Increase Manual Print Batch")).toBeTruthy();
   });
 
   it("shows the scaled general ticket batch upgrade cost for the current level", () => {

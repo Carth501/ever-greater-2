@@ -24,6 +24,7 @@ import {
   incrementGlobalCount,
   purchaseAutoBuySupplies,
   purchaseGem,
+  purchaseGold,
   setAutoBuySettings,
   setAutoBuySuppliesActive,
 } from "./db-access.js";
@@ -247,6 +248,15 @@ async function applyValidatedOperation(
         configureParams.resourceKey,
         configureParams,
       ),
+      client,
+    );
+  }
+
+  if (operationId === OperationId.BUY_GOLD) {
+    return purchaseGold(
+      userId,
+      cost[ResourceType.MONEY] ?? 0,
+      gain[ResourceType.GOLD] ?? 0,
       client,
     );
   }

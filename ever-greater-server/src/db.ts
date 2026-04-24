@@ -21,6 +21,7 @@ export {
   getUserById,
   incrementGlobalCount,
   purchaseAutoBuySupplies,
+  purchaseGold,
   recordTicketWithdrawal,
   setAutoBuySettings,
   setAutoBuySuppliesActive,

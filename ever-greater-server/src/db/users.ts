@@ -109,7 +109,7 @@ export async function createUser(
   passwordHash: string,
 ): Promise<User> {
   const result = await getPool().query(
-    `INSERT INTO users (email, password_hash, printer_supplies, money, gold, gems, autoprinters, credit_value, credit_generation_level, credit_capacity_level, ticket_batch_level, manual_print_batch_level, supplies_batch_level, first_gem_purchased, auto_buy_supplies_purchased, auto_buy_supplies_active, auto_buy_settings) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) RETURNING ${USER_SELECT_COLUMNS}`,
+    `INSERT INTO users (email, password_hash, printer_supplies, money, gold, gems, autoprinters, credit_value, credit_generation_level, credit_capacity_level, ticket_batch_level, manual_print_batch_level, supplies_batch_level, first_gold_purchased, first_gem_purchased, auto_buy_supplies_purchased, auto_buy_supplies_active, auto_buy_settings) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING ${USER_SELECT_COLUMNS}`,
     [
       email,
       passwordHash,
@@ -124,6 +124,7 @@ export async function createUser(
       0,
       0,
       0,
+      false,
       false,
       false,
       false,
@@ -146,6 +147,34 @@ export async function getUserById(
 
   if (!result.rows[0]) {
     return null;
+  }
+
+  return hydrateUserWithWithdrawals(result.rows[0] as User, client);
+}
+
+export async function purchaseGold(
+  userId: number,
+  moneyCost: number,
+  goldQuantity: number,
+  client?: PoolClient,
+): Promise<User> {
+  const dbClient: QueryClient = client ?? getPool();
+  const result = await dbClient.query(
+    `
+      UPDATE users
+      SET
+        money = money - $1,
+        gold = gold + $2,
+        first_gold_purchased = TRUE
+      WHERE id = $3
+        AND money >= $1
+      RETURNING ${USER_SELECT_COLUMNS}
+    `,
+    [moneyCost, goldQuantity, userId],
+  );
+
+  if (!result.rows[0]) {
+    throw new Error("Insufficient resources or user not found");
   }
 
   return hydrateUserWithWithdrawals(result.rows[0] as User, client);

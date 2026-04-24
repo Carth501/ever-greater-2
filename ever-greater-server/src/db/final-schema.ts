@@ -29,6 +29,7 @@ export const finalSchemaBootstrapStatements = [
       ticket_batch_level INTEGER NOT NULL DEFAULT 0,
       manual_print_batch_level INTEGER NOT NULL DEFAULT 0,
       supplies_batch_level INTEGER NOT NULL DEFAULT 0,
+      first_gold_purchased BOOLEAN NOT NULL DEFAULT FALSE,
       first_gem_purchased BOOLEAN NOT NULL DEFAULT FALSE,
       auto_buy_supplies_purchased BOOLEAN NOT NULL DEFAULT FALSE,
       auto_buy_supplies_active BOOLEAN NOT NULL DEFAULT FALSE,

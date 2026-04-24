@@ -19,6 +19,7 @@ const USER_RESOURCE_COLUMNS = [
   "ticket_batch_level",
   "manual_print_batch_level",
   "supplies_batch_level",
+  "first_gold_purchased",
   "first_gem_purchased",
   "auto_buy_supplies_purchased",
   "auto_buy_supplies_active",
