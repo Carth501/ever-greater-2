@@ -22,6 +22,7 @@ function CreditDisplay({ user }: CreditDisplayProps): JSX.Element {
   const creditValue = Number(user.credit_value ?? 0);
   const creditCapacity = getMaxCreditValue(user);
   const creditRate = Number(user.credit_generation_level ?? 0) * 0.1;
+  const shouldDisplayCreditCapacity = creditCapacity > 1;
 
   // Ensure we don't divide by zero
   const progressValue =
@@ -32,8 +33,8 @@ function CreditDisplay({ user }: CreditDisplayProps): JSX.Element {
     <Stack spacing={1}>
       <Box>
         <Typography variant="body1" color="text.secondary">
-          Credit: <strong>{creditValueDisplay.toFixed(1)}</strong> /{" "}
-          {creditCapacity}
+          Credit: <strong>{creditValueDisplay.toFixed(1)}</strong>
+          {shouldDisplayCreditCapacity ? <> / {creditCapacity}</> : null}
         </Typography>
         {creditCapacity > 0 && (
           <LinearProgress
