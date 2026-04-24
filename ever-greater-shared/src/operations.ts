@@ -69,7 +69,7 @@ export enum OperationId {
 
 export const SUPPLIES_PER_GOLD = 200;
 export const TICKET_BATCH_UPGRADE_COST = 10;
-export const MANUAL_PRINT_BATCH_UPGRADE_COST = 10;
+export const MANUAL_PRINT_BATCH_UPGRADE_COST = 1;
 export const SUPPLIES_BATCH_UPGRADE_COST = 10;
 export const AUTOPRINTER_COST_MULTIPLIER = 20;
 export const CREDIT_CAPACITY_UPGRADE_AMOUNT = 20;
