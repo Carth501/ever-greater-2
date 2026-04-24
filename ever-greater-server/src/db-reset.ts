@@ -1,9 +1,16 @@
-import { closePool, initializeDatabase, pool } from "./db.js";
+import "dotenv/config";
+import { assertRequiredEnvironment, getServerConfig } from "./config.js";
 import { assertDestructiveCommandAllowed } from "./db-script-utils.js";
 
 async function runResetCommand(): Promise<void> {
+  const serverConfig = getServerConfig();
+
   try {
+    assertRequiredEnvironment(serverConfig);
     assertDestructiveCommandAllowed("db:reset");
+
+    const { getPool, initializeDatabase } = await import("./db.js");
+    const pool = getPool();
 
     await pool.query("DROP SCHEMA IF EXISTS public CASCADE");
     await pool.query("CREATE SCHEMA public");
@@ -16,6 +23,7 @@ async function runResetCommand(): Promise<void> {
     process.exitCode = 1;
   } finally {
     try {
+      const { closePool } = await import("./db.js");
       await closePool();
     } catch (error) {
       console.error("Failed to close database pool after reset:", error);

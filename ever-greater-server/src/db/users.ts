@@ -3,32 +3,32 @@ import {
   type AutoBuySettings,
   type User,
 } from "ever-greater-shared";
-import type { PoolClient } from "pg";
+import type { Pool, PoolClient } from "pg";
 import {
   coerceUserRowNumbersInPlace,
-  pool,
-  STARTING_PRINTER_SUPPLIES,
+  getPool,
+  getStartingPrinterSupplies,
   toNumber,
   USER_AUTH_SELECT_COLUMNS,
   USER_SELECT_COLUMNS,
   type DbUser,
 } from "./core.js";
 
-type QueryClient = PoolClient | typeof pool;
+type QueryClient = PoolClient | Pool;
 
 export async function getGlobalCount(client?: PoolClient): Promise<number> {
-  const dbClient: QueryClient = client ?? pool;
+  const dbClient: QueryClient = client ?? getPool();
   const result = await dbClient.query(
     "SELECT count FROM global_state WHERE id = 1",
   );
-  return result.rows[0].count;
+  return toNumber(result.rows[0].count);
 }
 
 export async function incrementGlobalCount(
   amount = 1,
   client?: PoolClient,
 ): Promise<number> {
-  const dbClient: QueryClient = client ?? pool;
+  const dbClient: QueryClient = client ?? getPool();
   const result = await dbClient.query(
     `
     UPDATE global_state
@@ -38,14 +38,14 @@ export async function incrementGlobalCount(
   `,
     [amount],
   );
-  return result.rows[0].count;
+  return toNumber(result.rows[0].count);
 }
 
 export async function getTicketsWithdrawnIn24Hours(
   userId: number,
   client?: PoolClient,
 ): Promise<number> {
-  const dbClient: QueryClient = client ?? pool;
+  const dbClient: QueryClient = client ?? getPool();
   const result = await dbClient.query(
     "SELECT COALESCE(SUM(amount), 0) as total FROM ticket_withdrawals WHERE user_id = $1 AND created_at > NOW() - INTERVAL '24 hours'",
     [userId],
@@ -58,7 +58,7 @@ export async function recordTicketWithdrawal(
   amount: number,
   client?: PoolClient,
 ): Promise<void> {
-  const dbClient: QueryClient = client ?? pool;
+  const dbClient: QueryClient = client ?? getPool();
   await dbClient.query(
     "INSERT INTO ticket_withdrawals (user_id, amount) VALUES ($1, $2)",
     [userId, amount],
@@ -66,7 +66,7 @@ export async function recordTicketWithdrawal(
 }
 
 export async function cleanupOldTicketWithdrawals(): Promise<number> {
-  const result = await pool.query(
+  const result = await getPool().query(
     "DELETE FROM ticket_withdrawals WHERE created_at < NOW() - INTERVAL '24 hours'",
   );
   return result.rowCount || 0;
@@ -92,7 +92,7 @@ export async function enrichUserWithWithdrawals(
 }
 
 export async function getUserByEmail(email: string): Promise<DbUser | null> {
-  const result = await pool.query(
+  const result = await getPool().query(
     `SELECT ${USER_AUTH_SELECT_COLUMNS} FROM users WHERE email = $1`,
     [email],
   );
@@ -108,12 +108,12 @@ export async function createUser(
   email: string,
   passwordHash: string,
 ): Promise<User> {
-  const result = await pool.query(
+  const result = await getPool().query(
     `INSERT INTO users (email, password_hash, printer_supplies, money, gold, gems, autoprinters, credit_value, credit_generation_level, credit_capacity_level, ticket_batch_level, manual_print_batch_level, supplies_batch_level, first_gem_purchased, auto_buy_supplies_purchased, auto_buy_supplies_active, auto_buy_settings) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) RETURNING ${USER_SELECT_COLUMNS}`,
     [
       email,
       passwordHash,
-      STARTING_PRINTER_SUPPLIES,
+      getStartingPrinterSupplies(),
       0,
       0,
       0,
@@ -138,7 +138,7 @@ export async function getUserById(
   userId: number,
   client?: PoolClient,
 ): Promise<User | null> {
-  const dbClient: QueryClient = client ?? pool;
+  const dbClient: QueryClient = client ?? getPool();
   const result = await dbClient.query(
     `SELECT ${USER_SELECT_COLUMNS} FROM users WHERE id = $1`,
     [userId],
@@ -156,7 +156,7 @@ export async function purchaseAutoBuySupplies(
   goldCost: number,
   client?: PoolClient,
 ): Promise<User> {
-  const dbClient: QueryClient = client ?? pool;
+  const dbClient: QueryClient = client ?? getPool();
   const result = await dbClient.query(
     `
       UPDATE users
@@ -184,7 +184,7 @@ export async function setAutoBuySuppliesActive(
   active: boolean,
   client?: PoolClient,
 ): Promise<User> {
-  const dbClient: QueryClient = client ?? pool;
+  const dbClient: QueryClient = client ?? getPool();
   const result = await dbClient.query(
     `
       UPDATE users
@@ -207,7 +207,7 @@ export async function setAutoBuySettings(
   autoBuySettings: AutoBuySettings,
   client?: PoolClient,
 ): Promise<User> {
-  const dbClient: QueryClient = client ?? pool;
+  const dbClient: QueryClient = client ?? getPool();
   const result = await dbClient.query(
     `
       UPDATE users

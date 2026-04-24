@@ -1,8 +1,19 @@
 import { OperationId, ResourceType } from 'ever-greater-shared';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+const FINAL_SCHEMA_BASELINE_MIGRATION_ID = 13;
+const BASELINE_ONLY_MIGRATION_ROWS = [
+  { id: FINAL_SCHEMA_BASELINE_MIGRATION_ID },
+];
+const HISTORICAL_MIGRATION_ROWS = Array.from(
+  { length: FINAL_SCHEMA_BASELINE_MIGRATION_ID },
+  (_, index) => ({ id: index + 1 })
+);
+const PRE_BASELINE_MIGRATION_ROWS = HISTORICAL_MIGRATION_ROWS.slice(0, -1);
+
 describe('Database Functions', () => {
   let mockPool;
+  let mockPoolConstructor;
   let mockClient;
   let db;
   let consoleErrorSpy;
@@ -41,10 +52,11 @@ describe('Database Functions', () => {
     };
 
     // Mock pg module with doMock (must be before dynamic import)
+    mockPoolConstructor = vi.fn(function(config) {
+      return mockPool;
+    });
     vi.doMock('pg', () => ({
-      Pool: vi.fn(function() {
-        return mockPool;
-      }),
+      Pool: mockPoolConstructor,
     }));
 
     mockExecuteOperationForUser = vi.fn();
@@ -68,6 +80,50 @@ describe('Database Functions', () => {
   });
 
   describe('initializeDatabase', () => {
+    it('should create the pg pool lazily using the current environment', async () => {
+      const oldDatabaseUrl = process.env.DATABASE_URL;
+      const oldDbPoolMax = process.env.DB_POOL_MAX;
+      const oldDbPoolIdleTimeout = process.env.DB_POOL_IDLE_TIMEOUT;
+
+      process.env.DATABASE_URL = 'postgresql://tester:secret@localhost:5432/ever_greater_db';
+      process.env.DB_POOL_MAX = '17';
+      process.env.DB_POOL_IDLE_TIMEOUT = '1234';
+      mockPool.query.mockResolvedValue({ rows: [{ count: '42' }] });
+
+      try {
+        expect(mockPoolConstructor).not.toHaveBeenCalled();
+
+        await db.getGlobalCount();
+
+        expect(mockPoolConstructor).toHaveBeenCalledTimes(1);
+        expect(mockPoolConstructor).toHaveBeenCalledWith(
+          expect.objectContaining({
+            connectionString: 'postgresql://tester:secret@localhost:5432/ever_greater_db',
+            max: 17,
+            idleTimeoutMillis: 1234,
+          })
+        );
+      } finally {
+        if (oldDatabaseUrl === undefined) {
+          delete process.env.DATABASE_URL;
+        } else {
+          process.env.DATABASE_URL = oldDatabaseUrl;
+        }
+
+        if (oldDbPoolMax === undefined) {
+          delete process.env.DB_POOL_MAX;
+        } else {
+          process.env.DB_POOL_MAX = oldDbPoolMax;
+        }
+
+        if (oldDbPoolIdleTimeout === undefined) {
+          delete process.env.DB_POOL_IDLE_TIMEOUT;
+        } else {
+          process.env.DB_POOL_IDLE_TIMEOUT = oldDbPoolIdleTimeout;
+        }
+      }
+    });
+
     it('should create tables and insert initial data', async () => {
       mockClient.query.mockImplementation(async (query) => {
         if (query.includes('SELECT id FROM schema_migrations')) {
@@ -116,7 +172,11 @@ describe('Database Functions', () => {
       const migrationInsertCalls = mockClient.query.mock.calls.filter((call) =>
         call[0].includes('INSERT INTO schema_migrations')
       );
-      expect(migrationInsertCalls).toHaveLength(13);
+      expect(migrationInsertCalls).toHaveLength(1);
+      expect(migrationInsertCalls[0][1]).toEqual([
+        FINAL_SCHEMA_BASELINE_MIGRATION_ID,
+        'create-final-schema-baseline',
+      ]);
       expect(mockClient.release).toHaveBeenCalled();
     });
 
@@ -167,6 +227,52 @@ describe('Database Functions', () => {
 
       await expect(db.initializeDatabase()).rejects.toThrow('Database error');
       expect(mockClient.release).toHaveBeenCalled();
+    });
+
+    it('should widen global_state count to BIGINT in the baseline migration', async () => {
+      mockClient.query.mockImplementation(async (query) => {
+        if (query.includes('SELECT id FROM schema_migrations')) {
+          return { rows: [] };
+        }
+
+        if (query.includes('information_schema.columns')) {
+          return {
+            rows: [
+              { column_name: 'tickets_contributed' },
+              { column_name: 'printer_supplies' },
+              { column_name: 'money' },
+              { column_name: 'gold' },
+              { column_name: 'gems' },
+              { column_name: 'autoprinters' },
+              { column_name: 'milk' },
+              { column_name: 'credit_value' },
+              { column_name: 'money_per_ticket_level' },
+              { column_name: 'credit_generation_level' },
+              { column_name: 'credit_capacity_level' },
+              { column_name: 'credit_capacity_amount_level' },
+              { column_name: 'ticket_batch_level' },
+              { column_name: 'manual_print_batch_level' },
+              { column_name: 'supplies_batch_level' },
+              { column_name: 'first_gem_purchased' },
+            ],
+          };
+        }
+
+        if (query.includes('SELECT COUNT(*) FROM global_state')) {
+          return { rows: [{ count: 0 }] };
+        }
+
+        return { rows: [] };
+      });
+
+      await db.initializeDatabase();
+
+      const alterTableCalls = mockClient.query.mock.calls.filter((call) =>
+        call[0].includes('ALTER TABLE global_state')
+      );
+
+      expect(alterTableCalls.length).toBeGreaterThan(0);
+      expect(alterTableCalls[0][0]).toContain('SET DATA TYPE BIGINT');
     });
 
     it('should convert credit_value column to NUMERIC to support decimal values', async () => {
@@ -220,7 +326,7 @@ describe('Database Functions', () => {
       mockClient.query.mockImplementation(async (query) => {
         if (query.includes('SELECT id FROM schema_migrations')) {
           return {
-            rows: [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }, { id: 5 }, { id: 6 }, { id: 7 }, { id: 8 }, { id: 9 }, { id: 10 }],
+            rows: BASELINE_ONLY_MIGRATION_ROWS,
           };
         }
 
@@ -259,6 +365,53 @@ describe('Database Functions', () => {
         expect.stringContaining('CREATE TABLE IF NOT EXISTS global_state')
       );
     });
+
+    it('should skip fresh-schema bootstrap when historical migrations already exist', async () => {
+      mockClient.query.mockImplementation(async (query) => {
+        if (query.includes('SELECT id FROM schema_migrations')) {
+          return {
+            rows: PRE_BASELINE_MIGRATION_ROWS,
+          };
+        }
+
+        if (query.includes('information_schema.columns')) {
+          return {
+            rows: [
+              { column_name: 'tickets_contributed' },
+              { column_name: 'printer_supplies' },
+              { column_name: 'money' },
+              { column_name: 'gold' },
+              { column_name: 'gems' },
+              { column_name: 'autoprinters' },
+              { column_name: 'credit_value' },
+              { column_name: 'money_per_ticket_level' },
+              { column_name: 'credit_generation_level' },
+              { column_name: 'credit_capacity_level' },
+              { column_name: 'credit_capacity_amount_level' },
+              { column_name: 'ticket_batch_level' },
+              { column_name: 'manual_print_batch_level' },
+              { column_name: 'supplies_batch_level' },
+              { column_name: 'first_gem_purchased' },
+            ],
+          };
+        }
+
+        if (query.includes('SELECT COUNT(*) FROM global_state')) {
+          return { rows: [{ count: 1 }] };
+        }
+
+        return { rows: [] };
+      });
+
+      await db.initializeDatabase();
+
+      expect(mockClient.query).not.toHaveBeenCalledWith(
+        expect.stringContaining('CREATE TABLE IF NOT EXISTS users')
+      );
+      expect(mockClient.query).toHaveBeenCalledWith(
+        expect.stringContaining('ALTER TABLE users')
+      );
+    });
   });
 
   describe('prepareDatabaseForRuntime', () => {
@@ -284,7 +437,7 @@ describe('Database Functions', () => {
         }
 
         if (query.includes('SELECT id FROM schema_migrations')) {
-          return { rows: [{ id: 1 }] };
+          return { rows: PRE_BASELINE_MIGRATION_ROWS };
         }
 
         throw new Error(`Unexpected query: ${query}`);
@@ -296,7 +449,7 @@ describe('Database Functions', () => {
       expect(mockClient.release).toHaveBeenCalled();
     });
 
-    it('should validate a ready database without rerunning migrations', async () => {
+    it('should validate a reset-ready database without rerunning migrations', async () => {
       mockClient.query.mockImplementation(async (query) => {
         if (query.includes('information_schema.tables')) {
           return { rows: [{ exists: true }] };
@@ -304,7 +457,56 @@ describe('Database Functions', () => {
 
         if (query.includes('SELECT id FROM schema_migrations')) {
           return {
-            rows: [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }, { id: 5 }, { id: 6 }, { id: 7 }, { id: 8 }, { id: 9 }, { id: 10 }, { id: 11 }, { id: 12 }, { id: 13 }],
+            rows: BASELINE_ONLY_MIGRATION_ROWS,
+          };
+        }
+
+        if (query.includes("information_schema.columns WHERE table_name = 'users'")) {
+          return {
+            rows: [
+              { column_name: 'tickets_contributed' },
+              { column_name: 'printer_supplies' },
+              { column_name: 'money' },
+              { column_name: 'gold' },
+              { column_name: 'gems' },
+              { column_name: 'autoprinters' },
+              { column_name: 'credit_value' },
+              { column_name: 'money_per_ticket_level' },
+              { column_name: 'credit_generation_level' },
+              { column_name: 'credit_capacity_level' },
+              { column_name: 'credit_capacity_amount_level' },
+              { column_name: 'ticket_batch_level' },
+              { column_name: 'manual_print_batch_level' },
+              { column_name: 'supplies_batch_level' },
+              { column_name: 'first_gem_purchased' },
+            ],
+          };
+        }
+
+        if (query.includes('SELECT COUNT(*) FROM global_state')) {
+          return { rows: [{ count: 1 }] };
+        }
+
+        return { rows: [] };
+      });
+
+      await db.prepareDatabaseForRuntime();
+
+      expect(mockClient.query).not.toHaveBeenCalledWith(
+        expect.stringContaining('CREATE TABLE IF NOT EXISTS global_state')
+      );
+      expect(mockClient.release).toHaveBeenCalled();
+    });
+
+    it('should validate a historically migrated database without rerunning migrations', async () => {
+      mockClient.query.mockImplementation(async (query) => {
+        if (query.includes('information_schema.tables')) {
+          return { rows: [{ exists: true }] };
+        }
+
+        if (query.includes('SELECT id FROM schema_migrations')) {
+          return {
+            rows: HISTORICAL_MIGRATION_ROWS,
           };
         }
 
@@ -347,8 +549,8 @@ describe('Database Functions', () => {
   });
 
   describe('getGlobalCount', () => {
-    it('should return the current global count', async () => {
-      mockPool.query.mockResolvedValue({ rows: [{ count: 42 }] });
+    it('should return the current global count when postgres returns bigint strings', async () => {
+      mockPool.query.mockResolvedValue({ rows: [{ count: '42' }] });
 
       const count = await db.getGlobalCount();
 
@@ -367,8 +569,8 @@ describe('Database Functions', () => {
   });
 
   describe('incrementGlobalCount', () => {
-    it('should increment count and return new value', async () => {
-      mockPool.query.mockResolvedValue({ rows: [{ count: 43 }] });
+    it('should increment count and return the parsed bigint value', async () => {
+      mockPool.query.mockResolvedValue({ rows: [{ count: '43' }] });
 
       const newCount = await db.incrementGlobalCount();
 
@@ -386,7 +588,7 @@ describe('Database Functions', () => {
     });
 
     it('should increment from any starting value', async () => {
-      mockPool.query.mockResolvedValue({ rows: [{ count: 100 }] });
+      mockPool.query.mockResolvedValue({ rows: [{ count: '100' }] });
 
       const newCount = await db.incrementGlobalCount();
 
@@ -433,8 +635,23 @@ describe('Database Functions', () => {
   });
 
   describe('createUser', () => {
+    it('should read starting printer supplies from the current environment', () => {
+      const oldStartingPrinterSupplies = process.env.STARTING_PRINTER_SUPPLIES;
+      process.env.STARTING_PRINTER_SUPPLIES = '4321';
+
+      try {
+        expect(db.getStartingPrinterSupplies()).toBe(4321);
+      } finally {
+        if (oldStartingPrinterSupplies === undefined) {
+          delete process.env.STARTING_PRINTER_SUPPLIES;
+        } else {
+          process.env.STARTING_PRINTER_SUPPLIES = oldStartingPrinterSupplies;
+        }
+      }
+    });
+
     it('should create a new user and return user object', async () => {
-      const expectedStartingSupplies = db.STARTING_PRINTER_SUPPLIES;
+      const expectedStartingSupplies = db.getStartingPrinterSupplies();
       const mockUser = {
         id: 1,
         email: 'newuser@example.com',
@@ -617,13 +834,25 @@ describe('Database Functions', () => {
   });
 
   describe('closePool', () => {
-    it('should call pool.end() to close connections', async () => {
+    it('should not create a pool just to close it', async () => {
+      await db.closePool();
+
+      expect(mockPoolConstructor).not.toHaveBeenCalled();
+      expect(mockPool.end).not.toHaveBeenCalled();
+    });
+
+    it('should call pool.end() to close initialized connections', async () => {
+      mockPool.query.mockResolvedValue({ rows: [{ count: '42' }] });
+
+      await db.getGlobalCount();
       await db.closePool();
 
       expect(mockPool.end).toHaveBeenCalled();
     });
 
     it('should handle errors during pool close', async () => {
+      mockPool.query.mockResolvedValue({ rows: [{ count: '42' }] });
+      await db.getGlobalCount();
       mockPool.end.mockRejectedValue(new Error('Close failed'));
 
       await expect(db.closePool()).rejects.toThrow('Close failed');

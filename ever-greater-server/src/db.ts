@@ -1,8 +1,8 @@
 export {
   closePool,
+  getPool,
+  getStartingPrinterSupplies,
   GlobalTicketLimitExceeded,
-  pool,
-  STARTING_PRINTER_SUPPLIES,
 } from "./db/core.js";
 export { initializeDatabase, prepareDatabaseForRuntime } from "./db/schema.js";
 export {

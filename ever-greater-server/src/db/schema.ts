@@ -1,6 +1,7 @@
 import { RESOURCE_DB_FIELDS } from "ever-greater-shared";
 import type { PoolClient } from "pg";
 import { withPoolClient } from "./core.js";
+import { finalSchemaBootstrapStatements } from "./final-schema.js";
 import {
   databaseMigrations,
   type DatabaseMigration,
@@ -83,9 +84,27 @@ async function applyMigration(
   }
 }
 
+async function createFreshSchemaBootstrap(client: PoolClient): Promise<void> {
+  await client.query("BEGIN");
+  try {
+    for (const statement of finalSchemaBootstrapStatements) {
+      await client.query(statement);
+    }
+
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => undefined);
+    throw error;
+  }
+}
+
 async function runPendingMigrations(client: PoolClient): Promise<void> {
   await ensureMigrationsTable(client);
   const appliedMigrationIds = await getAppliedMigrationIds(client);
+
+  if (appliedMigrationIds.size === 0) {
+    await createFreshSchemaBootstrap(client);
+  }
 
   for (const migration of getPendingMigrations(appliedMigrationIds)) {
     await applyMigration(client, migration);

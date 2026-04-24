@@ -104,6 +104,8 @@ From the repository root, the equivalent command is:
 npm run server:migrate
 ```
 
+The current tracked migration set is a single final-schema baseline. A fresh database or `db:reset` now converges on the same schema in one migration step, while older databases still need the latest tracked migration recorded before runtime startup.
+
 When migrations run successfully, you'll see:
 
 ```
@@ -119,7 +121,7 @@ npm run db:seed
 npm run db:backup
 ```
 
-- `db:reset` drops and recreates the `public` schema, then reapplies tracked migrations.
+- `db:reset` drops and recreates the `public` schema, then reapplies the current final-schema baseline migration.
 - `db:seed` creates or refreshes a deterministic local demo user at `demo@example.com` with password `demo1234`.
 - `db:backup` writes a SQL backup to `ever-greater-server/backups/` by default and accepts `--output <path>`.
 
@@ -225,13 +227,13 @@ The `global_state` table has the following structure:
 ```sql
 CREATE TABLE global_state (
     id INTEGER PRIMARY KEY,
-    count INTEGER NOT NULL DEFAULT 0,
+   count BIGINT NOT NULL DEFAULT 0,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 ```
 
 - **id**: Always set to 1 (single row for global state)
-- **count**: The current global ticket count
+- **count**: The current global ticket count, stored as `BIGINT`
 - **updated_at**: Timestamp of last update (automatically updated on increment)
 
 ## Backup and Restore

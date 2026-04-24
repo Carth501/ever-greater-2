@@ -9,22 +9,25 @@ Comprehensive unit tests for the Ever-Greater server, using the Vitest testing f
 Tests for all database functions with mocked PostgreSQL pool:
 
 - **`initializeDatabase`** - Database schema initialization
-  - Creates tables and indexes
+  - Applies the current final-schema baseline migration
+  - Creates tables and indexes for reset-ready databases
   - Inserts initial data when empty
   - Skips insertion if table is already populated
   - Properly releases client connections on errors
 
 - **`prepareDatabaseForRuntime`** - Runtime database readiness checks
   - Fails when migrations have not been applied
-  - Fails when tracked migrations are still pending
-  - Validates the ready schema without rerunning migrations
+  - Fails when the latest tracked migration is still pending
+  - Validates both reset-ready baseline databases and historically migrated databases without rerunning migrations
 
 - **`getGlobalCount`** - Retrieve current global count
   - Returns count successfully
+  - Parses bigint-backed PostgreSQL values into server numbers
   - Handles database errors
 
 - **`incrementGlobalCount`** - Atomically increment global count
   - Increments count and returns new value
+  - Parses bigint-backed PostgreSQL values into server numbers
   - Handles errors
   - Works from any starting value
 

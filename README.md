@@ -17,7 +17,7 @@ From the repository root, run `npm run server:migrate` after database schema cha
 
 Useful local database commands from the repository root:
 
-- `npm run server:db:reset -- --force` - drop and recreate the server database schema, then re-run migrations
+- `npm run server:db:reset -- --force` - drop and recreate the server database schema, then reapply the current final-schema baseline migration
 - `npm run server:db:seed` - create a deterministic demo user and baseline global count for local development
 - `npm run server:db:backup` - write a SQL backup under `ever-greater-server/backups/`
 
@@ -120,6 +120,8 @@ The older query-based entry (`?concept=dashboard`) still works for compatibility
    npm run migrate
    ```
 
+   The current tracked migration set is a single final-schema baseline, so fresh databases and reset databases land on the same schema in one step.
+
 5. **Start the Server**
 
    ```bash
@@ -128,7 +130,7 @@ The older query-based entry (`?concept=dashboard`) still works for compatibility
 
    Use `npm start` when you want a production-style build and run.
 
-   The server now expects migrations to be applied before startup and will fail fast if the schema is behind.
+   The server now expects migrations to be applied before startup and will fail fast if the schema is behind the latest tracked migration.
 
 6. **Optional Local Database Utilities**
 
@@ -159,7 +161,7 @@ The older query-based entry (`?concept=dashboard`) still works for compatibility
 - `npm start` - run the server
 - `npm run dev` - run the server in watch mode with TypeScript entrypoint reloads
 - `npm run server:migrate` - apply pending server database migrations from the repository root
-- `npm run server:db:reset -- --force` - rebuild the server database schema from scratch
+- `npm run server:db:reset -- --force` - rebuild the server database schema from scratch with the current final-schema baseline
 - `npm run server:db:seed` - seed local development data
 - `npm run server:db:backup` - create a local SQL backup using `pg_dump`
 

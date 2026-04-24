@@ -9,7 +9,7 @@
 		"server": "npm --prefix ever-greater-server start",
 		"server:dev": "npm --prefix ever-greater-server run dev",
 		"server:migrate": "npm --prefix ever-greater-server run migrate",
-		"server:db:reset": "npm --prefix ever-greater-server run db:reset",
+		"server:db:reset": "npm --prefix ever-greater-server run db:reset --",
 		"server:db:seed": "npm --prefix ever-greater-server run db:seed",
 		"server:db:backup": "npm --prefix ever-greater-server run db:backup",
 		"dev": "npm-run-all --parallel server:dev client",

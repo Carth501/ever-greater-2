@@ -2,7 +2,7 @@ import { normalizeAutoBuySettings, User } from "ever-greater-shared";
 import { Pool, type PoolClient } from "pg";
 import { getServerConfig } from "../config.js";
 
-const serverConfig = getServerConfig();
+let pool: Pool | undefined;
 
 const USER_RESOURCE_COLUMNS = [
   "tickets_contributed",
@@ -74,18 +74,33 @@ export class GlobalTicketLimitExceeded extends Error {
   }
 }
 
-export const STARTING_PRINTER_SUPPLIES = serverConfig.startingPrinterSupplies;
-
-export const pool = new Pool({
-  connectionString: serverConfig.databaseUrl,
-  max: serverConfig.dbPoolMax,
-  idleTimeoutMillis: serverConfig.dbPoolIdleTimeout,
-});
-
-if (pool.on && typeof pool.on === "function") {
-  pool.on("error", (err: Error) => {
-    console.error("Unexpected error on idle client", err);
+function createPool(): Pool {
+  const serverConfig = getServerConfig();
+  const createdPool = new Pool({
+    connectionString: serverConfig.databaseUrl,
+    max: serverConfig.dbPoolMax,
+    idleTimeoutMillis: serverConfig.dbPoolIdleTimeout,
   });
+
+  if (createdPool.on && typeof createdPool.on === "function") {
+    createdPool.on("error", (err: Error) => {
+      console.error("Unexpected error on idle client", err);
+    });
+  }
+
+  return createdPool;
+}
+
+export function getStartingPrinterSupplies(): number {
+  return getServerConfig().startingPrinterSupplies;
+}
+
+export function getPool(): Pool {
+  if (!pool) {
+    pool = createPool();
+  }
+
+  return pool;
 }
 
 export function toNumber(value: unknown): number {
@@ -118,7 +133,7 @@ export function coerceUserRowNumbersInPlace(userRow: CoercibleUserRow): void {
 export async function withPoolClient<T>(
   run: (client: PoolClient) => Promise<T>,
 ): Promise<T> {
-  const client = await pool.connect();
+  const client = await getPool().connect();
   try {
     return await run(client);
   } finally {
@@ -143,6 +158,12 @@ export async function withTransaction<T>(
 }
 
 export async function closePool(): Promise<void> {
-  await pool.end();
+  if (!pool) {
+    return;
+  }
+
+  const poolToClose = pool;
+  pool = undefined;
+  await poolToClose.end();
   console.log("Database pool closed");
 }

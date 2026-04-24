@@ -28,9 +28,9 @@ import {
   closePool,
   createUser,
   getGlobalCount,
+  getPool,
   getUserByEmail,
   getUserById,
-  pool,
   prepareDatabaseForRuntime,
   processAutoprinters,
   updateAllUsersCreditValues,
@@ -342,7 +342,7 @@ function createApp(): Express {
   const sessionStore = isTestEnvironment
     ? undefined // Uses default MemoryStore
     : new PgSession({
-        pool,
+        pool: getPool(),
         tableName: "session",
       });
 
@@ -362,7 +362,7 @@ function createApp(): Express {
 
   app.get("/health", async (req, res) => {
     try {
-      await pool.query("SELECT 1");
+      await getPool().query("SELECT 1");
       return res.json({
         status: "ok",
         db: "up",

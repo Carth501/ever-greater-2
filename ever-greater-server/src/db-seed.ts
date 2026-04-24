@@ -3,9 +3,9 @@ import { getDefaultAutoBuySettings } from "ever-greater-shared";
 import { assertSeedCommandAllowed } from "./db-script-utils.js";
 import {
   closePool,
+  getPool,
+  getStartingPrinterSupplies,
   initializeDatabase,
-  pool,
-  STARTING_PRINTER_SUPPLIES,
 } from "./db.js";
 
 const DEMO_USER_EMAIL = "demo@example.com";
@@ -16,6 +16,9 @@ async function runSeedCommand(): Promise<void> {
   try {
     assertSeedCommandAllowed();
     await initializeDatabase();
+
+    const pool = getPool();
+    const startingPrinterSupplies = getStartingPrinterSupplies();
 
     const passwordHash = await bcrypt.hash(DEMO_USER_PASSWORD, 10);
     const result = await pool.query(
@@ -64,7 +67,7 @@ async function runSeedCommand(): Promise<void> {
         DEMO_USER_EMAIL,
         passwordHash,
         120,
-        STARTING_PRINTER_SUPPLIES * 4,
+        startingPrinterSupplies * 4,
         250,
         25,
         0,

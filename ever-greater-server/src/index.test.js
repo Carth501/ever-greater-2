@@ -13,6 +13,10 @@ import * as db from './db.ts';
 import { buildPeriodicUserUpdatePayload, createApp } from './index.ts';
 import * as operationDb from './operations/db-access.ts';
 
+const mockDatabasePool = {
+  query: vi.fn(),
+};
+
 // Mock database BEFORE importing the app
 vi.mock('./db.ts', () => ({
   initializeDatabase: vi.fn().mockResolvedValue(undefined),
@@ -32,9 +36,7 @@ vi.mock('./db.ts', () => ({
   cleanupOldTicketWithdrawals: vi.fn().mockResolvedValue(undefined),
   processAutoprinters: vi.fn().mockResolvedValue(undefined),
   updateAllUsersCreditValues: vi.fn().mockResolvedValue(undefined),
-  pool: {
-    query: vi.fn(),
-  },
+  getPool: vi.fn(() => mockDatabasePool),
 }));
 
 vi.mock('./operations/db-access.ts', () => ({
@@ -330,7 +332,7 @@ describe('Express API Endpoints', () => {
 
   describe('GET /health', () => {
     it('should return healthy status when database responds', async () => {
-      db.pool.query.mockResolvedValue({ rows: [{ '?column?': 1 }] });
+      db.getPool().query.mockResolvedValue({ rows: [{ '?column?': 1 }] });
 
       const response = await request(app)
         .get('/health')
@@ -339,11 +341,11 @@ describe('Express API Endpoints', () => {
       expect(response.body.status).toBe('ok');
       expect(response.body.db).toBe('up');
       expect(response.body.timestamp).toBeDefined();
-      expect(db.pool.query).toHaveBeenCalledWith('SELECT 1');
+      expect(db.getPool().query).toHaveBeenCalledWith('SELECT 1');
     });
 
     it('should return 503 when database health check fails', async () => {
-      db.pool.query.mockRejectedValue(new Error('DB unavailable'));
+      db.getPool().query.mockRejectedValue(new Error('DB unavailable'));
 
       const response = await request(app)
         .get('/health')
