@@ -1,11 +1,6 @@
-export type PreviewMode =
-  | {
-      kind: "index";
-    }
-  | {
-      kind: "dashboard";
-      showControls: boolean;
-    };
+export type PreviewMode = {
+  showControls: boolean;
+};
 
 type LocationShape = Pick<Location, "hash" | "pathname" | "search">;
 
@@ -22,6 +17,16 @@ const DASHBOARD_PATH_ROUTES = new Set([
 ]);
 
 const INDEX_PATH_ROUTES = new Set(["/internal/preview", "/preview"]);
+
+function resolveShowControls(
+  searchParams: URLSearchParams,
+  hashSearchParams: URLSearchParams,
+): boolean {
+  return (
+    searchParams.get("controls") !== "0" &&
+    hashSearchParams.get("controls") !== "0"
+  );
+}
 
 function getHashParts(hash: string): {
   hashPath: string;
@@ -42,28 +47,14 @@ export function getPreviewMode(location: LocationShape): PreviewMode | null {
 
   if (
     searchParams.get("preview") === "index" ||
+    searchParams.get("preview") === "dashboard" ||
     INDEX_HASH_ROUTES.has(hashPath) ||
-    INDEX_PATH_ROUTES.has(location.pathname)
-  ) {
-    return { kind: "index" };
-  }
-
-  if (searchParams.get("preview") === "dashboard") {
-    return {
-      kind: "dashboard",
-      showControls: searchParams.get("controls") !== "0",
-    };
-  }
-
-  if (
+    INDEX_PATH_ROUTES.has(location.pathname) ||
     DASHBOARD_HASH_ROUTES.has(hashPath) ||
     DASHBOARD_PATH_ROUTES.has(location.pathname)
   ) {
     return {
-      kind: "dashboard",
-      showControls:
-        hashSearchParams.get("controls") !== "0" &&
-        searchParams.get("controls") !== "0",
+      showControls: resolveShowControls(searchParams, hashSearchParams),
     };
   }
 

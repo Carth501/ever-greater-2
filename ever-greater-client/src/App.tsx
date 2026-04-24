@@ -6,7 +6,6 @@ import { useEffect, useState } from "react";
 import DashboardPage from "./components/pages/DashboardPage";
 import EverGreaterMainPage from "./components/pages/EverGreaterMainPage";
 import LoginPage from "./components/pages/LoginPage";
-import PreviewIndexPage from "./components/pages/PreviewIndexPage";
 import SignupPage from "./components/pages/SignupPage";
 import cLogo from "./images/cLogo.png";
 import { getPreviewMode } from "./lib/previewMode";
@@ -50,8 +49,7 @@ function App() {
   );
 
   const isPreviewMode = previewMode !== null;
-  const showDashboardControls =
-    previewMode?.kind === "dashboard" ? previewMode.showControls : true;
+  const showDashboardControls = previewMode?.showControls ?? true;
 
   // Check if user is already logged in on mount
   useEffect(() => {
@@ -107,11 +105,7 @@ function App() {
           disableGutters
           sx={{ flex: 1, overflowY: "scroll", maxHeight: contentHeight }}
         >
-          {previewMode?.kind === "dashboard" ? (
-            <DashboardPage showControls={showDashboardControls} />
-          ) : (
-            <PreviewIndexPage />
-          )}
+          <DashboardPage showControls={showDashboardControls} />
         </Container>
 
         <AppFooter as="footer">
